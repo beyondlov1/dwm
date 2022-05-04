@@ -344,6 +344,7 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
+static Client *lastfocused;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1144,7 +1145,7 @@ focusstack(const Arg *arg)
 void 
 distinctpush(Client *cc, Client *c)
 {
-	if (!c)
+	if (!c || !cc)
 	{
 		return;
 	}
@@ -1234,6 +1235,7 @@ focusgrid(const Arg *arg)
 	if (arg->i == FOCUS_LEFT) {
 		Client *closest = NULL;
 		int min = INT_MAX;
+	    // fprintf(f,"%s", selmon->sel->lastfocus->name);
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
 			if (c->x < cc->x && ISVISIBLE(c))
@@ -2122,7 +2124,10 @@ sendevent(Window w, Atom proto, int mask, long d0, long d1, long d2, long d3, lo
 void
 setfocus(Client *c)
 {
-	distinctpush(selmon->sel, c);
+	// monitor中的clients包含了整个显示器中的client, ISVISABLE可以判断是否是现在这个tag中的client
+	// 但是这里push的时候, 会push所有的, 但是, 在切换tag时会focus一下NULL, 导致lastfocus的链条中断
+	// 所以这里定义一个全局变量lastfocused来防止链条中断
+	distinctpush(lastfocused, c);
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
@@ -2130,6 +2135,7 @@ setfocus(Client *c)
 			(unsigned char *) &(c->win), 1);
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
+	lastfocused = c;
 }
 
 void
