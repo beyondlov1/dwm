@@ -1530,6 +1530,15 @@ keypress(XEvent *e)
 			keys[i].func(&(keys[i].arg));
 }
 
+
+void 
+focuspop(Client *c){
+	Client *tmp = NULL, *tmpnext=NULL;
+	for(tmp=selmon->sel;tmp && tmp != c;tmpnext = tmp,tmp = tmp->lastfocus);
+	tmpnext->lastfocus = tmp->lastfocus;
+	tmp->lastfocus = NULL;
+}
+
 void
 killclient(const Arg *arg)
 {
@@ -1545,6 +1554,9 @@ killclient(const Arg *arg)
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
+
+	lastfocused = selmon->sel->lastfocus;
+	selmon->sel->lastfocus = NULL;
 }
 
 void
