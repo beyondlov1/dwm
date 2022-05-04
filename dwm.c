@@ -41,6 +41,7 @@
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
+#include <math.h>
 
 #include "drw.h"
 #include "util.h"
@@ -73,6 +74,11 @@
 #define VERSION_MAJOR               0
 #define VERSION_MINOR               0
 #define XEMBED_EMBEDDED_VERSION (VERSION_MAJOR << 16) | VERSION_MINOR
+
+#define FOCUS_LEFT -1
+#define FOCUS_RIGHT 1
+#define FOCUS_UP 2
+#define FOCUS_DOWN -2
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -114,6 +120,10 @@ struct Client {
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Client *next;
 	Client *snext;
+	Client *lastfocus;
+	int focusfreq;
+	int fullscreenfreq;
+	int focusindex;
 	Monitor *mon;
 	Window win;
 };
@@ -210,6 +220,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void focusgrid(const Arg *arg);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
@@ -1129,6 +1140,200 @@ focusstack(const Arg *arg)
 	}
 }
 
+
+void 
+distinctpush(Client *cc, Client *c)
+{
+	if (!c)
+	{
+		return;
+	}
+	Client *tmp, *tmpnext = NULL;
+	int i = 100;
+	for (tmp = cc; tmp; tmp = tmp->lastfocus)
+	{
+		tmp->focusindex = --i;
+	}
+	tmp = cc;
+	while (tmp)
+	{
+		if (tmp == c)
+		{
+			if (tmpnext == NULL)
+			{
+				break;
+			}
+			tmpnext->lastfocus = tmp->lastfocus;
+			tmp->lastfocus = NULL;
+			break;
+		}
+		tmpnext = tmp;
+		tmp = tmp->lastfocus;
+	}
+	if (cc != c)
+	{
+		c->focusindex = 100;
+		c->focusfreq ++;
+		c->lastfocus = cc;
+	}
+}
+
+Client *
+closestxclient(Client *t, Client *c1, Client *c2){
+	if (abs(c1->x - t->x) > abs(c2->x - t->x))
+	{
+		return c2;
+	}else{
+		return c1;
+	}
+}
+
+Client *
+closestyclient(Client *t, Client *c1, Client *c2)
+{
+	if (abs(c1->y - t->y) > abs(c2->y - t->y))
+	{
+		return c2;
+	}
+	else
+	{
+		return c1;
+	}
+}
+
+double 
+score(Client *c){
+	return log(c->fullscreenfreq+1)*10-log(100-c->focusindex+1)*10;
+	// return c->focusindex;
+	// return 1;
+}
+
+Client *
+smartchoose(Client *t, Client *c1, Client *c2)
+{
+	if (score(c1) < score(c2))
+	{
+		return c2;
+	}
+	else
+	{
+		return c1;
+	}
+}
+
+void
+focusgrid(const Arg *arg)
+{
+	Client *c = NULL, *i;
+	Client *cc = selmon->sel;
+
+	// FILE *f = fopen("/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm/log/m.log","a");
+	// fprintf(f,"cx: %d, cy: %d", cc->x, cc->y);
+
+	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return;
+	if (arg->i == FOCUS_LEFT) {
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		{
+			if (c->x < cc->x && ISVISIBLE(c))
+			{
+				if (abs(cc->x - c->x) < min)
+				{
+					min = abs(cc->x - c->x);
+					closest = c;
+				}else if (abs(cc->x - c->x) == min)
+				{
+					// fprintf(f, "\n1score: %f, 2score: %f\n", score(c), score(closest));
+					closest = smartchoose(cc, c, closest);
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_RIGHT) {
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		{
+			if (c->x > cc->x && ISVISIBLE(c))
+			{
+				if (abs(cc->x - c->x) < min)
+				{
+					min = abs(cc->x - c->x);
+					closest = c;
+				}
+				else if (abs(cc->x - c->x) == min)
+				{
+					// fprintf(f, "\n%sscore: %f, %sscore: %f\n", c->name,score(c), closest->name,score(closest));
+					closest = smartchoose(cc, c, closest);
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		{
+			if (c->y < cc->y && ISVISIBLE(c))
+			{
+				if (abs(cc->y - c->y) < min && cc->x == c->x)
+				{
+					min = abs(cc->y - c->y);
+					closest = c;
+				}
+				else if (abs(cc->y - c->y) == min)
+				{
+					closest = closestxclient(cc, c, closest);
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		{
+			if (c->y > cc->y && ISVISIBLE(c))
+			{
+				if (abs(cc->y - c->y) < min && cc->x == c->x)
+				{
+					min = abs(cc->y - c->y);
+					closest = c;
+				}
+				else if (abs(cc->y - c->y) == min)
+				{
+					closest = closestxclient(cc, c, closest);
+				}
+			}
+		}
+		c = closest;
+	}
+	else
+	{
+		for (i = selmon->clients; i != selmon->sel; i = i->next)
+			if (ISVISIBLE(i))
+				c = i;
+		if (!c)
+			for (; i; i = i->next)
+				if (ISVISIBLE(i))
+					c = i;
+	}
+	if (c) {
+		// NULL <- 1 <- 2 <- 1 
+		// NULL <- 2 <- 1
+		focus(c);
+		restack(selmon);
+	}
+
+	// fclose(f);
+}
+
 Atom
 getatomprop(Client *c, Atom prop)
 {
@@ -1454,6 +1659,8 @@ monocle(Monitor *m)
 		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
 		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
+	
+	m->sel->fullscreenfreq++;
 }
 
 void
@@ -1821,8 +2028,7 @@ run(void)
 
 void
 runAutostart(void) {
-	system("cd ~/bin/dwm.script; ./blocking.sh");
-	system("cd ~/bin/dwm.script; ./init.sh &");
+	system("~/.config/dwm/script/init.sh &");
 }
 
 void
@@ -1916,6 +2122,7 @@ sendevent(Window w, Atom proto, int mask, long d0, long d1, long d2, long d3, lo
 void
 setfocus(Client *c)
 {
+	distinctpush(selmon->sel, c);
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
@@ -2936,7 +3143,7 @@ void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
-
+	c->fullscreenfreq ++;
 	if (!selmon->lt[selmon->sellt]->arrange
 	|| (selmon->sel && selmon->sel->isfloating))
 		return;
