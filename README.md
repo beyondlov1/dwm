@@ -23,3 +23,24 @@
 ## 截图
 
 ![desktop.png](./desktop.png)
+
+### ubuntu 
+依赖:
+```
+sudo apt install libxft-dev libxinerama-dev
+
+少包到  
+https://packages.ubuntu.com/search?mode=exactfilename&suite=focal&section=all&arch=any&keywords=X11%2Fextensions%2FXinerama.h&searchon=contents
+查询
+```
+- sudo make clean install
+  sudo cp dwm.desktop /usr/share/xsession
+- mkdir -p ~/.config/dwm/script && echo 'compton 
+ibus-daemon -r -d -x
+while true; do
+        xsetroot -name "$(date)"
+        sleep 1
+done' >| ~/.config/dwm/script/init.sh && chmod +x ~/.config/dwm/script/init.sh 
+- echo 'export _JAVA_AWT_WM_NONREPARENTING=1' >> ~/.profile
+- sudo apt remove --purge fonts-noto-color-emoji
+- restart

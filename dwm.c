@@ -3174,6 +3174,8 @@ zoom(const Arg *arg)
 int
 main(int argc, char *argv[])
 {
+	close(2);
+	FILE *f = fopen("/home/beyond/github/dwm/m.log", "a");
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("dwm-"VERSION);
 	else if (argc != 1)
@@ -3194,5 +3196,6 @@ main(int argc, char *argv[])
 	if(restart) execvp(argv[0], argv);
 	cleanup();
 	XCloseDisplay(dpy);
+	fclose(f);
 	return EXIT_SUCCESS;
 }

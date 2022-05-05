@@ -1,0 +1,4 @@
+Another composite manager is already running
+XIO:  fatal IO error 4 (Interrupted system call) on X server ":0"
+      after 13625506 requests (13620748 known processed) with 99 events remaining.
+Another composite manager is already running
