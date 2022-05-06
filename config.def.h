@@ -138,15 +138,6 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-	TAGKEYS(                        XK_KP_1,                      0)
-	TAGKEYS(                        XK_KP_2,                      1)
-	TAGKEYS(                        XK_KP_3,                      2)
-	TAGKEYS(                        XK_KP_4,                      3)
-	TAGKEYS(                        XK_KP_5,                      4)
-	TAGKEYS(                        XK_KP_6,                      5)
-	TAGKEYS(                        XK_KP_7,                      6)
-	TAGKEYS(                        XK_KP_8,                      7)
-	TAGKEYS(                        XK_KP_9,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_q,      quit,           {1} }, 
 	// { 0, XF86XK_AudioMute,        spawn, SHCMD("pamixer -t; pkill -RTMIN+7 dwmblocks") },
