@@ -89,7 +89,6 @@ static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont,
 static const char *termcmd[]  = { "x-terminal-emulator", NULL };
 static const char scratchpadname[] = "scratchpad";
 static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
-static const char *roficmd[] = {"rofi","-show","combi",NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -110,7 +109,7 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
-	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
+	{ MODKEY,                       XK_grave,    spawn,           {.v = {"rofi","-show","combi",NULL}} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
