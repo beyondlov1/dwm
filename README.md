@@ -49,3 +49,6 @@ done' >| ~/.config/dwm/script/init.sh && chmod +x ~/.config/dwm/script/init.sh
 - echo 'export _JAVA_AWT_WM_NONREPARENTING=1' >> ~/.profile
 - sudo apt remove --purge fonts-noto-color-emoji
 - restart
+
+### TODO
+- 状态栏时间更新
