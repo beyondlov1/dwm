@@ -20,6 +20,11 @@
 - [dwm-systray-6.3.diff](./patch/dwm-systray-6.3.diff)
 - [dwm-viewontag-20210312-61bb8b2.diff](./patch/dwm-viewontag-20210312-61bb8b2.diff)
 
+### rofi 需要支持 EWMH, 打了下面两个补丁
+- [wmhtags](https://dwm.suckless.org/patches/ewmhtags)
+- [focusconnetactive](https://dwm.suckless.org/patches/focusonnetactive/)
+
+
 ## 截图
 
 ![desktop.png](./desktop.png)
