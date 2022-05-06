@@ -304,6 +304,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void LOG(char *content,char *content2);
 
 /* variables */
 static Systray *systray = NULL;
@@ -1145,7 +1146,7 @@ focusstack(const Arg *arg)
 void 
 distinctpush(Client *cc, Client *c)
 {
-	if (!c || !cc)
+	if (!c || !cc )
 	{
 		return;
 	}
@@ -1223,19 +1224,23 @@ smartchoose(Client *t, Client *c1, Client *c2)
 }
 
 void
+LOG(char *content, char * content2){
+	FILE *f = fopen("/home/beyond/m.log","a");
+	fprintf(f,"%s%s", content, content2);
+	fclose(f);
+}
+
+void
 focusgrid(const Arg *arg)
 {
 	Client *c = NULL, *i;
 	Client *cc = selmon->sel;
 
-	// FILE *f = fopen("/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm/log/m.log","a");
-	// fprintf(f,"cx: %d, cy: %d", cc->x, cc->y);
 
 	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return;
 	if (arg->i == FOCUS_LEFT) {
 		Client *closest = NULL;
 		int min = INT_MAX;
-	    // fprintf(f,"%s", selmon->sel->lastfocus->name);
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
 			if (c->x < cc->x && ISVISIBLE(c))
@@ -1246,7 +1251,6 @@ focusgrid(const Arg *arg)
 					closest = c;
 				}else if (abs(cc->x - c->x) == min)
 				{
-					// fprintf(f, "\n1score: %f, 2score: %f\n", score(c), score(closest));
 					closest = smartchoose(cc, c, closest);
 				}
 			}
@@ -1267,7 +1271,6 @@ focusgrid(const Arg *arg)
 				}
 				else if (abs(cc->x - c->x) == min)
 				{
-					// fprintf(f, "\n%sscore: %f, %sscore: %f\n", c->name,score(c), closest->name,score(closest));
 					closest = smartchoose(cc, c, closest);
 				}
 			}
@@ -1316,24 +1319,34 @@ focusgrid(const Arg *arg)
 		}
 		c = closest;
 	}
-	else
-	{
-		for (i = selmon->clients; i != selmon->sel; i = i->next)
-			if (ISVISIBLE(i))
+	if(cc && selmon->sellt == 1){
+		if(arg->i == FOCUS_LEFT) {
+			Client *i;
+			for(i = selmon->clients;i;i=i->next){
+				if (!ISVISIBLE(i)) continue;
+				if(i->next == cc) break;
+			}
+			if (!i)
+			{
+				for(i = selmon->clients;i && ISVISIBLE(i) && i->next;i=i->next);
+			}
+			c = i;
+		}
+		if(arg->i == FOCUS_RIGHT) {
+			c = cc->next;
+			if (!c)
+			{
+				Client *i;
+				for(i = selmon->clients;i && !ISVISIBLE(i);i=i->next);
 				c = i;
-		if (!c)
-			for (; i; i = i->next)
-				if (ISVISIBLE(i))
-					c = i;
+			}
+		}
 	}
 	if (c) {
-		// NULL <- 1 <- 2 <- 1 
-		// NULL <- 2 <- 1
 		focus(c);
 		restack(selmon);
 	}
 
-	// fclose(f);
 }
 
 Atom
@@ -1533,10 +1546,14 @@ keypress(XEvent *e)
 
 void 
 focuspop(Client *c){
+	if(!lastfocused) return;
 	Client *tmp = NULL, *tmpnext=NULL;
-	for(tmp=selmon->sel;tmp && tmp != c;tmpnext = tmp,tmp = tmp->lastfocus);
-	tmpnext->lastfocus = tmp->lastfocus;
+	for(tmp=lastfocused;tmp && tmp != c;tmpnext = tmp,tmp = tmp->lastfocus);
+	if(tmpnext) tmpnext->lastfocus = tmp->lastfocus;
 	tmp->lastfocus = NULL;
+
+	if ( lastfocused && lastfocused == c)
+		lastfocused = lastfocused->lastfocus;
 }
 
 void
@@ -1555,8 +1572,6 @@ killclient(const Arg *arg)
 		XUngrabServer(dpy);
 	}
 
-	lastfocused = selmon->sel->lastfocus;
-	selmon->sel->lastfocus = NULL;
 }
 
 void
@@ -1617,6 +1632,7 @@ manage(Window w, XWindowAttributes *wa)
 		XRaiseWindow(dpy, c->win);
 	attach(c);
 	attachstack(c);
+	distinctpush(lastfocused,c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -1627,6 +1643,8 @@ manage(Window w, XWindowAttributes *wa)
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
 	focus(NULL);
+
+	LOG("managed:",c->name);
 }
 
 void
@@ -2614,6 +2632,10 @@ unmanage(Client *c, int destroyed)
 
 	detach(c);
 	detachstack(c);
+	focuspop(c);
+
+	
+	LOG("unmanage:", c->name);
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -3175,7 +3197,7 @@ int
 main(int argc, char *argv[])
 {
 	close(2);
-	FILE *f = fopen("/home/beyond/github/dwm/m.log", "a");
+	FILE *f = fopen("/home/beyond/m.log", "a");
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("dwm-"VERSION);
 	else if (argc != 1)
