@@ -3047,7 +3047,9 @@ updatetitle(Client *c)
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
 		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
 	char *subname;
-	for(subname = c->name;*subname != '\0' && *subname != '-'; subname++);
+	for(subname = c->name;*subname != '\0'; subname++);
+	for(;subname != c->name && *subname != '-'; subname--);
+	if (subname == c->name ) return;
 	for (; *subname != '\0' && (*subname == ' ' || *subname == '-'); subname++);
 	if(subname[0] != '\0' && subname[1] != '\0') strcpy(c->name, subname);
 	if (c->name[0] == '\0') /* hack to mark broken clients */
