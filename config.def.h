@@ -104,6 +104,10 @@ static Key keys[] = {
 	{ MODKEY,                       XK_k,      focusgrid,     {.i = +2 } },
 	{ MODKEY,                       XK_l,      focusgrid,     {.i = +1 } },
 	{ MODKEY,                       XK_h,      focusgrid,     {.i = -1 } },
+	{ MODKEY,                       XK_Down,      focusgrid,     {.i = -2 } },
+	{ MODKEY,                       XK_Up,      focusgrid,     {.i = +2 } },
+	{ MODKEY,                       XK_Right,      focusgrid,     {.i = +1 } },
+	{ MODKEY,                       XK_Left,      focusgrid,     {.i = -1 } },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY|ControlMask,                       XK_h,      setmfact,       {.f = -0.05} },
@@ -138,6 +142,15 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
+	TAGKEYS(                        XK_KP_End,                      0)
+	TAGKEYS(                        XK_KP_Down,                      1)
+	TAGKEYS(                        XK_KP_Page_Down,                      2)
+	TAGKEYS(                        XK_KP_Left,                      3)
+	TAGKEYS(                        XK_KP_Begin,                      4)
+	TAGKEYS(                        XK_KP_Right,                      5)
+	TAGKEYS(                        XK_KP_Home,                      6)
+	TAGKEYS(                        XK_KP_Up,                      7)
+	TAGKEYS(                        XK_KP_Page_Up,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_q,      quit,           {1} }, 
 	// { 0, XF86XK_AudioMute,        spawn, SHCMD("pamixer -t; pkill -RTMIN+7 dwmblocks") },
