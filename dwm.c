@@ -87,6 +87,7 @@ enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+	   NetWmStateSkipTaskbar,
        NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
@@ -1246,6 +1247,16 @@ LOG(char *content, char * content2){
 }
 
 void
+LOG_FORMAT(char *format, ...){
+	FILE *f = fopen("/home/beyond/m.log","a");
+	va_list ap;
+	va_start(ap,format);
+	vfprintf(f,format, ap);
+	va_end(ap);
+	fclose(f);
+}
+
+void
 focusgrid(const Arg *arg)
 {
 	Client *c = NULL;
@@ -1365,7 +1376,7 @@ focusgrid(const Arg *arg)
 }
 
 Atom
-getatomprop(Client *c, Atom prop)
+getwinatomprop(Window win, Atom prop)
 {
 	int di;
 	unsigned long dl;
@@ -1378,7 +1389,7 @@ getatomprop(Client *c, Atom prop)
 	if (prop == xatom[XembedInfo])
 		req = xatom[XembedInfo];
 
-	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, req,
+	if (XGetWindowProperty(dpy, win, prop, 0L, sizeof atom, False, req,
 		&da, &di, &dl, &dl, &p) == Success && p) {
 		atom = *(Atom *)p;
 		if (da == xatom[XembedInfo] && dl == 2)
@@ -1387,6 +1398,13 @@ getatomprop(Client *c, Atom prop)
 	}
 	return atom;
 }
+
+Atom
+getatomprop(Client *c, Atom prop)
+{
+	return getwinatomprop(c->win, prop);
+}
+
 
 pid_t
 getstatusbarpid()
@@ -1833,8 +1851,10 @@ propertynotify(XEvent *e)
 		switch(ev->atom) {
 		default: break;
 		case XA_WM_TRANSIENT_FOR:
-			if (!c->isfloating && (XGetTransientForHint(dpy, c->win, &trans)) &&
-				(c->isfloating = (wintoclient(trans)) != NULL))
+			if (!c->isfloating && (XGetTransientForHint(dpy, c->win, &trans)) 
+			// idea 
+			// && (c->isfloating = (wintoclient(trans)) != NULL)
+			)
 				arrange(c->mon);
 			break;
 		case XA_WM_NORMAL_HINTS:
@@ -2342,6 +2362,9 @@ setup(void)
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
+
+	netatom[NetWmStateSkipTaskbar] = XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR", False);
+	
 	
 	//EWMHTAGS
 	netatom[NetDesktopViewport] = XInternAtom(dpy, "_NET_DESKTOP_VIEWPORT", False);

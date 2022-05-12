@@ -30,7 +30,7 @@ static const char *colors[][3]      = {
 };
 
 /* tagging */
-static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-datasource", "6-learn", "7", "8", "9" };
 
 /* launcher commands (They must be NULL terminated) */
 static const char* chrome[]      = { "google-chrome-stable", NULL, NULL };
@@ -50,7 +50,11 @@ static const Rule rules[] = {
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor */
 	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
-	{ "Firefox",  NULL,       NULL,       1 << 8,       0,           -1 },
+	// { "firefox",  NULL,       NULL,       1 << 1,       0,           -1 },
+	// { "Evince",  NULL,       NULL,       1 << 5,       0,           -1 },
+	// { "jetbrains-idea",  NULL,       NULL,       1 << 2,       0,           -1 },
+	// { "Code",  NULL,       NULL,       1 << 3,       0,           -1 },
+	// { "jetbrains-datagrip",  NULL,       NULL,       1 << 4,       0,           -1 },
 };
 
 /* layout(s) */
