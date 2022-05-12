@@ -1852,7 +1852,7 @@ propertynotify(XEvent *e)
 		default: break;
 		case XA_WM_TRANSIENT_FOR:
 			if (!c->isfloating && (XGetTransientForHint(dpy, c->win, &trans)) 
-			// idea 
+			// idea 弹窗后其他窗口会变成floating, 这里先注释掉
 			// && (c->isfloating = (wintoclient(trans)) != NULL)
 			)
 				arrange(c->mon);
