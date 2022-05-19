@@ -119,7 +119,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,isfocused;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -281,6 +281,7 @@ static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
+static void tile2(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -579,6 +580,7 @@ buttonpress(XEvent *e)
 			click = ClkWinTitle;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
+		LOG("buttonpress.elseif", c->name);
 		restack(selmon);
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		click = ClkClientWin;
@@ -725,6 +727,7 @@ clientmessage(XEvent *e)
 			selmon = c->mon;
 			view(&a);
 			focus(c);
+			LOG("clientmessage", c->name);
 			restack(selmon);
 		}
 	}
@@ -1068,6 +1071,8 @@ enternotify(XEvent *e)
 	} else if (!c || c == selmon->sel)
 		return;
 	focus(c);
+	LOG("enternotify", c->name);
+	arrange(m);
 }
 
 void
@@ -1100,6 +1105,7 @@ focus(Client *c)
 		grabbuttons(c, 1);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
+		LOG("focus", c->name);
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -1371,6 +1377,7 @@ focusgrid(const Arg *arg)
 	if (c) {
 		focus(c);
 		restack(selmon);
+		arrange(selmon);
 	}
 
 }
@@ -1745,6 +1752,7 @@ motionnotify(XEvent *e)
 		unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
+		LOG("motionnotify", selmon->sel->name);
 	}
 	mon = m;
 }
@@ -1777,6 +1785,7 @@ movemouse(const Arg *arg)
 		case Expose:
 		case MapRequest:
 			handler[ev.type](&ev);
+			LOG("movemouse.xxx", c->name);
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -1798,6 +1807,7 @@ movemouse(const Arg *arg)
 				togglefloating(NULL);
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, c->w, c->h, 1);
+			LOG("movemouse.motionNotify", c->name);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
@@ -1806,6 +1816,7 @@ movemouse(const Arg *arg)
 		sendmon(c, m);
 		selmon = m;
 		focus(NULL);
+		LOG("movemouse.motionNotify.if", c->name);
 	}
 }
 
@@ -2204,6 +2215,7 @@ setfocus(Client *c)
 			(unsigned char *) &(c->win), 1);
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
+	c->isfocused = True;
 	lastfocused = c;
 }
 
@@ -2548,6 +2560,101 @@ tile(Monitor *m)
 		}
 }
 
+typedef struct 
+{
+	Client * c;
+	int x;
+	int y;
+	int w;
+	int h;
+	int interact;
+} geo_t;
+
+void
+geo( geo_t *g, Client *c, int x, int y, int w, int h, int interact)
+{
+	g->c = c;
+	g->x = x;
+	g->y = y;
+	g->w = w;
+	g->h = h;
+	g->interact =interact;
+}
+
+void
+tile2(Monitor *m)
+{
+	unsigned int i, n, h, mw, my, ty, masterend;
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster)
+		mw = m->nmaster ? m->ww * m->mfact : 0;
+	else
+		mw = m->ww - m->gap->gappx;
+
+
+	int focused_slave_index = -1;
+	geo_t gmap[n];
+	for (i = 0, my = ty = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{	
+		memset(gmap+i, 0, sizeof(geo_t));
+		if (i < m->nmaster) {
+			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
+			geo(gmap+i,c, m->wx + m->gap->gappx, m->wy + my, mw - (2*c->bw) - m->gap->gappx, h - (2*c->bw), 0);
+			geo_t g = gmap[i];
+			// resize(g.c, g.x, g.y, g.w, g.h, g.interact);
+			if (my + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
+				my += (g.h + 2*c->bw) + m->gap->gappx;
+			masterend = i;
+		} else {
+			if(c->isfocused){
+				focused_slave_index = i;
+			}
+			h = (m->wh - ty) / (n - i) - m->gap->gappx;
+			geo(gmap+i,c, m->wx + mw + m->gap->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gap->gappx, h - (2*c->bw), 0);
+			geo_t g = gmap[i];
+			//resize(g.c, g.x, g.y, g.w, g.h, g.interact);
+			if (ty + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
+				ty += (g.h + 2*c->bw) + m->gap->gappx;
+		}
+	}
+	
+	int slave_cnt = n - masterend - 1;
+	int focused_slave_h = m->wh -  m->gap->gappx;
+	if(slave_cnt > 0) focused_slave_h = (m->wh - m->gap->gappx) / slave_cnt ;
+	if(focused_slave_index > 0 && slave_cnt > 1) focused_slave_h = m->wh - m->gap->gappx - 200;
+	int unfocused_slave_h = m->wh -  m->gap->gappx;
+	if(slave_cnt > 1) unfocused_slave_h = (m->wh- m->gap->gappx - focused_slave_h ) / (slave_cnt -1) ;
+	if(slave_cnt == 1) unfocused_slave_h = m->wh - m->gap->gappx;
+
+	LOG("a","b");
+
+	int currenty = 0;
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		geo_t g = gmap[i];
+		if(i <= masterend){
+			resize(g.c, g.x, g.y, g.w, g.h, g.interact);
+			continue;
+		}
+		int h;
+		if(i == focused_slave_index){
+			h = focused_slave_h;
+		}else{
+			h = unfocused_slave_h;
+		}
+		resize(g.c, g.x, currenty + m->gap->gappx, g.w, h - m->gap->gappx, g.interact);
+		currenty += h;
+		// resize(g.c, g.x, g.y, g.w, g.h, g.interact);
+		//LOG("aa","bb");
+	}
+	
+}
+
 void
 togglebar(const Arg *arg)
 {
@@ -2677,6 +2784,7 @@ unfocus(Client *c, int setfocus)
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
+	c->isfocused = False;
 }
 
 void
