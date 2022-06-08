@@ -128,6 +128,7 @@ struct Client {
 	int focusindex;
 	Monitor *mon;
 	Window win;
+	int titlex, titlew;
 };
 
 typedef struct {
@@ -577,7 +578,17 @@ buttonpress(XEvent *e)
 				}
 			}
 		} else
+		{
 			click = ClkWinTitle;
+			Client *c;
+			for(c = selmon->clients; c; c = c->next){
+				if (ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
+				{
+					focus(c);
+					break;
+				}
+			}
+		}
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
 		LOG("buttonpress.elseif", c->name);
@@ -1010,7 +1021,11 @@ drawbar(Monitor *m)
 
 				drw_setscheme(drw, scheme[m->sel == c ? SchemeSel : SchemeNorm]);
 				if (tw > 0) /* trap special handling of 0 in drw_text */
+				{
 					drw_text(drw, x, 0, tw, bh, lrpad / 2, c->name, 0);
+					c->titlex = x;
+					c->titlew = tw;
+				}
 				if (c->isfloating)
 					drw_rect(drw, x + boxs, boxs, boxw, boxw, c->isfixed, 0);
 				x += tw;
