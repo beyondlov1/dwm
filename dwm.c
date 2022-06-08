@@ -1629,6 +1629,23 @@ killclient(const Arg *arg)
 
 }
 
+int 
+count(Client *c){
+	if (!c)
+	{
+		return 0;
+	}
+	
+	Client *tmp;
+	int i = 0;
+	for(tmp = c;tmp ;tmp = tmp->next)
+	{
+		if (ISVISIBLE(tmp))
+			i++;
+	}
+	return i;
+}
+
 void
 manage(Window w, XWindowAttributes *wa)
 {
@@ -1699,7 +1716,14 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	focus(NULL);
 
-	LOG("managed:",c->name);
+	int cnt = count(selmon->clients);
+	if (cnt>3)
+	{
+		Arg arg = {.ui= c->mon->tagset[c->mon->seltags] << 1 };
+		tag(&arg);
+	}
+	
+	//LOG("managed:",c->name);
 }
 
 void
