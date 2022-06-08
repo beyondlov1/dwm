@@ -6,3 +6,4 @@ drw.o
 dwm.o
 util.o
 log/*
+.vscode/*
