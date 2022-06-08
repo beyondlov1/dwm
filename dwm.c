@@ -2853,6 +2853,16 @@ unmanage(Client *c, int destroyed)
 	focus(NULL);
 	updateclientlist();
 	arrange(m);
+
+	if (count(m->clients) == 0)
+	{
+		int last = m->tagset[m->seltags] >> 1;
+		if(last){
+			Arg arg = {.ui= last};
+			view(&arg);
+		}
+	}
+	
 }
 
 void
