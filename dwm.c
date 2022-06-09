@@ -129,6 +129,7 @@ struct Client {
 	Monitor *mon;
 	Window win;
 	int titlex, titlew;
+	int priority;
 };
 
 typedef struct {
@@ -180,6 +181,7 @@ typedef struct {
 	unsigned int tags;
 	int isfloating;
 	int monitor;
+	int priority;
 } Rule;
 
 typedef struct {
@@ -398,6 +400,7 @@ applyrules(Client *c)
 		{
 			c->isfloating = r->isfloating;
 			c->tags |= r->tags;
+			c->priority = r->priority;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
@@ -1630,25 +1633,37 @@ killclient(const Arg *arg)
 }
 
 int 
-count(Client *c){
-	if (!c)
+counttag(Client *clients, int tags){
+	if (!clients)
 	{
 		return 0;
 	}
 	
 	Client *tmp;
 	int i = 0;
-	for(tmp = c;tmp ;tmp = tmp->next)
+	for(tmp = clients;tmp ;tmp = tmp->next)
 	{
-		if (ISVISIBLE(tmp))
+		if ((tmp->tags & tags) && !tmp->isfloating)
 			i++;
 	}
 	return i;
 }
 
+int 
+countcurtag(Client *clients){
+	counttag(clients, selmon->tagset[selmon->seltags]);
+}
+
 void
 manage(Window w, XWindowAttributes *wa)
 {
+
+	int tmptags = selmon->tagset[selmon->seltags];
+	while (counttag(selmon->clients, tmptags) >= 3)
+		tmptags = tmptags << 1;
+	Arg arg = {.ui= tmptags };
+	view(&arg);
+
 	Client *c, *t = NULL;
 	Window trans = None;
 	XWindowChanges wc;
@@ -1716,12 +1731,24 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	focus(NULL);
 
-	int cnt = count(selmon->clients);
-	if (cnt>3)
+	Client *maxpc;
+	Client *tmp;
+	int maxp = 0;
+	for (tmp = selmon->clients; tmp; tmp = tmp->next)
 	{
-		Arg arg = {.ui= c->mon->tagset[c->mon->seltags] << 1 };
-		tag(&arg);
+		if(ISVISIBLE(tmp)){
+			if(tmp->priority > maxp){
+				maxpc = tmp;
+				maxp = tmp->priority;
+			}	
+		}
 	}
+	if (c->priority > 0 && maxpc != c)
+	{
+		Arg arg = {0};
+		zoom(&arg);
+	}
+	
 	
 	//LOG("managed:",c->name);
 }
@@ -2854,7 +2881,7 @@ unmanage(Client *c, int destroyed)
 	updateclientlist();
 	arrange(m);
 
-	if (count(m->clients) == 0)
+	if (countcurtag(m->clients) == 0)
 	{
 		int last = m->tagset[m->seltags] >> 1;
 		if(last){

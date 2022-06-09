@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Wed Jun  8 15:07:01 2022
+# Make data base, printed on Thu Jun  9 14:46:46 2022
 
 # Variables
 
@@ -81,7 +81,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 LC_CTYPE = zh_CN.UTF-8
 # environment
-TERMINATOR_UUID = urn:uuid:23cf7b98-ef87-482e-acb2-5f8fe4a3bb1f
+TERMINATOR_UUID = urn:uuid:46f9b170-2ebb-4dbe-8c45-dd9fbd4c763b
 # makefile (from 'config.mk', line 24)
 INCS = -I${X11INC} -I${FREETYPEINC}
 # environment
@@ -89,7 +89,7 @@ LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 LC_NAME = zh_CN.UTF-8
 # environment
-VSCODE_CWD = /home/beyond/github/dwm
+VSCODE_CWD = /home/beyond
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
@@ -115,7 +115,7 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 # environment
 XDG_SESSION_DESKTOP = dwm
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-wToaeJ2lKuuR/agent.3633
+SSH_AUTH_SOCK = /tmp/ssh-RQYCaCilU4ez/agent.363625
 # automatic
 %F = $(notdir $%)
 # environment
@@ -135,7 +135,7 @@ X11INC = /usr/include/X11
 # environment
 XDG_SEAT = seat0
 # environment
-SSH_AGENT_PID = 3696
+SSH_AGENT_PID = 363690
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = undefined
 # environment
@@ -179,15 +179,15 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SHLVL = 2
+SHLVL = 9
 # makefile (from 'config.mk', line 38)
 CC = cc
 # environment
 JAVA_HOME = /home/beyond/software/bin/jdk1.8.0_281
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-7884db29-e016-44f1-baf9-37b39cf45f42.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-dc6222ec-f111-4efb-8894-75f8aa5089f9.sock
 # environment
-XDG_SESSION_ID = 5
+XDG_SESSION_ID = 87
 # environment
 USER = beyond
 # environment
@@ -204,8 +204,6 @@ LESS = -R
 LC_TELEPHONE = zh_CN.UTF-8
 # default
 MAKE_COMMAND := make
-# environment
-OLDPWD = /home/beyond
 # environment
 TERMINATOR_DBUS_PATH = /net/tenshu/Terminator2
 # default
@@ -275,20 +273,20 @@ LC_IDENTIFICATION = zh_CN.UTF-8
 # environment
 AUTOJUMP_ERROR_PATH = /home/beyond/.local/share/autojump/errors.log
 # environment
- 
 LC_ADDRESS = zh_CN.UTF-8
 # environment
+ 
 LANG = C
 # environment
 TERM = xterm-256color
 # environment
 TERMINATOR_DBUS_NAME = net.tenshu.Terminator21a9d5db22c73a993ff0b42f64b396873
 # environment
-VSCODE_PID = 3911
+VSCODE_PID = 364582
 # makefile (from 'config.mk', line 15)
 XINERAMAFLAGS = -DXINERAMA
 # variable set hash-table stats:
-# Load=138/1024=13%, Rehash=0, Collisions=26/185=14%
+# Load=137/1024=13%, Rehash=0, Collisions=26/184=14%
 
 # Pattern-specific Variable Values
 
@@ -471,6 +469,6 @@ install: all
 # strcache performance: lookups = 81 / hit rate = 50%
 # hash-table stats:
 # Load=40/8192=0%, Rehash=0, Collisions=1/81=1%
-# Finished Make data base on Wed Jun  8 15:07:01 2022
+# Finished Make data base on Thu Jun  9 14:46:46 2022
 
  
