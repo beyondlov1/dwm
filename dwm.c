@@ -1190,6 +1190,10 @@ distinctpush(Client *cc, Client *c)
 	{
 		return;
 	}
+	if(!cc){
+		cc = c;
+		return;
+	}
 	Client *tmp, *tmpnext = NULL;
 	int i = 100;
 	for (tmp = cc; tmp; tmp = tmp->lastfocus)
@@ -1657,12 +1661,19 @@ countcurtag(Client *clients){
 void
 manage(Window w, XWindowAttributes *wa)
 {
+	int curisfloating = 0;
+	Atom wtype = getwinatomprop(w, netatom[NetWMWindowType]);
+	if (wtype == netatom[NetWMWindowTypeDialog])
+		curisfloating = 1;
 
-	int tmptags = selmon->tagset[selmon->seltags];
-	while (counttag(selmon->clients, tmptags) >= 3)
-		tmptags = tmptags << 1;
-	Arg arg = {.ui= tmptags };
-	view(&arg);
+	if (!curisfloating)
+	{
+		int tmptags = selmon->tagset[selmon->seltags];
+		while (counttag(selmon->clients, tmptags) >= 3)
+			tmptags = tmptags << 1;
+		Arg arg = {.ui= tmptags };
+		view(&arg);
+	}
 
 	Client *c, *t = NULL;
 	Window trans = None;
@@ -1748,7 +1759,6 @@ manage(Window w, XWindowAttributes *wa)
 		Arg arg = {0};
 		zoom(&arg);
 	}
-	
 	
 	//LOG("managed:",c->name);
 }

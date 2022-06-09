@@ -4,6 +4,7 @@ echo dwm build options:
 echo "CFLAGS   = -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA"
 echo "LDFLAGS  = -L/usr/lib/X11 -lX11 -lXinerama -lfontconfig -lXft -lm"
 echo "CC       = cc"
+ 
 cp config.def.h config.h
 cc -c -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA drw.c
 cc -c -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA dwm.c
