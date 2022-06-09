@@ -256,6 +256,7 @@ static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
 static void resizerequest(XEvent *e);
 static void restack(Monitor *m);
+static void rerule(const Arg *arg);
 static void rotatestack(const Arg *arg);
 static void run(void);
 static void runAutostart(void);
@@ -411,6 +412,47 @@ applyrules(Client *c)
 	if (ch.res_name)
 		XFree(ch.res_name);
 	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
+}
+
+void
+rerule(const Arg *arg)
+{
+	Client *c;
+	for(c = selmon->clients; c; c = c->next){
+			const char *class, *instance;
+		unsigned int i;
+		const Rule *r;
+		Monitor *m;
+		XClassHint ch = { NULL, NULL };
+
+		/* rule matching */
+		c->isfloating = 0;
+		c->tags = 0;
+		XGetClassHint(dpy, c->win, &ch);
+		class    = ch.res_class ? ch.res_class : broken;
+		instance = ch.res_name  ? ch.res_name  : broken;
+
+		for (i = 0; i < LENGTH(subjrules); i++) {
+			r = &subjrules[i];
+			if ((!r->title || strstr(c->name, r->title))
+			&& (!r->class || strstr(class, r->class))
+			&& (!r->instance || strstr(instance, r->instance)))
+			{
+				c->isfloating = r->isfloating;
+				c->tags |= r->tags;
+				c->priority = r->priority;
+				for (m = mons; m && m->num != r->monitor; m = m->next);
+				if (m)
+					c->mon = m;
+			}
+		}
+		if (ch.res_class)
+			XFree(ch.res_class);
+		if (ch.res_name)
+			XFree(ch.res_name);
+		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
+	}
+	arrange(selmon);
 }
 
 int

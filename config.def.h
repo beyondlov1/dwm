@@ -64,7 +64,7 @@ static const Rule subjrules[] = {
 	 */
 	/* class                  instance    title       tags mask     isfloating   monitor  priority */
 	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5},
-	{ "X-terminal-emulator",  NULL,       NULL,       0,            0,           -1 , 1},
+	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,            0,           -1 , 1},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5},
@@ -116,6 +116,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
+	{ MODKEY,                       XK_r,      rerule,      {0} },
 	{ MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_k,      rotatestack,    {.i = -1 } },
 	{ MODKEY,                       XK_j,      focusgrid,     {.i = -2 } },
