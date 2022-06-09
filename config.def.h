@@ -49,14 +49,25 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor  priority */
-	// { "Gimp",     NULL,       NULL,       0,            1,           -1 },
 	{ "firefox",  NULL,       NULL,       NULL,       0,           -1 , 5},
 	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1},
 	{ "Code",  NULL,       NULL,       NULL,       0,           -1 , 5},
-	// { "Evince",  NULL,       NULL,       1 << 5,       0,           -1 },
-	// { "jetbrains-idea",  NULL,       NULL,       1 << 2,       0,           -1 },
-	// { "Code",  NULL,       NULL,       1 << 3,       0,           -1 },
-	// { "jetbrains-datagrip",  NULL,       NULL,       1 << 4,       0,           -1 },
+	{ "jetbrains-idea",  NULL,       NULL,       NULL,       0,           -1 , 5},
+	{ "jetbrains-datagrip",  NULL,       NULL,       NULL,       0,           -1 , 5},
+};
+
+
+static const Rule subjrules[] = {
+	/* xprop(1):
+	 *	WM_CLASS(STRING) = instance, class
+	 *	WM_NAME(STRING) = title
+	 */
+	/* class                  instance    title       tags mask     isfloating   monitor  priority */
+	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5},
+	{ "X-terminal-emulator",  NULL,       NULL,       0,            0,           -1 , 1},
+	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5},
+	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5},
+	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5},
 };
 
 /* layout(s) */
@@ -96,10 +107,11 @@ static const char *termcmd[]  = { "x-terminal-emulator", NULL };
 static const char scratchpadname[] = "scratchpad";
 static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
 static const char *roficmd[] = {"rofi","-show","combi",NULL};
+static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_w,      spawn,          {.v = chrome } },
+	{ MODKEY,                       XK_w,      spawn,          {.v = firefoxcmd } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
