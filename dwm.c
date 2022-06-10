@@ -130,6 +130,7 @@ struct Client {
 	Window win;
 	int titlex, titlew;
 	int priority;
+	int nstub;
 };
 
 typedef struct {
@@ -182,6 +183,7 @@ typedef struct {
 	int isfloating;
 	int monitor;
 	int priority;
+	int nstub;
 } Rule;
 
 typedef struct {
@@ -402,6 +404,7 @@ applyrules(Client *c)
 			c->isfloating = r->isfloating;
 			c->tags |= r->tags;
 			c->priority = r->priority;
+			c->nstub = r->nstub;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
@@ -441,6 +444,7 @@ rerule(const Arg *arg)
 				c->isfloating = r->isfloating;
 				c->tags |= r->tags;
 				c->priority = r->priority;
+				c->nstub = r->nstub;
 				for (m = mons; m && m->num != r->monitor; m = m->next);
 				if (m)
 					c->mon = m;
@@ -1690,7 +1694,7 @@ counttag(Client *clients, int tags){
 	for(tmp = clients;tmp ;tmp = tmp->next)
 	{
 		if ((tmp->tags & tags) && !tmp->isfloating)
-			i++;
+			i+=(tmp->nstub+1);
 	}
 	return i;
 }
@@ -1700,9 +1704,39 @@ countcurtag(Client *clients){
 	counttag(clients, selmon->tagset[selmon->seltags]);
 }
 
+Rule * 
+getwinrule(Window *win)
+{
+	Rule *target;
+	const char *class, *instance;
+	
+	XClassHint ch = { NULL, NULL };
+	XGetClassHint(dpy, win, &ch);
+	class    = ch.res_class ? ch.res_class : broken;
+	instance = ch.res_name  ? ch.res_name  : broken;
+
+	const Rule *r;
+	unsigned int i;
+	for (i = 0; i < LENGTH(rules); i++) {
+		r = &rules[i];
+		if ((!r->class || strstr(class, r->class))
+		    && (!r->instance || strstr(instance, r->instance)))
+		{
+			target = r;
+			break;
+		}
+	}
+	if (ch.res_class)
+		XFree(ch.res_class);
+	if (ch.res_name)
+		XFree(ch.res_name);
+	return target;
+}
+
 void
 manage(Window w, XWindowAttributes *wa)
 {
+	// 每个tag不能超过 n 个client, 超过则移动到下一个tag
 	int curisfloating = 0;
 	Atom wtype = getwinatomprop(w, netatom[NetWMWindowType]);
 	if (wtype == netatom[NetWMWindowTypeDialog])
@@ -1710,8 +1744,9 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (!curisfloating)
 	{
+		Rule * rule = getwinrule(w);
 		int tmptags = selmon->tagset[selmon->seltags];
-		while (counttag(selmon->clients, tmptags) >= 3)
+		while (counttag(selmon->clients, tmptags) >= 3-rule->nstub)
 			tmptags = tmptags << 1;
 		Arg arg = {.ui= tmptags };
 		view(&arg);

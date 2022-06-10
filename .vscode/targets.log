@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Thu Jun  9 15:12:24 2022
+# Make data base, printed on Fri Jun 10 14:14:24 2022
 
 # Variables
 
@@ -81,7 +81,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 LC_CTYPE = zh_CN.UTF-8
 # environment
-TERMINATOR_UUID = urn:uuid:0c20e526-d0d2-4cd8-b89a-74ebc6eb769b
+TERMINATOR_UUID = urn:uuid:36a83bfa-389c-4e89-8289-beb3c6f91c65
 # makefile (from 'config.mk', line 24)
 INCS = -I${X11INC} -I${FREETYPEINC}
 # environment
@@ -115,7 +115,7 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 # environment
 XDG_SESSION_DESKTOP = dwm
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-LDV5j0eB8ndp/agent.379832
+SSH_AUTH_SOCK = /tmp/ssh-mnJPeNJ3bP6w/agent.938579
 # automatic
 %F = $(notdir $%)
 # environment
@@ -135,7 +135,7 @@ X11INC = /usr/include/X11
 # environment
 XDG_SEAT = seat0
 # environment
-SSH_AGENT_PID = 379895
+SSH_AGENT_PID = 938642
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = undefined
 # environment
@@ -179,15 +179,15 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SHLVL = 10
+SHLVL = 13
 # makefile (from 'config.mk', line 38)
 CC = cc
 # environment
 JAVA_HOME = /home/beyond/software/bin/jdk1.8.0_281
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-ed214ff5-5fb5-4d5d-a855-4509efe6d159.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-f4a028f5-71d5-4798-bc24-37455ed926ae.sock
 # environment
-XDG_SESSION_ID = 90
+XDG_SESSION_ID = 161
 # environment
 USER = beyond
 # environment
@@ -282,7 +282,7 @@ TERM = xterm-256color
 # environment
 TERMINATOR_DBUS_NAME = net.tenshu.Terminator21a9d5db22c73a993ff0b42f64b396873
 # environment
-VSCODE_PID = 383357
+VSCODE_PID = 938788
 # makefile (from 'config.mk', line 15)
 XINERAMAFLAGS = -DXINERAMA
 # variable set hash-table stats:
@@ -469,6 +469,6 @@ install: all
 # strcache performance: lookups = 81 / hit rate = 50%
 # hash-table stats:
 # Load=40/8192=0%, Rehash=0, Collisions=1/81=1%
-# Finished Make data base on Thu Jun  9 15:12:24 2022
+# Finished Make data base on Fri Jun 10 14:14:24 2022
 
  

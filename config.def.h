@@ -48,12 +48,12 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class                 instance    title       tags mask     isfloating   monitor  priority */
-	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5},
-	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1},
-	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5},
-	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5},
-	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5},
+	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub*/
+	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              0},
+	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5,              0},
+	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
+	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 };
 
 
@@ -62,12 +62,12 @@ static const Rule subjrules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class                  instance    title       tags mask     isfloating   monitor  priority */
-	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5},
-	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1},
-	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5},
-	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5},
-	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5},
+	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub*/
+	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
+	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              0},
+	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
+	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
+	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2},
 };
 
 /* layout(s) */
