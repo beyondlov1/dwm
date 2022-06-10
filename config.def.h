@@ -48,12 +48,12 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating   monitor  priority */
-	{ "firefox",  NULL,       NULL,       NULL,       0,           -1 , 5},
+	/* class                 instance    title       tags mask     isfloating   monitor  priority */
+	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5},
 	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1},
-	{ "Code",  NULL,       NULL,       NULL,       0,           -1 , 5},
-	{ "jetbrains-idea",  NULL,       NULL,       NULL,       0,           -1 , 5},
-	{ "jetbrains-datagrip",  NULL,       NULL,       NULL,       0,           -1 , 5},
+	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5},
+	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5},
+	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5},
 };
 
 
@@ -64,14 +64,14 @@ static const Rule subjrules[] = {
 	 */
 	/* class                  instance    title       tags mask     isfloating   monitor  priority */
 	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5},
-	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,            0,           -1 , 1},
+	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5},
 };
 
 /* layout(s) */
-static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
+static const float mfact     = 0.70; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
