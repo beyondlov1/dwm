@@ -391,6 +391,7 @@ applyrules(Client *c)
 	/* rule matching */
 	c->isfloating = 0;
 	c->tags = 0;
+	c->nstub = 0;
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
@@ -1705,9 +1706,9 @@ countcurtag(Client *clients){
 }
 
 Rule * 
-getwinrule(Window *win)
+getwinrule(Window win)
 {
-	Rule *target;
+	const Rule *target = &defaultrule;
 	const char *class, *instance;
 	
 	XClassHint ch = { NULL, NULL };
@@ -1719,11 +1720,11 @@ getwinrule(Window *win)
 	unsigned int i;
 	for (i = 0; i < LENGTH(rules); i++) {
 		r = &rules[i];
-		if ((!r->class || strstr(class, r->class))
-		    && (!r->instance || strstr(instance, r->instance)))
+		if ((r->class && strstr(class, r->class))
+		    || (r->instance && strstr(instance, r->instance)))
 		{
+			LOG_FORMAT(" %s:%s ", r->class, class);
 			target = r;
-			break;
 		}
 	}
 	if (ch.res_class)
@@ -1746,10 +1747,15 @@ manage(Window w, XWindowAttributes *wa)
 	{
 		Rule * rule = getwinrule(w);
 		int tmptags = selmon->tagset[selmon->seltags];
-		while (counttag(selmon->clients, tmptags) >= 3-rule->nstub)
+		while (counttag(selmon->clients, tmptags) >= (3 - rule->nstub))
 			tmptags = tmptags << 1;
 		Arg arg = {.ui= tmptags };
 		view(&arg);
+		if (rule->nstub == 2 && selmon->sellt == 0)
+		{
+			const Arg arg = {.v = &layouts[1]};
+			setlayout(&arg);
+		}
 	}
 
 	Client *c, *t = NULL;
@@ -1769,6 +1775,7 @@ manage(Window w, XWindowAttributes *wa)
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
+		c->nstub = 0;
 	} else {
 		c->mon = selmon;
 		applyrules(c);
@@ -1782,7 +1789,12 @@ manage(Window w, XWindowAttributes *wa)
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
-	c->bw = borderpx;
+	if (selmon->sellt == 1)
+	{
+		c->bw = 0;
+	}else{
+		c->bw = borderpx;
+	}
 
 	selmon->tagset[selmon->seltags] &= ~scratchtag;
 	if (!strcmp(c->name, scratchpadname)) {

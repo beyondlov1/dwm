@@ -43,6 +43,7 @@ static const Launcher launchers[] = {
 /* Lockfile */
 static char lockfile[] = "/tmp/dwm.lock";
 
+static const Rule defaultrule = { "",              NULL,       NULL,       NULL,       0,           -1 , 0,              0};
 static const Rule rules[] = {
 	/* xprop(1):
 	 *	WM_CLASS(STRING) = instance, class
@@ -50,6 +51,7 @@ static const Rule rules[] = {
 	 */
 	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub*/
 	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{ "Google-chrome",        NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              0},
 	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
@@ -64,6 +66,7 @@ static const Rule subjrules[] = {
 	 */
 	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub*/
 	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
+	{ "Google-chrome",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
 	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              0},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
