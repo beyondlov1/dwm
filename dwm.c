@@ -230,6 +230,7 @@ static void focusstack(const Arg *arg);
 static void focusgrid(const Arg *arg);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
+static unsigned int getmaxtags();
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static unsigned int getsystraywidth();
@@ -311,6 +312,7 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void relview(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static Client *wintosystrayicon(Window w);
@@ -418,6 +420,18 @@ applyrules(Client *c)
 	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 }
 
+
+unsigned int
+getmaxtags(){
+	// 将没有rule的client放到最后一个空闲tag
+	Client *c;
+	unsigned int maxtags = 0;
+	for(c = selmon->clients; c; c = c->next)
+		if (c->tags > maxtags)
+			maxtags = c->tags;
+	return maxtags;
+}
+
 void
 rerule(const Arg *arg)
 {
@@ -454,7 +468,13 @@ rerule(const Arg *arg)
 		if (ch.res_class)
 			XFree(ch.res_class);
 		if (ch.res_name)
-			XFree(ch.res_name);
+			XFree(ch.res_name);	
+	}
+	unsigned int maxtags = getmaxtags();
+	for(c = selmon->clients; c; c = c->next)
+	{
+		if (c->tags == 0)
+			c->tags = maxtags << 1;
 		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 	}
 	arrange(selmon);
@@ -1746,15 +1766,18 @@ manage(Window w, XWindowAttributes *wa)
 	if (!curisfloating)
 	{
 		Rule * rule = getwinrule(w);
-		int tmptags = selmon->tagset[selmon->seltags];
-		while (counttag(selmon->clients, tmptags) >= (3 - rule->nstub))
-			tmptags = tmptags << 1;
-		Arg arg = {.ui= tmptags };
-		view(&arg);
-		if (rule->nstub == 2 && selmon->sellt == 0)
+		if (!rule->isfloating)
 		{
-			const Arg arg = {.v = &layouts[1]};
-			setlayout(&arg);
+			int tmptags = selmon->tagset[selmon->seltags];
+			while (counttag(selmon->clients, tmptags) >= (3 - rule->nstub))
+				tmptags = tmptags << 1;
+			Arg arg = {.ui= tmptags };
+			view(&arg);
+			if (rule->nstub == 2 && selmon->sellt == 0)
+			{
+				const Arg arg = {.v = &layouts[1]};
+				setlayout(&arg);
+			}	
 		}
 	}
 
@@ -3430,6 +3453,32 @@ view(const Arg *arg)
 	focus(NULL);
 	arrange(selmon);
 	updatecurrentdesktop();
+}
+
+void
+relview(const Arg *arg)
+{
+	unsigned int maxtags = getmaxtags();
+	unsigned int nexttags = 0;
+	if (arg->i > 0)
+	{
+		nexttags = selmon->tagset[selmon->seltags] << arg->i;
+		if (nexttags > maxtags)
+			nexttags = 1;	
+	}
+	if (arg->i < 0)
+	{
+		nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
+		if (!nexttags)
+			nexttags = maxtags ;
+	}
+
+	if (arg -> i != 0 && nexttags)
+	{
+		Arg viewarg = {.ui = nexttags};
+		view(&viewarg);
+	}
+	
 }
 
 Client *

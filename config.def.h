@@ -56,6 +56,8 @@ static const Rule rules[] = {
 	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{ "Evince",               NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
 };
 
 
@@ -71,6 +73,8 @@ static const Rule subjrules[] = {
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2},
+	{ "Evince",               NULL,       NULL,       1 << 5,       0,           -1 , 5,              2},
+	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
 };
 
 /* layout(s) */
@@ -111,12 +115,14 @@ static const char scratchpadname[] = "scratchpad";
 static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
 static const char *roficmd[] = {"rofi","-show","combi",NULL};
 static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
+static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_w,      spawn,          {.v = firefoxcmd } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
+	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	{ MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
@@ -136,6 +142,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
+	{ MODKEY,                       XK_u,    relview,           {.i=-1} },
+	{ MODKEY,                       XK_o,    relview,           {.i=1} },
 	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
