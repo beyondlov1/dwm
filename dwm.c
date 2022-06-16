@@ -1704,7 +1704,7 @@ killclient(const Arg *arg)
 }
 
 int 
-counttag(Client *clients, int tags){
+counttagnstub(Client *clients, int tags){
 	if (!clients)
 	{
 		return 0;
@@ -1721,7 +1721,21 @@ counttag(Client *clients, int tags){
 }
 
 int 
-countcurtag(Client *clients){
+countcurtagnstub(Client *clients){
+	counttagnstub(clients, selmon->tagset[selmon->seltags]);
+}
+
+int counttag(Client *clients, int tags){
+	int i = 0;
+	Client *tmp;
+	for (tmp = clients; tmp; tmp = tmp->next)
+		if (ISVISIBLE(tmp))
+			i ++;
+	return i;
+}
+
+int countcurtag(Client *clients)
+{
 	counttag(clients, selmon->tagset[selmon->seltags]);
 }
 
@@ -1769,7 +1783,7 @@ manage(Window w, XWindowAttributes *wa)
 		if (!rule->isfloating)
 		{
 			int tmptags = selmon->tagset[selmon->seltags];
-			while (counttag(selmon->clients, tmptags) >= (3 - rule->nstub))
+			while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
 				tmptags = tmptags << 1;
 			Arg arg = {.ui= tmptags };
 			view(&arg);
