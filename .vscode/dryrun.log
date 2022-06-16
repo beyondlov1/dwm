@@ -1,5 +1,5 @@
 make --dry-run --always-make --keep-going --print-directory
-make: Entering directory '/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm'
+make: Entering directory '/home/beyond/github/dwm'
 echo dwm build options:
 echo "CFLAGS   = -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA"
 echo "LDFLAGS  = -L/usr/lib/X11 -lX11 -lXinerama -lfontconfig -lXft -lm"
@@ -9,5 +9,5 @@ cc -c -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X
 cc -c -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA dwm.c
 cc -c -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os -I/usr/include/X11 -I/usr/include/freetype2 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"6.3\" -DXINERAMA util.c
 cc -o dwm drw.o dwm.o util.o -L/usr/lib/X11 -lX11 -lXinerama -lfontconfig -lXft -lm
-make: Leaving directory '/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm'
+make: Leaving directory '/home/beyond/github/dwm'
  

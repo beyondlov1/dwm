@@ -52,7 +52,8 @@ static const Rule rules[] = {
 	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub*/
 	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "Google-chrome",        NULL,       NULL,       NULL,       0,           -1 , 5,              2},
-	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              0},
+	{ "Sidekick-browser",     NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              -1},
 	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
@@ -69,7 +70,8 @@ static const Rule subjrules[] = {
 	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub*/
 	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
 	{ "Google-chrome",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
-	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              0},
+	{ "Sidekick-browser",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
+	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2},

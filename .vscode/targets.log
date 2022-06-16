@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Jun 11 12:21:05 2022
+# Make data base, printed on Thu Jun 16 19:56:55 2022
 
 # Variables
 
@@ -14,6 +14,8 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 GNUMAKEFLAGS := 
 # automatic
 <D = $(patsubst %/,%,$(dir $<))
+# makefile (from 'config.mk', line 7)
+PREFIX = /usr/local
 # automatic
 ?F = $(notdir $?)
 # environment
@@ -45,15 +47,15 @@ GDMSESSION = dwm
 # environment
 XMODIFIERS = @im=ibus
 # makefile
-CURDIR := /media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm
+CURDIR := /home/beyond/github/dwm
 # makefile
 SHELL = /bin/sh
 # environment
 VTE_VERSION = 6003
 # environment
-VSCODE_NLS_CONFIG = {"locale":"en-gb","availableLanguages":{},"_languagePackSupport":true}
+VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupport":true}
 # environment
-_ = /usr/share/code/code
+_ = /usr/bin/code
 # makefile (from 'config.mk', line 30)
 CFLAGS = -std=c99 -pedantic -Wall -Wno-deprecated-declarations -Os ${INCS} ${CPPFLAGS}
 # environment
@@ -77,9 +79,9 @@ VERSION = 6.3
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-LC_CTYPE = en_GB.UTF-8
+LC_CTYPE = zh_CN.UTF-8
 # environment
-TERMINATOR_UUID = urn:uuid:87143028-4099-4084-afd0-b465bb560a1c
+TERMINATOR_UUID = urn:uuid:f41b99ef-b0a2-447f-911d-ec1571ae4811
 # makefile (from 'config.mk', line 24)
 INCS = -I${X11INC} -I${FREETYPEINC}
 # environment
@@ -87,11 +89,11 @@ LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 LC_NAME = zh_CN.UTF-8
 # environment
-VSCODE_CWD = /home/beyond
+VSCODE_CWD = /home/beyond/github/dwm
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
-PATH = /home/beyond/.local/bin:/home/beyond/.autojump/bin:/home/beyond/shell:/home/beyond/software:/home/beyond/.autojump/bin:/home/beyond/shell:/home/beyond/software:/home/beyond/.local/bin:/home/beyond/.autojump/bin:/home/beyond/shell:/home/beyond/software:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+PATH = /home/beyond/.autojump/bin:/home/beyond/.tiup/bin:/home/beyond/software:/home/beyond/.local/bin:/home/beyond/.autojump/bin:/home/beyond/.tiup/bin:/home/beyond/software:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
@@ -99,11 +101,11 @@ LSCOLORS = Gxfxcxdxdxegedabagacad
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
-NOTEDIR = /home/beyond/Documents/tmp/work-note-data
+NOTEDIR = /home/beyond/Documents/note-data
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_CRASH_REPORTER_START_OPTIONS = {"companyName":"Microsoft","productName":"VSCode","submitURL":"appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171&uid=d088c81d-e4ff-4428-be9a-ce2ddc3edfa6&iid=d088c81d-e4ff-4428-be9a-ce2ddc3edfa6&sid=d088c81d-e4ff-4428-be9a-ce2ddc3edfa6","uploadToServer":true}
+VSCODE_CRASH_REPORTER_START_OPTIONS = {"companyName":"Microsoft","productName":"VSCode","submitURL":"appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171&uid=828e468f-4c4c-4807-a662-2161bdba3bff&iid=828e468f-4c4c-4807-a662-2161bdba3bff&sid=828e468f-4c4c-4807-a662-2161bdba3bff","uploadToServer":true}
 # makefile (from 'config.mk', line 31)
 LDFLAGS = ${LIBS}
 # default
@@ -113,7 +115,7 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 # environment
 XDG_SESSION_DESKTOP = dwm
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-XlSdB88jhmEC/agent.1047828
+SSH_AUTH_SOCK = /tmp/ssh-zcvn4Q7501xN/agent.979079
 # automatic
 %F = $(notdir $%)
 # environment
@@ -123,12 +125,7 @@ GTK_IM_MODULE = ibus
 # environment
 VSCODE_PIPE_LOGGING = true
 # environment
-PWD = /media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm
-# environment
-define COMP_WORDBREAKS
- 	
-"'><=;|&(
-endef
+PWD = /home/beyond/github/dwm
 # environment
 OSH = /home/beyond/.oh-my-bash
 # default
@@ -138,7 +135,7 @@ X11INC = /usr/include/X11
 # environment
 XDG_SEAT = seat0
 # environment
-SSH_AGENT_PID = 1047913
+SSH_AGENT_PID = 979142
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = undefined
 # environment
@@ -150,15 +147,17 @@ HOME = /home/beyond
 # environment
 LESSCLOSE = /usr/bin/lesspipe %s %s
 # environment
-VSCODE_CODE_CACHE_PATH = /home/beyond/.config/Code/CachedData/6cba118ac49a1b88332f312a8f67186f7f3c1643
+VSCODE_CLI = 1
+# environment
+VSCODE_CODE_CACHE_PATH = /home/beyond/.config/Code/CachedData/ccbaa2d27e38e5afa3e5c21c1c7bef4657064247
 # environment
 LOGNAME = beyond
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # automatic
 +F = $(notdir $+)
-# makefile (from 'config.mk', line 7)
-PREFIX = /usr/local
+# environment
+ELECTRON_NO_ATTACH_CONSOLE = 1
 # environment
 VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 # default
@@ -180,13 +179,15 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SHLVL = 9
+SHLVL = 14
 # makefile (from 'config.mk', line 38)
 CC = cc
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-469a7c78-d3f4-4aad-864d-68ab7380c9c0.sock
+JAVA_HOME = /home/beyond/software/bin/jdk1.8.0_281
 # environment
-XDG_SESSION_ID = 269
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-9a41a08b-ea4f-4243-b2ca-b2cfe925debd.sock
+# environment
+XDG_SESSION_ID = 168
 # environment
 USER = beyond
 # environment
@@ -204,15 +205,17 @@ LC_TELEPHONE = zh_CN.UTF-8
 # default
 MAKE_COMMAND := make
 # environment
+OLDPWD = /home/beyond/Downloads/powerfolder/PowerFolder
+# environment
 TERMINATOR_DBUS_PATH = /net/tenshu/Terminator2
 # default
 .VARIABLES := 
 # automatic
 *F = $(notdir $*)
 # environment
-LANGUAGE = en_GB:en
+LANGUAGE = zh_CN:en
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-8914be2d-1.61.2-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-8914be2d-1.62.3-main.sock
 # makefile
 MAKEFLAGS = pqrR
 # environment
@@ -231,8 +234,6 @@ MANPREFIX = ${PREFIX}/share/man
 LC_PAPER = zh_CN.UTF-8
 # environment
 QT_ACCESSIBILITY = 1
-# environment
-XIM_PROGRAM = ibus-daemon
 # default
 MAKEFILES := 
 # environment
@@ -249,6 +250,8 @@ LC_MEASUREMENT = zh_CN.UTF-8
 PAGER = less
 # environment
 LC_ALL = C
+# environment
+_JAVA_AWT_WM_NONREPARENTING = 1
 # makefile (from 'config.mk', line 25)
 LIBS = -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS} -lm
 # automatic
@@ -275,17 +278,17 @@ AUTOJUMP_ERROR_PATH = /home/beyond/.local/share/autojump/errors.log
 LC_ADDRESS = zh_CN.UTF-8
 # environment
 LANG = C
- 
 # environment
+ 
 TERM = xterm-256color
 # environment
 TERMINATOR_DBUS_NAME = net.tenshu.Terminator21a9d5db22c73a993ff0b42f64b396873
 # environment
-VSCODE_PID = 1049623
+VSCODE_PID = 378382
 # makefile (from 'config.mk', line 15)
 XINERAMAFLAGS = -DXINERAMA
 # variable set hash-table stats:
-# Load=135/1024=13%, Rehash=0, Collisions=22/182=12%
+# Load=138/1024=13%, Rehash=0, Collisions=26/185=14%
 
 # Pattern-specific Variable Values
 
@@ -293,7 +296,7 @@ XINERAMAFLAGS = -DXINERAMA
 
 # Directories
 
-# . (device 2081, inode 3933825): 28 files, no impossibilities.
+# . (device 2049, inode 6480111): 28 files, no impossibilities.
 
 # 28 files, no impossibilities in 1 directories.
 
@@ -306,7 +309,7 @@ XINERAMAFLAGS = -DXINERAMA
 # Not a target:
 config.mk:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-04 18:49:19.166279656
+#  Last modified 2022-05-05 11:22:11.477985274
 #  File has been updated.
 #  Successfully updated.
 
@@ -343,7 +346,7 @@ uninstall:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-02 11:53:55.59129854
+#  Last modified 2022-05-05 11:22:11.477985274
 #  File has been updated.
 #  Successfully updated.
 
@@ -468,6 +471,6 @@ install: all
 # strcache performance: lookups = 81 / hit rate = 50%
 # hash-table stats:
 # Load=40/8192=0%, Rehash=0, Collisions=1/81=1%
-# Finished Make data base on Sat Jun 11 12:21:05 2022
+# Finished Make data base on Thu Jun 16 19:56:55 2022
 
  
