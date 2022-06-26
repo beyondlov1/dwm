@@ -292,6 +292,7 @@ static void tile2(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
+static void togglestick(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -2920,6 +2921,32 @@ togglescratch(const Arg *arg)
 		}
 	} else
 		spawn(arg);
+}
+
+void
+togglestick(const Arg *arg)
+{
+	Client * c = selmon->sel ;
+	if (!c)
+	{
+		return;
+	}
+	
+	if (!c->isfloating)
+	{
+		c->isfloating = True;
+		int neww = selmon->ww * 0.4;
+		int newh = selmon->wh * 0.4;
+		c->x = selmon->ww / 2 - neww / 2;
+		c->y = selmon->wh / 2 - newh / 2;
+		c->tags = 0xFFFFFFFF;
+		arrange(selmon);			
+		resize(c, c->x, c->y, neww, newh, 0);
+	}else{
+		c->isfloating = False;
+		c->tags = selmon->tagset[selmon->seltags];
+		arrange(selmon);
+	}
 }
 
 void
