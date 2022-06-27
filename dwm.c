@@ -197,6 +197,26 @@ struct Systray {
 	Client *icons;
 };
 
+typedef struct 
+{
+	Client * c;
+	int x;
+	int y;
+	int w;
+	int h;
+	int interact;
+} geo_t;
+
+
+typedef struct ScatchItem ScatchItem;
+struct ScatchItem
+{
+	Client *c;
+	int tags;
+	int pretags;
+};
+
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -264,6 +284,7 @@ static void rotatestack(const Arg *arg);
 static void run(void);
 static void runAutostart(void);
 static void scan(void);
+static void scatch(const Arg *arg);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
 static void setclientstate(Client *c, long state);
@@ -292,7 +313,7 @@ static void tile2(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
-static void togglestick(const Arg *arg);
+static void togglescatch(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -363,6 +384,7 @@ static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
 static Client *lastfocused;
+static ScatchItem *scatchitemptr;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -2628,6 +2650,10 @@ setup(void)
 	XSelectInput(dpy, root, wa.event_mask);
 	grabkeys();
 	focus(NULL);
+
+	scatchitemptr = (ScatchItem *)malloc(sizeof(ScatchItem));
+	memset(scatchitemptr, 0, sizeof(ScatchItem));
+
 }
 
 
@@ -2763,15 +2789,6 @@ tile(Monitor *m)
 		}
 }
 
-typedef struct 
-{
-	Client * c;
-	int x;
-	int y;
-	int w;
-	int h;
-	int interact;
-} geo_t;
 
 void
 geo( geo_t *g, Client *c, int x, int y, int w, int h, int interact)
@@ -2923,18 +2940,29 @@ togglescratch(const Arg *arg)
 		spawn(arg);
 }
 
-void
-togglestick(const Arg *arg)
+void 
+scatch(const Arg *arg)
 {
 	Client * c = selmon->sel ;
-	if (!c)
-	{
-		return;
+	if (!c) return;
+	if(scatchitemptr->c != c){
+		scatchitemptr->pretags = c->tags;
+		scatchitemptr->tags = c->tags;
 	}
-	
+	scatchitemptr->c = c;
+	togglescatch(arg);
+}
+
+
+void
+togglescatch(const Arg *arg)
+{
+	Client * c = scatchitemptr->c;
+	if (!c) return;
 	if (!c->isfloating)
 	{
 		c->isfloating = True;
+		c->isfixed = True;
 		int neww = selmon->ww * 0.4;
 		int newh = selmon->wh * 0.4;
 		c->x = selmon->ww / 2 - neww / 2;
@@ -2942,11 +2970,20 @@ togglestick(const Arg *arg)
 		c->tags = 0xFFFFFFFF;
 		arrange(selmon);			
 		resize(c, c->x, c->y, neww, newh, 0);
+		focus(c);
 	}else{
 		c->isfloating = False;
-		c->tags = selmon->tagset[selmon->seltags];
+		c->isfixed = False;
+		if(scatchitemptr->pretags)
+			c->tags = scatchitemptr->pretags;
+		else
+			c->tags = selmon->tagset[selmon->seltags];
 		arrange(selmon);
+		focus(NULL);
 	}
+	scatchitemptr->c = c;
+	scatchitemptr->pretags = scatchitemptr->tags;
+	scatchitemptr->tags = c->tags;
 }
 
 void
