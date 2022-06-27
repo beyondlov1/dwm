@@ -2961,25 +2961,23 @@ togglescatch(const Arg *arg)
 	if (!c) return;
 	if (!c->isfloating)
 	{
-		c->isfloating = True;
-		c->isfixed = True;
+		c->isfloating = 1;
 		int neww = selmon->ww * 0.4;
 		int newh = selmon->wh * 0.4;
 		c->x = selmon->ww / 2 - neww / 2;
 		c->y = selmon->wh / 2 - newh / 2;
 		c->tags = 0xFFFFFFFF;
+		focus(c);
 		arrange(selmon);			
 		resize(c, c->x, c->y, neww, newh, 0);
-		focus(c);
 	}else{
-		c->isfloating = False;
-		c->isfixed = False;
+		c->isfloating = 0;
 		if(scatchitemptr->pretags)
 			c->tags = scatchitemptr->pretags;
 		else
 			c->tags = selmon->tagset[selmon->seltags];
-		arrange(selmon);
 		focus(NULL);
+		arrange(selmon);
 	}
 	scatchitemptr->c = c;
 	scatchitemptr->pretags = scatchitemptr->tags;
