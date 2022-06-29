@@ -1752,7 +1752,7 @@ int counttag(Client *clients, int tags){
 	int i = 0;
 	Client *tmp;
 	for (tmp = clients; tmp; tmp = tmp->next)
-		if (ISVISIBLE(tmp))
+		if ((tmp->tags & tags) > 0)
 			i ++;
 	return i;
 }
@@ -3452,12 +3452,12 @@ updatetitle(Client *c)
 {
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
 		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
-	char *subname;
-	for(subname = c->name;*subname != '\0'; subname++);
-	for(;subname != c->name && *subname != '-'; subname--);
-	if (subname == c->name ) return;
-	for (; *subname != '\0' && (*subname == ' ' || *subname == '-'); subname++);
-	if(subname[0] != '\0' && subname[1] != '\0') strcpy(c->name, subname);
+	// char *subname;
+	// for(subname = c->name;*subname != '\0'; subname++);
+	// for(;subname != c->name && *subname != '-'; subname--);
+	// if (subname == c->name ) return;
+	// for (; *subname != '\0' && (*subname == ' ' || *subname == '-'); subname++);
+	// if(subname[0] != '\0' && subname[1] != '\0') strcpy(c->name, subname);
 	if (c->name[0] == '\0') /* hack to mark broken clients */
 		strcpy(c->name, broken);
 }
@@ -3540,14 +3540,30 @@ relview(const Arg *arg)
 	if (arg->i > 0)
 	{
 		nexttags = selmon->tagset[selmon->seltags] << arg->i;
-		if (nexttags > maxtags)
-			nexttags = 1;	
+		while (counttag(selmon->clients, nexttags) == 0)
+		{
+			if (nexttags > maxtags)
+			{
+				nexttags = 1;
+				break;
+			}else {
+				nexttags = nexttags << 1;
+			}
+		}
 	}
 	if (arg->i < 0)
 	{
 		nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
-		if (!nexttags)
-			nexttags = maxtags ;
+		while (counttag(selmon->clients, nexttags) == 0)
+		{
+			if (!nexttags)
+			{
+		  		nexttags = maxtags ;
+				break;
+			}else {
+				nexttags = nexttags >> 1;
+			}
+		}
 	}
 
 	if (arg -> i != 0 && nexttags)
