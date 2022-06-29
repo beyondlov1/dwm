@@ -213,7 +213,7 @@ struct ScatchItem
 {
 	Client *c;
 	int tags;
-	int pretags;
+	int pretiledtags;
 };
 
 
@@ -2946,7 +2946,7 @@ scatch(const Arg *arg)
 	Client * c = selmon->sel ;
 	if (!c) return;
 	if(scatchitemptr->c != c){
-		scatchitemptr->pretags = c->tags;
+		scatchitemptr->pretiledtags = c->tags;
 		scatchitemptr->tags = c->tags;
 	}
 	scatchitemptr->c = c;
@@ -2961,6 +2961,7 @@ togglescatch(const Arg *arg)
 	if (!c) return;
 	if (!c->isfloating)
 	{
+		scatchitemptr->pretiledtags = c->tags;
 		c->isfloating = 1;
 		int neww = selmon->ww * 0.4;
 		int newh = selmon->wh * 0.4;
@@ -2972,15 +2973,15 @@ togglescatch(const Arg *arg)
 		resize(c, c->x, c->y, neww, newh, 0);
 	}else{
 		c->isfloating = 0;
-		if(scatchitemptr->pretags)
-			c->tags = scatchitemptr->pretags;
+		if(scatchitemptr->pretiledtags)
+			c->tags = scatchitemptr->pretiledtags;
 		else
 			c->tags = selmon->tagset[selmon->seltags];
 		focus(NULL);
 		arrange(selmon);
+		scatchitemptr->pretiledtags = scatchitemptr->tags;
 	}
 	scatchitemptr->c = c;
-	scatchitemptr->pretags = scatchitemptr->tags;
 	scatchitemptr->tags = c->tags;
 }
 
