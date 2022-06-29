@@ -1752,7 +1752,7 @@ int counttag(Client *clients, int tags){
 	int i = 0;
 	Client *tmp;
 	for (tmp = clients; tmp; tmp = tmp->next)
-		if (ISVISIBLE(tmp))
+		if ((tmp->tags & tags) > 0)
 			i ++;
 	return i;
 }
@@ -3539,14 +3539,30 @@ relview(const Arg *arg)
 	if (arg->i > 0)
 	{
 		nexttags = selmon->tagset[selmon->seltags] << arg->i;
-		if (nexttags > maxtags)
-			nexttags = 1;	
+		while (counttag(selmon->clients, nexttags) == 0)
+		{
+			if (nexttags > maxtags)
+			{
+				nexttags = 1;
+				break;
+			}else {
+				nexttags = nexttags << 1;
+			}
+		}
 	}
 	if (arg->i < 0)
 	{
 		nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
-		if (!nexttags)
-			nexttags = maxtags ;
+		while (counttag(selmon->clients, nexttags) == 0)
+		{
+			if (!nexttags)
+			{
+		  		nexttags = maxtags ;
+				break;
+			}else {
+				nexttags = nexttags >> 1;
+			}
+		}
 	}
 
 	if (arg -> i != 0 && nexttags)
