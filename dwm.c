@@ -1387,7 +1387,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->x < cc->x && ISVISIBLE(c))
+			if (cc && c->x < cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
@@ -1406,7 +1406,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->x > cc->x && ISVISIBLE(c))
+			if (cc && c->x > cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
@@ -1427,7 +1427,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->y < cc->y && ISVISIBLE(c))
+			if (cc && c->y < cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
@@ -1448,7 +1448,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->y > cc->y && ISVISIBLE(c))
+			if (cc && c->y > cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
