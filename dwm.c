@@ -1492,6 +1492,9 @@ focusgrid(const Arg *arg)
 		arrange(selmon);
 	}
 
+	Client *focustmp;
+	for(focustmp = selmon->sel; focustmp; focustmp = focustmp->lastfocus)
+		LOG_FORMAT("<-%s\n", focustmp->name);
 }
 
 Atom
@@ -2961,9 +2964,10 @@ togglescatch(const Arg *arg)
 	if (!c) return;
 	if (!c->isfloating)
 	{
+		scatchitemptr->pretags = c->tags;
 		c->isfloating = 1;
-		int neww = selmon->ww * 0.4;
-		int newh = selmon->wh * 0.4;
+		int neww = selmon->ww * 0.5;
+		int newh = selmon->wh * 0.6;
 		c->x = selmon->ww / 2 - neww / 2;
 		c->y = selmon->wh / 2 - newh / 2;
 		c->tags = 0xFFFFFFFF;
@@ -2980,7 +2984,6 @@ togglescatch(const Arg *arg)
 		arrange(selmon);
 	}
 	scatchitemptr->c = c;
-	scatchitemptr->pretags = scatchitemptr->tags;
 	scatchitemptr->tags = c->tags;
 }
 

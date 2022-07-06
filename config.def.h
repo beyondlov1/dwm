@@ -119,10 +119,11 @@ static const char *scratchpadcmd[] = {"jumpapp", "chrome", NULL };
 static const char *roficmd[] = {"rofi","-show","combi",NULL};
 static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
+static const char *browser[] = {"sidk.sh",NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_w,      spawn,          {.v = firefoxcmd } },
+	{ MODKEY,                       XK_q,      spawn,          {.v = browser } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
