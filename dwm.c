@@ -213,7 +213,7 @@ struct ScatchItem
 {
 	Client *c;
 	int tags;
-	int pretiledtags;
+	int pretags;
 };
 
 
@@ -1387,7 +1387,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->x < cc->x && ISVISIBLE(c))
+			if (cc && c->x < cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
@@ -1406,7 +1406,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->x > cc->x && ISVISIBLE(c))
+			if (cc && c->x > cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
@@ -1427,7 +1427,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->y < cc->y && ISVISIBLE(c))
+			if (cc && c->y < cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
@@ -1448,7 +1448,7 @@ focusgrid(const Arg *arg)
 		int min = INT_MAX;
 		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
 		{
-			if (c->y > cc->y && ISVISIBLE(c))
+			if (cc && c->y > cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
@@ -1492,6 +1492,9 @@ focusgrid(const Arg *arg)
 		arrange(selmon);
 	}
 
+	Client *focustmp;
+	for(focustmp = selmon->sel; focustmp; focustmp = focustmp->lastfocus)
+		LOG_FORMAT("<-%s\n", focustmp->name);
 }
 
 Atom
@@ -2946,7 +2949,7 @@ scatch(const Arg *arg)
 	Client * c = selmon->sel ;
 	if (!c) return;
 	if(scatchitemptr->c != c){
-		scatchitemptr->pretiledtags = c->tags;
+		scatchitemptr->pretags = c->tags;
 		scatchitemptr->tags = c->tags;
 	}
 	scatchitemptr->c = c;
@@ -2961,10 +2964,10 @@ togglescatch(const Arg *arg)
 	if (!c) return;
 	if (!c->isfloating)
 	{
-		scatchitemptr->pretiledtags = c->tags;
+		scatchitemptr->pretags = c->tags;
 		c->isfloating = 1;
-		int neww = selmon->ww * 0.4;
-		int newh = selmon->wh * 0.4;
+		int neww = selmon->ww * 0.5;
+		int newh = selmon->wh * 0.6;
 		c->x = selmon->ww / 2 - neww / 2;
 		c->y = selmon->wh / 2 - newh / 2;
 		c->tags = 0xFFFFFFFF;
@@ -2973,13 +2976,12 @@ togglescatch(const Arg *arg)
 		resize(c, c->x, c->y, neww, newh, 0);
 	}else{
 		c->isfloating = 0;
-		if(scatchitemptr->pretiledtags)
-			c->tags = scatchitemptr->pretiledtags;
+		if(scatchitemptr->pretags)
+			c->tags = scatchitemptr->pretags;
 		else
 			c->tags = selmon->tagset[selmon->seltags];
 		focus(NULL);
 		arrange(selmon);
-		scatchitemptr->pretiledtags = scatchitemptr->tags;
 	}
 	scatchitemptr->c = c;
 	scatchitemptr->tags = c->tags;
