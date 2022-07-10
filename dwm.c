@@ -2856,6 +2856,15 @@ tile2(Monitor *m)
 
 	LOG("a","b");
 
+	if (i == 1)
+	{
+		geo_t onlyg = gmap[0];
+		onlyg.c->bw = 0;
+		resize(onlyg.c, onlyg.c->mon->wx, onlyg.c->mon->wy, onlyg.c->mon->ww, onlyg.c->mon->wh, onlyg.interact);
+		onlyg.c->bw = onlyg.c->oldbw;
+		return;
+	}
+
 	int currenty = 0;
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 	{
