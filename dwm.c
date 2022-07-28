@@ -1360,8 +1360,8 @@ smartchoose(Client *t, Client *c1, Client *c2)
 void
 LOG(char *content, char * content2){
 	FILE *f = fopen("/home/beyond/m.log","a");
-	fprintf(f,"%s%s", content, content2);
-	fclose(f);
+	fprintf(f,"%s%s\n", content, content2);
+	// fclose(f);
 }
 
 void
@@ -1371,7 +1371,7 @@ LOG_FORMAT(char *format, ...){
 	va_start(ap,format);
 	vfprintf(f,format, ap);
 	va_end(ap);
-	fclose(f);
+	// fclose(f);
 }
 
 void
@@ -1894,8 +1894,8 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	focus(NULL);
 
-	Client *maxpc;
-	Client *tmp;
+	Client *maxpc = NULL;
+	Client *tmp = NULL;
 	int maxp = 0;
 	for (tmp = selmon->clients; tmp; tmp = tmp->next)
 	{
@@ -1912,7 +1912,6 @@ manage(Window w, XWindowAttributes *wa)
 		zoom(&arg);
 	}
 	
-	//LOG("managed:",c->name);
 }
 
 void
@@ -1980,7 +1979,6 @@ motionnotify(XEvent *e)
 		unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
-		LOG("motionnotify", selmon->sel->name);
 	}
 	mon = m;
 }
@@ -2013,7 +2011,6 @@ movemouse(const Arg *arg)
 		case Expose:
 		case MapRequest:
 			handler[ev.type](&ev);
-			LOG("movemouse.xxx", c->name);
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -2807,7 +2804,7 @@ geo( geo_t *g, Client *c, int x, int y, int w, int h, int interact)
 void
 tile2(Monitor *m)
 {
-	unsigned int i, n, h, mw, my, ty, masterend;
+	unsigned int i, n, h, mw, my, ty, masterend = 0;
 	Client *c;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
@@ -2854,7 +2851,7 @@ tile2(Monitor *m)
 	if(slave_cnt > 1) unfocused_slave_h = (m->wh- m->gap->gappx - focused_slave_h ) / (slave_cnt -1) ;
 	if(slave_cnt == 1) unfocused_slave_h = m->wh - m->gap->gappx;
 
-	LOG("a","b");
+	LOG_FORMAT("%s\n","tile2");
 
 	if (i == 1)
 	{
