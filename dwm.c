@@ -81,6 +81,9 @@
 #define FOCUS_UP 2
 #define FOCUS_DOWN -2
 
+
+static FILE *logfile;
+
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
@@ -88,6 +91,7 @@ enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
 	   NetWmStateSkipTaskbar,
+	   NetWmPid,
        NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
@@ -131,6 +135,7 @@ struct Client {
 	int titlex, titlew;
 	int priority;
 	int nstub;
+	int pid;
 };
 
 typedef struct {
@@ -1357,21 +1362,20 @@ smartchoose(Client *t, Client *c1, Client *c2)
 	}
 }
 
+
+
 void
 LOG(char *content, char * content2){
-	FILE *f = fopen("/home/beyond/m.log","a");
-	fprintf(f,"%s%s\n", content, content2);
-	// fclose(f);
+	fprintf(logfile,"%s%s\n", content, content2);
 }
 
 void
 LOG_FORMAT(char *format, ...){
-	FILE *f = fopen("/home/beyond/m.log","a");
 	va_list ap;
 	va_start(ap,format);
-	vfprintf(f,format, ap);
+	vfprintf(logfile,format, ap);
 	va_end(ap);
-	// fclose(f);
+	fflush(logfile);
 }
 
 void
@@ -1589,6 +1593,7 @@ getsystraywidth()
 		for(i = systray->icons; i; w += i->w + systrayspacing, i = i->next) ;
 	return w ? w + systrayspacing : 1;
 }
+
 
 int
 gettextprop(Window w, Atom atom, char *text, unsigned int size)
@@ -1835,6 +1840,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->oldbw = wa->border_width;
 
 	updatetitle(c);
+
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -2609,6 +2615,8 @@ setup(void)
 	netatom[NetCurrentDesktop] = XInternAtom(dpy, "_NET_CURRENT_DESKTOP", False);
 	netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
 
+	netatom[NetWmPid] = XInternAtom(dpy, "_NET_WM_PID", False);
+
 	xatom[Manager] = XInternAtom(dpy, "MANAGER", False);
 	xatom[Xembed] = XInternAtom(dpy, "_XEMBED", False);
 	xatom[XembedInfo] = XInternAtom(dpy, "_XEMBED_INFO", False);
@@ -3071,7 +3079,7 @@ unmanage(Client *c, int destroyed)
 	focuspop(c);
 
 	
-	LOG("unmanage:", c->name);
+	LOG("unmanage:\n", c->name);
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -3727,7 +3735,7 @@ int
 main(int argc, char *argv[])
 {
 	close(2);
-	FILE *f = fopen("/home/beyond/m.log", "a");
+	logfile = fopen("/home/beyond/m.log", "a");
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("dwm-"VERSION);
 	else if (argc != 1)
@@ -3748,6 +3756,6 @@ main(int argc, char *argv[])
 	if(restart) execvp(argv[0], argv);
 	cleanup();
 	XCloseDisplay(dpy);
-	fclose(f);
+	fclose(logfile);
 	return EXIT_SUCCESS;
 }
