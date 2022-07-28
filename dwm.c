@@ -135,7 +135,7 @@ struct Client {
 	int titlex, titlew;
 	int priority;
 	int nstub;
-	int pid;
+	unsigned long pid;
 };
 
 typedef struct {
@@ -1595,6 +1595,7 @@ getsystraywidth()
 }
 
 
+
 int
 gettextprop(Window w, Atom atom, char *text, unsigned int size)
 {
@@ -1799,30 +1800,108 @@ getwinrule(Window win)
 	return target;
 }
 
+
+unsigned long
+getwindowpid(Window w)
+{
+	Atom           type;
+	int            format;
+	unsigned long  nItems;
+	unsigned long  bytesAfter;
+	unsigned char *propPID = 0;
+	unsigned long pid;
+	if(Success == XGetWindowProperty(dpy, w, netatom[NetWmPid], 0, 1, False, XA_CARDINAL,
+										&type, &format, &nItems, &bytesAfter, &propPID))
+	{
+		pid = *((unsigned long *)propPID);
+		XFree(propPID);
+	}
+	return pid;
+}
+
+
+unsigned long getppidof(unsigned long pid)
+{
+    char dir[1024]={0};
+    char path[1024] = {0};
+    char buf[1024] = {0};
+    int rpid = 0;
+    unsigned long fpid=0;
+    char fpth[1024]={0};
+    ssize_t ret =0;
+    sprintf(dir,"/proc/%d/",pid);
+    sprintf(path,"%sstat",dir);
+	struct stat st;
+	if(stat(path,&st)!=0)
+    {
+        return 0; 
+	}
+    memset(buf,0,strlen(buf));
+    FILE * fp = fopen(path,"r");
+	if(!fp) return 0;
+    ret += fread(buf + ret,1,300-ret,fp);
+    fclose(fp);
+    sscanf(buf,"%*d %*c%s %*c %d %*s",fpth,&fpid);
+    fpth[strlen(fpth)-1]='\0';
+    return fpid;
+}
+
+void
+getppidchain(unsigned long pid, unsigned long *ppidchain, int size, int index){
+	if (index < size && pid > 1)
+	{
+		ppidchain[index] = getppidof(pid);
+		LOG_FORMAT("ppidchain: %d",ppidchain[index]);
+		getppidchain(ppidchain[index], ppidchain, size, index +1);
+	}
+}
+
 void
 manage(Window w, XWindowAttributes *wa)
 {
-	// 每个tag不能超过 n 个client, 超过则移动到下一个tag
-	int curisfloating = 0;
-	Atom wtype = getwinatomprop(w, netatom[NetWMWindowType]);
-	if (wtype == netatom[NetWMWindowTypeDialog])
-		curisfloating = 1;
-
-	if (!curisfloating)
-	{
-		Rule * rule = getwinrule(w);
-		if (!rule->isfloating)
+	unsigned long pid = getwindowpid(w);
+	LOG_FORMAT("pid: %d",  pid);
+	int PPIDCHAIN_N = 10;
+	unsigned long ppidchain[PPIDCHAIN_N];
+	getppidchain(pid, ppidchain, PPIDCHAIN_N, 0);
+	Client *tmpparent;
+	int found = 0;
+	for(tmpparent = selmon->stack; tmpparent;tmpparent = tmpparent->snext){
+		for(int i = 0 ; i < PPIDCHAIN_N; i++){
+			if(ppidchain[i] <=1 ) break;
+			if(ppidchain[i] == tmpparent->pid){
+				found = 1;
+				break;
+			}
+		}
+		if(found) break;
+	}
+	LOG_FORMAT("found:%d", found);
+	if(found && tmpparent->tags != 0xFFFFFFFF){
+		LOG_FORMAT("pid found");
+		Arg arg = {.ui= tmpparent->tags };
+		view(&arg);
+	}else{
+		// 每个tag不能超过 n 个client, 超过则移动到下一个tag
+		int curisfloating = 0;
+		Atom wtype = getwinatomprop(w, netatom[NetWMWindowType]);
+		if (wtype == netatom[NetWMWindowTypeDialog]) curisfloating = 1;
+		if (!curisfloating)
 		{
-			int tmptags = selmon->tagset[selmon->seltags];
-			while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
-				tmptags = tmptags << 1;
-			Arg arg = {.ui= tmptags };
-			view(&arg);
-			if (rule->nstub == 2 && selmon->sellt == 0)
+			Rule * rule = getwinrule(w);
+			if (!rule->isfloating)
 			{
-				const Arg arg = {.v = &layouts[1]};
-				setlayout(&arg);
-			}	
+				int tmptags = selmon->tagset[selmon->seltags];
+				while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
+					tmptags = tmptags << 1;
+				Arg arg = {.ui= tmptags };
+				view(&arg);
+				if (rule->nstub == 2 && selmon->sellt == 0)
+				{
+					const Arg arg = {.v = &layouts[1]};
+					setlayout(&arg);
+				}	
+			}
 		}
 	}
 
@@ -1832,6 +1911,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	c = ecalloc(1, sizeof(Client));
 	c->win = w;
+	c->pid = pid;
 	/* geometry */
 	c->x = c->oldx = wa->x;
 	c->y = c->oldy = wa->y;
