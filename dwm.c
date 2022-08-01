@@ -3185,6 +3185,9 @@ unmanage(Client *c, int destroyed)
 		}
 	}
 	
+	if (scatchitemptr->c == c){
+		memset(scatchitemptr, 0, sizeof(ScatchItem));
+	}
 }
 
 void
