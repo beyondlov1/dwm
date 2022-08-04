@@ -86,7 +86,7 @@ static FILE *logfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel }; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -136,6 +136,7 @@ struct Client {
 	int priority;
 	int nstub;
 	unsigned long pid;
+	int isscratched;
 };
 
 typedef struct {
@@ -212,13 +213,35 @@ typedef struct
 	int interact;
 } geo_t;
 
+typedef struct 
+{
+	int x;
+	int y;
+	int w;
+	int h;
+} rect_t;
 
-typedef struct ScatchItem ScatchItem;
-struct ScatchItem
+
+typedef struct ScratchItem ScratchItem;
+struct ScratchItem
 {
 	Client *c;
 	int tags;
 	int pretags;
+	ScratchItem *next;
+	ScratchItem *prev;
+	int x,y,w,h;
+};
+
+
+typedef struct ScratchGroup ScratchGroup;
+struct ScratchGroup
+{
+	ScratchItem *head;
+	ScratchItem *tail;
+	int tags;
+	int pretags;
+	int isfloating;
 };
 
 
@@ -289,7 +312,7 @@ static void rotatestack(const Arg *arg);
 static void run(void);
 static void runAutostart(void);
 static void scan(void);
-static void scatch(const Arg *arg);
+static void addtoscratchgroup(const Arg *arg);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
 static void setclientstate(Client *c, long state);
@@ -318,7 +341,7 @@ static void tile2(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
-static void togglescatch(const Arg *arg);
+static void togglescratchgroup(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -340,6 +363,7 @@ static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
+static void removefromscratchgroup(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static Client *wintosystrayicon(Window w);
@@ -389,7 +413,8 @@ static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
 static Client *lastfocused;
-static ScatchItem *scatchitemptr;
+static ScratchItem *scratchitemptr;
+static ScratchGroup *scratchgroupptr;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1216,7 +1241,10 @@ focus(Client *c)
 		detachstack(c);
 		attachstack(c);
 		grabbuttons(c, 1);
-		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+		if(c->isscratched)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+		else
+			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
 		LOG("focus", c->name);
 	} else {
@@ -1823,13 +1851,13 @@ getwindowpid(Window w)
 unsigned long getppidof(unsigned long pid)
 {
     char dir[1024]={0};
-    char path[1024] = {0};
+    char path[1028] = {0};
     char buf[1024] = {0};
     int rpid = 0;
     unsigned long fpid=0;
     char fpth[1024]={0};
     ssize_t ret =0;
-    sprintf(dir,"/proc/%d/",pid);
+    sprintf(dir,"/proc/%ld/",pid);
     sprintf(path,"%sstat",dir);
 	struct stat st;
 	if(stat(path,&st)!=0)
@@ -2421,7 +2449,7 @@ run(void)
 
 void
 runAutostart(void) {
-	system("~/.config/dwm/script/init.sh &");
+	system("~/.config/dwm/script/init.sh");
 }
 
 void
@@ -2739,9 +2767,8 @@ setup(void)
 	grabkeys();
 	focus(NULL);
 
-	scatchitemptr = (ScatchItem *)malloc(sizeof(ScatchItem));
-	memset(scatchitemptr, 0, sizeof(ScatchItem));
-
+	scratchgroupptr = (ScratchGroup *)malloc(sizeof(ScratchGroup));
+	memset(scratchgroupptr, 0, sizeof(ScratchGroup));
 }
 
 
@@ -3037,48 +3064,237 @@ togglescratch(const Arg *arg)
 		spawn(arg);
 }
 
+ScratchItem *
+alloc_si()
+{
+	ScratchItem * si = (ScratchItem *)malloc(sizeof(ScratchItem));
+	memset(si,0,sizeof(ScratchItem));
+	return si;
+}
+
 void 
-scatch(const Arg *arg)
+free_si(ScratchItem *si)
+{
+	if(si) free(si);
+}
+
+ScratchItem*
+findingroup(ScratchGroup *scratchgroupptr, Client *c)
+{
+	ScratchItem * tmp = NULL;
+	for( tmp = scratchgroupptr->head;tmp;tmp = tmp->next)
+		if(tmp->c == c) return tmp;
+	return tmp;
+}
+
+void 
+addtoscratchgroup(const Arg *arg)
 {
 	Client * c = selmon->sel ;
 	if (!c) return;
-	if(scatchitemptr->c != c){
-		scatchitemptr->pretags = c->tags;
-		scatchitemptr->tags = c->tags;
+	ScratchItem* scratchitemptr;
+	scratchitemptr = findingroup(scratchgroupptr, c);
+	if(!scratchitemptr){
+		scratchitemptr = alloc_si();
+		scratchitemptr->c = c;
+		scratchitemptr->pretags = c->tags;
+		scratchitemptr->prev = NULL;
+		scratchitemptr->next = scratchgroupptr->head;
+		if(scratchgroupptr->head) scratchgroupptr->head->prev = scratchitemptr;
+		scratchgroupptr->head = scratchitemptr;
+		if(!scratchitemptr->next) scratchgroupptr->tail = scratchitemptr;
+		c->isscratched = 1;
+		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
-	scatchitemptr->c = c;
-	togglescatch(arg);
+	// togglescratchgroup(arg);
+}
+
+void 
+removefromscratchgroupc(Client *c)
+{
+	ScratchItem *found = findingroup(scratchgroupptr, c);
+	if (found){
+		c->isscratched = 0;
+		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+		if(found->prev) {
+			found->prev->next = found->next;
+			found->prev = NULL;
+			found->next = NULL;
+		}else{
+			scratchgroupptr->head = found->next;
+			if(found->next) found->next->prev = NULL;
+			found->next = NULL;
+		}
+		free_si(found);
+	}
 }
 
 
-void
-togglescatch(const Arg *arg)
+void 
+removefromscratchgroup(const Arg *arg)
 {
-	Client * c = scatchitemptr->c;
-	if (!c) return;
-	if (!c->isfloating)
+	Client * c = selmon->sel;
+	removefromscratchgroupc(c);
+	// LOG_FORMAT("%p", scratchgroupptr);
+	// togglescratchgroup(arg);
+}
+
+int
+ispointin(int x, int y, rect_t t)
+{
+	if(x >= t.x && x<=(t.x+t.w) && y >= t.y && y <= (t.y+t.h)) return 1;
+	return 0;
+}
+
+int
+isintersectone(rect_t g, rect_t t)
+{
+	if(ispointin(g.x,g.y,t) 
+	|| ispointin(g.x+g.w,g.y, t) 
+	|| ispointin(g.x+g.w,g.y+g.h, t)
+	|| ispointin(g.x, g.y+g.h, t)
+	|| ispointin(t.x,t.y,g) 
+	|| ispointin(t.x+t.w,t.y, g) 
+	|| ispointin(t.x+t.w,t.y+t.h, g)
+	|| ispointin(t.x, t.y+t.h, g)
+	) return 1;
+	return 0;
+}
+
+int 
+isintersect(rect_t g, rect_t ts[], int tsn)
+{
+	int i;
+	for(i = 0; i<tsn; i++)
 	{
-		scatchitemptr->pretags = c->tags;
-		c->isfloating = 1;
-		int neww = selmon->ww * 0.5;
-		int newh = selmon->wh * 0.6;
-		c->x = selmon->ww / 2 - neww / 2;
-		c->y = selmon->wh / 2 - newh / 2;
-		c->tags = 0xFFFFFFFF;
-		focus(c);
-		arrange(selmon);			
-		resize(c, c->x, c->y, neww, newh, 0);
+		rect_t t = ts[i];
+		if(isintersectone(g,t)) return 1;
+	}
+	return 0;
+}
+
+int
+fill(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
+{
+	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
+	int stepw = (sc.w - w) /n;
+	int steph = (sc.h - h) /n;
+	int i;
+	int j;
+	for(i = 0; i<n;i++)
+	{
+		for(j=0;j<n;j++)
+		{
+			rect_t rect;
+			rect.x = sc.x + stepw * i;
+			rect.y = sc.y + steph * j;
+			rect.w = w;
+			rect.h = h;
+			if(!isintersect(rect, ts, tsn)){
+				r->x = rect.x;
+				r->y = rect.y;
+				r->w = rect.w;
+				r->h = rect.h;
+				// LOG_FORMAT(", fillr:%d", 1);
+				// LOG_FORMAT(", fx:%d, fy:%d, fw:%d, fh:%d\n", r->x, r->y, r->w, r->h);
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+void
+togglescratchgroup(const Arg *arg)
+{
+	ScratchGroup *sg = scratchgroupptr;
+	ScratchItem *si;
+	int tsn;
+	for(tsn = 0, si = sg->head; si; si = si->next, tsn++);
+	// LOG_FORMAT("tsn:%d\n",tsn);
+	if(tsn == 0) return;
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	sc.x = 0;
+	sc.y = 0;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
+	int i = 0;
+	for(si = sg->tail; si; si = si->prev)
+	{
+		Client * c = si->c;
+		if(!c) continue;
+		if(!sg->isfloating){
+			c->isfloating = 1;
+			c->tags = 0xFFFFFFFF;
+			int neww = selmon->ww * 0.45;
+			int newh = selmon->wh * 0.6;
+
+			// LOG_FORMAT("t: x:%d, y:%d, w: %d, h:%d\n", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
+
+			rect_t r;
+			int ok = fill(sc, neww, newh, 9, ts, i, &r);
+			if(!ok)
+			{
+				r.x = selmon->ww / 2 - neww / 2;
+				r.y = selmon->wh / 2 - newh / 2;
+				r.w = neww;
+				r.h = newh;
+			}
+		
+			// LOG_FORMAT("si0:%p, x:%d, y:%d\n",si, si->x, si->y);
+			if(!si->x) si->x = r.x;
+			if(!si->y) si->y = r.y;
+			if(!si->w) si->w = r.w;
+			if(!si->h) si->h = r.h;
+
+			c->x = si->x;
+			c->y = si->y;
+			
+			ts[i].x = si->x;
+			ts[i].y = si->y;
+			ts[i].w = si->w;
+			ts[i].h = si->h;
+
+			// LOG_FORMAT("si:%p, x:%d, y:%d\n",si, si->x, si->y);
+			// LOG_FORMAT("c: x:%d, y:%d\n", c->x, c->y);
+			i++;
+		}else{
+			c->isfloating = 0;
+			if(si->pretags)
+				c->tags = si->pretags;
+			else
+				c->tags = selmon->tagset[selmon->seltags];
+			si->x = c->x;
+			si->y = c->y;
+			si->w = c->w;
+			si->h = c->h;
+			// LOG_FORMAT("c else: x:%d, y:%d\n", c->x, c->y);
+			// LOG_FORMAT("si else: %p, x:%d, y:%d\n",si, c->x, c->y);
+		}
+	} 
+	
+	if(!sg->isfloating)
+	{
+		int k = 0;
+		for(si = sg->head; si; si = si->next)
+		{
+			// LOG_FORMAT("k:%d, x:%d, y:%d",k, si->x, si->y);
+			focus(si->c);
+			arrange(selmon);
+			resize(si->c,si->x,si->y, si->w,si->h,1);
+			k++;
+		}
+		if(sg->head && sg->head->c) 
+			focus(sg->head->c);
+		arrange(selmon);
 	}else{
-		c->isfloating = 0;
-		if(scatchitemptr->pretags)
-			c->tags = scatchitemptr->pretags;
-		else
-			c->tags = selmon->tagset[selmon->seltags];
 		focus(NULL);
 		arrange(selmon);
 	}
-	scatchitemptr->c = c;
-	scatchitemptr->tags = c->tags;
+	
+	sg->isfloating = (sg->isfloating + 1) % 2;
 }
 
 void
@@ -3185,9 +3401,7 @@ unmanage(Client *c, int destroyed)
 		}
 	}
 	
-	if (scatchitemptr->c == c){
-		memset(scatchitemptr, 0, sizeof(ScatchItem));
-	}
+	removefromscratchgroupc(c);
 }
 
 void

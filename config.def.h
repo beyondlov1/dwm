@@ -27,6 +27,7 @@ static const char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
 	[SchemeSel]  = { col_gray4, col_cyan,  "#00BFFF"  },
+	[SchemeScr]  = { col_gray4, col_cyan,  "#cf110b"  },
 };
 
 /* tagging */
@@ -127,8 +128,9 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
-	{ MODKEY,                       XK_p,      scatch,  {0 } },
-	{ MODKEY,                       XK_n,      togglescatch,  {0} },
+	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
+	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
+	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 	{ MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },

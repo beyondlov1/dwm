@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int getppidof(int pid)
 {
     char dir[1024]={0};
-    char path[1024] = {0};
+    char path[1028] = {0};
     char buf[1024] = {0};
     int rpid = 0;
     int fpid=0;
@@ -21,11 +22,30 @@ int getppidof(int pid)
     return fpid;
 }
 
+typedef struct ScratchItem ScratchItem;
+struct ScratchItem
+{
+	int tags;
+	int pretags;
+	ScratchItem *next;
+	ScratchItem *prev;
+};
+
+
+ScratchItem *
+alloc_si()
+{
+	ScratchItem * si = (ScratchItem *)malloc(sizeof(ScratchItem));
+	memset(si,0,sizeof(ScratchItem));
+	return si;
+}
+
 int main(int argc, char const *argv[])
 {
     int a = 1;
     a |= 0;
-    int b = getppidof(420724);
-    printf("%d", b);
+    // int b = getppidof(420724);
+    // printf("%d", b);
+    alloc_si();
     return 0;
 }
