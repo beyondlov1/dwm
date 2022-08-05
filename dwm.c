@@ -252,6 +252,8 @@ static void arrange(Monitor *m);
 static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachstack(Client *c);
+static void addtoscratchgroup(const Arg *arg);
+static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
 static void cleanup(void);
@@ -276,6 +278,7 @@ static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static void focusgrid(const Arg *arg);
+static void free_si(ScratchItem *si);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
 static unsigned int getmaxtags();
@@ -312,7 +315,6 @@ static void rotatestack(const Arg *arg);
 static void run(void);
 static void runAutostart(void);
 static void scan(void);
-static void addtoscratchgroup(const Arg *arg);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
 static void setclientstate(Client *c, long state);
@@ -2769,6 +2771,10 @@ setup(void)
 
 	scratchgroupptr = (ScratchGroup *)malloc(sizeof(ScratchGroup));
 	memset(scratchgroupptr, 0, sizeof(ScratchGroup));
+	scratchgroupptr->head = alloc_si();
+	scratchgroupptr->tail = alloc_si();
+	scratchgroupptr->head->next = scratchgroupptr->tail;
+	scratchgroupptr->tail->prev = scratchgroupptr->head;
 }
 
 
@@ -3082,9 +3088,115 @@ ScratchItem*
 findingroup(ScratchGroup *scratchgroupptr, Client *c)
 {
 	ScratchItem * tmp = NULL;
-	for( tmp = scratchgroupptr->head;tmp;tmp = tmp->next)
+	for( tmp = scratchgroupptr->head->next;tmp && tmp != scratchgroupptr->tail;tmp = tmp->next)
 		if(tmp->c == c) return tmp;
-	return tmp;
+	return NULL;
+}
+
+
+void
+showscratchgroup(ScratchGroup *sg)
+{
+	ScratchItem *si;
+	int tsn;
+	for(tsn = 0, si = sg->head->next; si && si != sg->tail; si = si->next, tsn++);
+	if(tsn == 0) return;
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	sc.x = selmon->gap->gappx + 10;
+	sc.y = selmon->gap->gappx + 10;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
+	int i = 0;
+	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	{
+		Client * c = si->c;
+		if(!c) continue;
+
+		c->isfloating = 1;
+		if(!sg->isfloating) si->pretags = c->tags;
+		c->tags = 0xFFFFFFFF;
+		int neww = selmon->ww * 0.45;
+		int newh = selmon->wh * 0.6;
+		
+		rect_t r;
+		int ok = fill(sc, neww, newh, 9, ts, i, &r);
+		if(!ok)
+		{
+			r.x = selmon->ww / 2 - neww / 2;
+			r.y = selmon->wh / 2 - newh / 2;
+			r.w = neww;
+			r.h = newh;
+		}
+
+		if(!si->x) si->x = r.x;
+		if(!si->y) si->y = r.y;
+		if(!si->w) si->w = r.w;
+		if(!si->h) si->h = r.h;
+
+		c->x = si->x;
+		c->y = si->y;
+		
+		ts[i].x = si->x;
+		ts[i].y = si->y;
+		ts[i].w = si->w;
+		ts[i].h = si->h;
+
+		i++;
+	} 
+	
+	for(si = sg->head->next; si && si != sg->tail; si = si->next)
+	{
+		focus(si->c);
+		arrange(selmon);
+		resize(si->c,si->x,si->y, si->w,si->h,1);
+	}
+	if(sg->head->next && sg->head->next->c) 
+		focus(sg->head->next->c);
+	arrange(selmon);
+	sg->isfloating = 1;
+}
+
+void
+hidescratchitem(ScratchItem *si)
+{
+	Client * c = si->c;
+	if(!c) return;
+	c->isfloating = 0;
+	if(si->pretags)
+		c->tags = si->pretags;
+	else
+		c->tags = selmon->tagset[selmon->seltags];
+	si->x = c->x;
+	si->y = c->y;
+	si->w = c->w;
+	si->h = c->h;
+	focus(NULL);
+	arrange(selmon);
+}
+
+void 
+hidescratchgroup(ScratchGroup *sg)
+{
+	ScratchItem *si;
+	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	{
+		Client * c = si->c;
+		if(!c) continue;
+		c->isfloating = 0;
+		if(si->pretags)
+			c->tags = si->pretags;
+		else
+			c->tags = selmon->tagset[selmon->seltags];
+		si->x = c->x;
+		si->y = c->y;
+		si->w = c->w;
+		si->h = c->h;
+	}
+	focus(NULL);
+	arrange(selmon);
+	sg->isfloating = 0;
 }
 
 void 
@@ -3097,16 +3209,18 @@ addtoscratchgroup(const Arg *arg)
 	if(!scratchitemptr){
 		scratchitemptr = alloc_si();
 		scratchitemptr->c = c;
-		scratchitemptr->pretags = c->tags;
-		scratchitemptr->prev = NULL;
-		scratchitemptr->next = scratchgroupptr->head;
-		if(scratchgroupptr->head) scratchgroupptr->head->prev = scratchitemptr;
-		scratchgroupptr->head = scratchitemptr;
-		if(!scratchitemptr->next) scratchgroupptr->tail = scratchitemptr;
+		scratchitemptr->prev = scratchgroupptr->head;
+		scratchitemptr->next = scratchgroupptr->head->next;
+		scratchgroupptr->head->next->prev = scratchitemptr;
+		scratchgroupptr->head->next = scratchitemptr;
 		c->isscratched = 1;
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
-	// togglescratchgroup(arg);
+	showscratchgroup(scratchgroupptr);
 }
 
 void 
@@ -3116,15 +3230,11 @@ removefromscratchgroupc(Client *c)
 	if (found){
 		c->isscratched = 0;
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
-		if(found->prev) {
-			found->prev->next = found->next;
-			found->prev = NULL;
-			found->next = NULL;
-		}else{
-			scratchgroupptr->head = found->next;
-			if(found->next) found->next->prev = NULL;
-			found->next = NULL;
-		}
+		found->prev->next = found->next;
+		found->next->prev = found->prev;
+		found->prev = NULL;
+		found->next = NULL;
+		hidescratchitem(found);
 		free_si(found);
 	}
 }
@@ -3135,8 +3245,8 @@ removefromscratchgroup(const Arg *arg)
 {
 	Client * c = selmon->sel;
 	removefromscratchgroupc(c);
-	// LOG_FORMAT("%p", scratchgroupptr);
-	// togglescratchgroup(arg);
+	if(scratchgroupptr->head->next == scratchgroupptr->tail)
+		hidescratchgroup(scratchgroupptr);
 }
 
 int
@@ -3176,6 +3286,7 @@ isintersect(rect_t g, rect_t ts[], int tsn)
 int
 fill(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
 {
+	// todo: center iterator
 	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
 	int stepw = (sc.w - w) /n;
 	int steph = (sc.h - h) /n;
@@ -3204,97 +3315,17 @@ fill(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
 	return 0;
 }
 
+
 void
 togglescratchgroup(const Arg *arg)
 {
 	ScratchGroup *sg = scratchgroupptr;
-	ScratchItem *si;
-	int tsn;
-	for(tsn = 0, si = sg->head; si; si = si->next, tsn++);
-	// LOG_FORMAT("tsn:%d\n",tsn);
-	if(tsn == 0) return;
-	rect_t ts[tsn];
-	memset(ts, 0, sizeof(ts));
-	rect_t sc;
-	sc.x = 0;
-	sc.y = 0;
-	sc.w = selmon->ww;
-	sc.h = selmon->wh;
-	int i = 0;
-	for(si = sg->tail; si; si = si->prev)
-	{
-		Client * c = si->c;
-		if(!c) continue;
-		if(!sg->isfloating){
-			c->isfloating = 1;
-			c->tags = 0xFFFFFFFF;
-			int neww = selmon->ww * 0.45;
-			int newh = selmon->wh * 0.6;
-
-			// LOG_FORMAT("t: x:%d, y:%d, w: %d, h:%d\n", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
-
-			rect_t r;
-			int ok = fill(sc, neww, newh, 9, ts, i, &r);
-			if(!ok)
-			{
-				r.x = selmon->ww / 2 - neww / 2;
-				r.y = selmon->wh / 2 - newh / 2;
-				r.w = neww;
-				r.h = newh;
-			}
-		
-			// LOG_FORMAT("si0:%p, x:%d, y:%d\n",si, si->x, si->y);
-			if(!si->x) si->x = r.x;
-			if(!si->y) si->y = r.y;
-			if(!si->w) si->w = r.w;
-			if(!si->h) si->h = r.h;
-
-			c->x = si->x;
-			c->y = si->y;
-			
-			ts[i].x = si->x;
-			ts[i].y = si->y;
-			ts[i].w = si->w;
-			ts[i].h = si->h;
-
-			// LOG_FORMAT("si:%p, x:%d, y:%d\n",si, si->x, si->y);
-			// LOG_FORMAT("c: x:%d, y:%d\n", c->x, c->y);
-			i++;
-		}else{
-			c->isfloating = 0;
-			if(si->pretags)
-				c->tags = si->pretags;
-			else
-				c->tags = selmon->tagset[selmon->seltags];
-			si->x = c->x;
-			si->y = c->y;
-			si->w = c->w;
-			si->h = c->h;
-			// LOG_FORMAT("c else: x:%d, y:%d\n", c->x, c->y);
-			// LOG_FORMAT("si else: %p, x:%d, y:%d\n",si, c->x, c->y);
-		}
-	} 
-	
 	if(!sg->isfloating)
 	{
-		int k = 0;
-		for(si = sg->head; si; si = si->next)
-		{
-			// LOG_FORMAT("k:%d, x:%d, y:%d",k, si->x, si->y);
-			focus(si->c);
-			arrange(selmon);
-			resize(si->c,si->x,si->y, si->w,si->h,1);
-			k++;
-		}
-		if(sg->head && sg->head->c) 
-			focus(sg->head->c);
-		arrange(selmon);
+		showscratchgroup(sg);
 	}else{
-		focus(NULL);
-		arrange(selmon);
+		hidescratchgroup(sg);
 	}
-	
-	sg->isfloating = (sg->isfloating + 1) % 2;
 }
 
 void
@@ -3367,6 +3398,7 @@ unfocus(Client *c, int setfocus)
 void
 unmanage(Client *c, int destroyed)
 {
+	removefromscratchgroupc(c);
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
@@ -3401,7 +3433,6 @@ unmanage(Client *c, int destroyed)
 		}
 	}
 	
-	removefromscratchgroupc(c);
 }
 
 void
