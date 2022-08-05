@@ -414,7 +414,7 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
-static Client *lastfocused;
+static Client *focuschain;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
 
@@ -434,6 +434,20 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
+
+void
+LOG(char *content, char * content2){
+	fprintf(logfile,"%s%s\n", content, content2);
+}
+
+void
+LOG_FORMAT(char *format, ...){
+	va_list ap;
+	va_start(ap,format);
+	vfprintf(logfile,format, ap);
+	va_end(ap);
+	fflush(logfile);
+}
 
 /* function implementations */
 void
@@ -1248,7 +1262,6 @@ focus(Client *c)
 		else
 			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
-		LOG("focus", c->name);
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -1309,104 +1322,91 @@ focusstack(const Arg *arg)
 
 
 void 
-distinctpush(Client *cc, Client *c)
+lru(Client *c)
 {
-	if (!c || !cc )
-	{
+	LOG_FORMAT("lru start %p\n", c);
+	if(!c) return;
+	if(!focuschain){
+		focuschain = c;
 		return;
 	}
-	if(!cc){
-		cc = c;
+	if(c == focuschain) return;
+	LOG_FORMAT("lru2 start \n");
+	c->focusfreq++;
+	Client *tmp = NULL, *prev = NULL;
+	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
+	{
+		if(c == tmp) break;
+		prev = tmp;
+	}
+	if(tmp)
+	{
+		prev->lastfocus = tmp->lastfocus;
+		tmp->lastfocus = focuschain;
+		focuschain = tmp;
+	}
+	else
+	{
+		c->lastfocus = focuschain;
+		focuschain = c->lastfocus;
+	}
+
+	LOG_FORMAT("lru end \n");
+}
+
+void
+removefromfocuschain(Client *c)
+{
+	if(!c) return;
+	if(!focuschain) return;
+	if(c == focuschain) 
+	{
+		focuschain = c->lastfocus;
 		return;
 	}
-	Client *tmp, *tmpnext = NULL;
-	int i = 100;
-	for (tmp = cc; tmp; tmp = tmp->lastfocus)
+	Client *tmp = NULL, *prev = NULL;
+	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
 	{
-		tmp->focusindex = --i;
+		if(c == tmp) break;
+		prev = tmp;
 	}
-	tmp = cc;
-	while (tmp)
-	{
-		if (tmp == c)
-		{
-			if (tmpnext == NULL)
-			{
-				break;
-			}
-			tmpnext->lastfocus = tmp->lastfocus;
-			tmp->lastfocus = NULL;
-			break;
-		}
-		tmpnext = tmp;
-		tmp = tmp->lastfocus;
-	}
-	if (cc != c)
-	{
-		c->focusindex = 100;
-		c->focusfreq ++;
-		c->lastfocus = cc;
-	}
+	if(tmp)
+		prev->lastfocus = tmp->lastfocus;
 }
 
 Client *
 closestxclient(Client *t, Client *c1, Client *c2){
 	if (abs(c1->x - t->x) > abs(c2->x - t->x))
-	{
 		return c2;
-	}else{
+	else
 		return c1;
-	}
 }
 
 Client *
 closestyclient(Client *t, Client *c1, Client *c2)
 {
 	if (abs(c1->y - t->y) > abs(c2->y - t->y))
-	{
 		return c2;
-	}
 	else
-	{
 		return c1;
-	}
 }
 
 double 
 score(Client *c){
-	return log(c->fullscreenfreq+1)*10-log(100-c->focusindex+1)*10;
-	// return c->focusindex;
-	// return 1;
+	return log(c->fullscreenfreq+1);
 }
 
 Client *
 smartchoose(Client *t, Client *c1, Client *c2)
 {
 	if (score(c1) < score(c2))
-	{
 		return c2;
-	}
 	else
-	{
 		return c1;
-	}
 }
 
 
 
-void
-LOG(char *content, char * content2){
-	fprintf(logfile,"%s%s\n", content, content2);
-}
-
-void
-LOG_FORMAT(char *format, ...){
-	va_list ap;
-	va_start(ap,format);
-	vfprintf(logfile,format, ap);
-	va_end(ap);
-	fflush(logfile);
-}
 
 void
 focusgrid(const Arg *arg)
@@ -1414,23 +1414,20 @@ focusgrid(const Arg *arg)
 	Client *c = NULL;
 	Client *cc = selmon->sel;
 
-
 	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return;
 	if (arg->i == FOCUS_LEFT) {
 		Client *closest = NULL;
 		int min = INT_MAX;
-		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		for (c = selmon->clients; c; c = c->next)
 		{
-			if (cc && c->x < cc->x && ISVISIBLE(c))
+			if (cc && c != cc && c->x < cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
 					min = abs(cc->x - c->x);
 					closest = c;
 				}else if (abs(cc->x - c->x) == min)
-				{
 					closest = smartchoose(cc, c, closest);
-				}
 			}
 		}
 		c = closest;
@@ -1438,9 +1435,9 @@ focusgrid(const Arg *arg)
 	else if (arg->i == FOCUS_RIGHT) {
 		Client *closest = NULL;
 		int min = INT_MAX;
-		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		for (c = selmon->clients; c; c = c->next)
 		{
-			if (cc && c->x > cc->x && ISVISIBLE(c))
+			if (cc && c != cc&& c->x > cc->x && ISVISIBLE(c))
 			{
 				if (abs(cc->x - c->x) < min)
 				{
@@ -1448,9 +1445,7 @@ focusgrid(const Arg *arg)
 					closest = c;
 				}
 				else if (abs(cc->x - c->x) == min)
-				{
 					closest = smartchoose(cc, c, closest);
-				}
 			}
 		}
 		c = closest;
@@ -1459,9 +1454,9 @@ focusgrid(const Arg *arg)
 	{
 		Client *closest = NULL;
 		int min = INT_MAX;
-		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		for (c = selmon->clients; c; c = c->next)
 		{
-			if (cc && c->y < cc->y && ISVISIBLE(c))
+			if (cc&& c != cc && c->y < cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
@@ -1469,9 +1464,7 @@ focusgrid(const Arg *arg)
 					closest = c;
 				}
 				else if (abs(cc->y - c->y) == min)
-				{
 					closest = closestxclient(cc, c, closest);
-				}
 			}
 		}
 		c = closest;
@@ -1480,9 +1473,9 @@ focusgrid(const Arg *arg)
 	{
 		Client *closest = NULL;
 		int min = INT_MAX;
-		for (c = selmon->sel->lastfocus; c; c = c->lastfocus)
+		for (c = selmon->clients; c; c = c->next)
 		{
-			if (cc && c->y > cc->y && ISVISIBLE(c))
+			if (cc && c != cc&& c->y > cc->y && ISVISIBLE(c))
 			{
 				if (abs(cc->y - c->y) < min && cc->x == c->x)
 				{
@@ -1490,9 +1483,7 @@ focusgrid(const Arg *arg)
 					closest = c;
 				}
 				else if (abs(cc->y - c->y) == min)
-				{
 					closest = closestxclient(cc, c, closest);
-				}
 			}
 		}
 		c = closest;
@@ -1526,9 +1517,6 @@ focusgrid(const Arg *arg)
 		arrange(selmon);
 	}
 
-	Client *focustmp;
-	for(focustmp = selmon->sel; focustmp; focustmp = focustmp->lastfocus)
-		LOG_FORMAT("<-%s\n", focustmp->name);
 }
 
 Atom
@@ -1735,17 +1723,7 @@ keypress(XEvent *e)
 }
 
 
-void 
-focuspop(Client *c){
-	if(!lastfocused) return;
-	Client *tmp = NULL, *tmpnext=NULL;
-	for(tmp=lastfocused;tmp && tmp != c;tmpnext = tmp,tmp = tmp->lastfocus);
-	if(tmpnext) tmpnext->lastfocus = tmp->lastfocus;
-	tmp->lastfocus = NULL;
 
-	if ( lastfocused && lastfocused == c)
-		lastfocused = lastfocused->lastfocus;
-}
 
 void
 killclient(const Arg *arg)
@@ -1998,7 +1976,6 @@ manage(Window w, XWindowAttributes *wa)
 		XRaiseWindow(dpy, c->win);
 	attach(c);
 	attachstack(c);
-	distinctpush(lastfocused,c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -2545,10 +2522,6 @@ sendevent(Window w, Atom proto, int mask, long d0, long d1, long d2, long d3, lo
 void
 setfocus(Client *c)
 {
-	// monitor中的clients包含了整个显示器中的client, ISVISABLE可以判断是否是现在这个tag中的client
-	// 但是这里push的时候, 会push所有的, 但是, 在切换tag时会focus一下NULL, 导致lastfocus的链条中断
-	// 所以这里定义一个全局变量lastfocused来防止链条中断
-	distinctpush(lastfocused, c);
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
@@ -2557,7 +2530,6 @@ setfocus(Client *c)
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
 	c->isfocused = True;
-	lastfocused = c;
 }
 
 void
@@ -2675,6 +2647,7 @@ setmfact(const Arg *arg)
 void
 setup(void)
 {
+	focuschain = NULL;
 	int i;
 	XSetWindowAttributes wa;
 	Atom utf8string;
@@ -3404,10 +3377,6 @@ unmanage(Client *c, int destroyed)
 
 	detach(c);
 	detachstack(c);
-	focuspop(c);
-
-	
-	LOG("unmanage:\n", c->name);
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
