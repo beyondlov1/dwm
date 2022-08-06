@@ -3076,8 +3076,10 @@ showscratchgroup(ScratchGroup *sg)
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t sc;
-	sc.x = selmon->gap->gappx + 10;
-	sc.y = selmon->gap->gappx + 10;
+	// sc.x = selmon->gap->gappx + 10;
+	// sc.y = selmon->gap->gappx + 10;
+	sc.x = 0;
+	sc.y = 0;
 	sc.w = selmon->ww;
 	sc.h = selmon->wh;
 	int i = 0;
@@ -3091,9 +3093,11 @@ showscratchgroup(ScratchGroup *sg)
 		c->tags = 0xFFFFFFFF;
 		int neww = selmon->ww * 0.45;
 		int newh = selmon->wh * 0.6;
+		// int neww = selmon->ww * 0.3;
+		// int newh = selmon->wh * 0.3;
 		
 		rect_t r;
-		int ok = fill(sc, neww, newh, 9, ts, i, &r);
+		int ok = fill2(sc, neww, newh, 30, ts, i, &r);
 		if(!ok)
 		{
 			r.x = selmon->ww / 2 - neww / 2;
@@ -3284,6 +3288,94 @@ fill(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
 			}
 		}
 	}
+	return 0;
+}
+
+int 
+tryfillone(int x, int y, int w, int h, rect_t ts[], int tsn, rect_t *r)
+{
+	rect_t rect;
+	rect.x = x;
+	rect.y = y;
+	rect.w = w;
+	rect.h = h;
+	if(!isintersect(rect, ts, tsn)){
+		r->x = rect.x;
+		r->y = rect.y;
+		r->w = rect.w;
+		r->h = rect.h;
+		return 1;
+	}
+	return 0;
+}
+
+int
+calcx(rect_t sc, int i, int stepw, int w)
+{
+	return sc.x + i*stepw ;
+}
+
+
+int
+calcy(rect_t sc, int j, int steph, int h)
+{
+	return sc.y + j*steph ;
+}
+
+int
+fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
+{
+	// todo: center iterator
+	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
+	int stepw = (sc.w - w) /(n-1);
+	int steph = (sc.h - h) /(n-1);
+	int wblockn = w/stepw + 1; // win x as n blocks
+	int hblockn = h/steph + 1; // win y as n blocks
+	int centeri = n/2;
+	int centerj = n/2;
+	int k;
+	for(k = 0; k<(n/2+1);k++)
+	{
+		int i;
+		int j;
+		if(k == 0)
+			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r)) return 1;
+
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r)) return 1;
+
+		i = centeri - k;
+		for(j=centerj - k;j<centerj+k;j++)
+		{
+			if(i>=n || i <0 || j>=n || j <0 ) continue;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+		}
+
+		j = centerj + k;
+		for(i=centeri - k;i<centeri+k;i++)
+		{
+			if(i>=n || i <0 || j>=n || j <0 ) continue;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+		}
+
+		i = centeri + k;
+		for(j=centerj + k;j>centerj-k;j--)
+		{
+			if(i>=n || i <0 || j>=n || j <0 ) continue;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+		}
+		
+		j = centerj - k;
+		for(i=centeri + k;i>centeri-k;i--)
+		{
+			if(i>=n || i <0 || j>=n || j <0 ) continue;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+		}
+		LOG_FORMAT("k:%d", k);
+	}
+	
 	return 0;
 }
 
