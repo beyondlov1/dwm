@@ -1326,7 +1326,7 @@ lru(Client *c)
 {
 	if(!c) return;
 	if(c == focuschain->lastfocus) return;
-	LOG_FORMAT("lru2 start \n");
+	// LOG_FORMAT("lru2 start \n");
 	c->focusfreq++;
 	Client *tmp = NULL, *prev = NULL;
 	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
@@ -1346,7 +1346,7 @@ lru(Client *c)
 		focuschain->lastfocus = c;
 	}
 
-	LOG_FORMAT("lru end \n");
+	// LOG_FORMAT("lru end \n");
 }
 
 void
@@ -1792,7 +1792,7 @@ getwinrule(Window win)
 		if ((r->class && strstr(class, r->class))
 		    || (r->instance && strstr(instance, r->instance)))
 		{
-			LOG_FORMAT(" %s:%s ", r->class, class);
+			// LOG_FORMAT(" %s:%s ", r->class, class);
 			target = r;
 		}
 	}
@@ -1854,7 +1854,6 @@ getppidchain(unsigned long pid, unsigned long *ppidchain, int size, int index){
 	if (index < size && pid > 1)
 	{
 		ppidchain[index] = getppidof(pid);
-		LOG_FORMAT("ppidchain: %d",ppidchain[index]);
 		getppidchain(ppidchain[index], ppidchain, size, index +1);
 	}
 }
@@ -1863,7 +1862,6 @@ void
 manage(Window w, XWindowAttributes *wa)
 {
 	unsigned long pid = getwindowpid(w);
-	LOG_FORMAT("pid: %d",  pid);
 	int PPIDCHAIN_N = 10;
 	unsigned long ppidchain[PPIDCHAIN_N];
 	getppidchain(pid, ppidchain, PPIDCHAIN_N, 0);
@@ -1879,9 +1877,7 @@ manage(Window w, XWindowAttributes *wa)
 		}
 		if(found) break;
 	}
-	LOG_FORMAT("found:%d", found);
 	if(found && tmpparent->tags != 0xFFFFFFFF){
-		LOG_FORMAT("pid found");
 		Arg arg = {.ui= tmpparent->tags };
 		view(&arg);
 	}else{
@@ -2944,8 +2940,6 @@ tile2(Monitor *m)
 	if(slave_cnt > 1) unfocused_slave_h = (m->wh- m->gap->gappx - focused_slave_h ) / (slave_cnt -1) ;
 	if(slave_cnt == 1) unfocused_slave_h = m->wh - m->gap->gappx;
 
-	LOG_FORMAT("%s\n","tile2");
-
 	if (i == 1)
 	{
 		geo_t onlyg = gmap[0];
@@ -3097,7 +3091,14 @@ showscratchgroup(ScratchGroup *sg)
 		// int newh = selmon->wh * 0.3;
 		
 		rect_t r;
-		int ok = fill2(sc, neww, newh, 30, ts, i, &r);
+		int radiostepn = 4;
+		double maxintersectradiostep[] = {0.0, 0.3, 0.6, 0.8};
+		int ok = 0;
+		int radioi;
+		for(radioi = 0;radioi<radiostepn;radioi++){
+			ok = fill2(sc, neww, newh, 9, ts, i, &r, maxintersectradiostep[radioi]);
+			if(ok) break;
+		}
 		if(!ok)
 		{
 			r.x = selmon->ww / 2 - neww / 2;
@@ -3247,6 +3248,36 @@ isintersectone(rect_t g, rect_t t)
 	return 0;
 }
 
+#define SETINPOINT(x,y,t, tx,ty)  if(ispointin(x,y,t)){tx=x;ty=y;}
+
+#define RETURNINTERSECT(i,j,x1,y1,x2,y2, g,t) if(x1[i]>-1 && y1[i]>-1 && x2[j]>-1 && y2[j]>-1) return 1.0*(abs(x2[j]-x1[i])*abs(y2[j]-y1[i]))/MIN((abs(g.w)*abs(g.h)),(abs(t.w)*abs(t.h)));
+
+
+double
+intersectpercent(rect_t g, rect_t t)
+{
+	int x1[4] = {-1,-1,-1,-1};
+	int y1[4] = {-1,-1,-1,-1};
+	int x2[4] = {-1,-1,-1,-1};
+	int y2[4] = {-1,-1,-1,-1};
+
+	SETINPOINT(g.x, g.y, t, x1[0], y1[0])
+	SETINPOINT(g.x+g.w,g.y, t, x1[1], y1[1])
+	SETINPOINT(g.x+g.w,g.y+g.h, t ,x1[2], y1[2])
+	SETINPOINT(g.x, g.y+g.h, t ,x1[3], y1[3])
+	
+	SETINPOINT(t.x,t.y,g,x2[0],y2[0]) 
+	SETINPOINT(t.x+t.w,t.y, g,x2[1],y2[1]) 
+	SETINPOINT(t.x+t.w,t.y+t.h, g,x2[2],y2[2]) 
+	SETINPOINT(t.x, t.y+t.h, g,x2[3],y2[3]) 
+	
+	RETURNINTERSECT(0,2,x1, y1, x2,y2,g,t)
+	RETURNINTERSECT(2,0,x1, y1, x2,y2,g,t)
+	RETURNINTERSECT(1,3,x1, y1, x2,y2,g,t)
+	RETURNINTERSECT(3,1,x1, y1, x2,y2,g,t)
+	return 0;
+}
+
 int 
 isintersect(rect_t g, rect_t ts[], int tsn)
 {
@@ -3254,7 +3285,22 @@ isintersect(rect_t g, rect_t ts[], int tsn)
 	for(i = 0; i<tsn; i++)
 	{
 		rect_t t = ts[i];
-		if(isintersectone(g,t)) return 1;
+		if(intersectpercent(g,t) > 0) return 1;
+	}
+	return 0;
+}
+
+int 
+isintersectp(rect_t g, rect_t ts[], int tsn, double maxintersectradio)
+{
+	// LOG_FORMAT("\n\ntsn:%d\n", tsn);
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		rect_t t = ts[i];
+		// LOG_FORMAT("i:%d:intersectpercent:%f,maxintersectradio:%f\n",i,intersectpercent(g,t), maxintersectradio);
+		// LOG_FORMAT("g(%d,%d,%d,%d), t(%d,%d,%d,%d)", g.x, g.y, g.w, g.h, t.x, t.y, t.w, t.h);
+		if(intersectpercent(g,t) > maxintersectradio) return 1;
 	}
 	return 0;
 }
@@ -3292,14 +3338,14 @@ fill(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
 }
 
 int 
-tryfillone(int x, int y, int w, int h, rect_t ts[], int tsn, rect_t *r)
+tryfillone(int x, int y, int w, int h, rect_t ts[], int tsn, rect_t *r,double maxintersectradio)
 {
 	rect_t rect;
 	rect.x = x;
 	rect.y = y;
 	rect.w = w;
 	rect.h = h;
-	if(!isintersect(rect, ts, tsn)){
+	if(!isintersectp(rect, ts, tsn, maxintersectradio)){
 		r->x = rect.x;
 		r->y = rect.y;
 		r->w = rect.w;
@@ -3323,14 +3369,12 @@ calcy(rect_t sc, int j, int steph, int h)
 }
 
 int
-fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
+fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
 	// todo: center iterator
 	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
 	int stepw = (sc.w - w) /(n-1);
 	int steph = (sc.h - h) /(n-1);
-	int wblockn = w/stepw + 1; // win x as n blocks
-	int hblockn = h/steph + 1; // win y as n blocks
 	int centeri = n/2;
 	int centerj = n/2;
 	int k;
@@ -3339,41 +3383,40 @@ fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r)
 		int i;
 		int j;
 		if(k == 0)
-			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r)) return 1;
+			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r)) return 1;
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r)) return 1;
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r)) return 1;
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 
 		i = centeri - k;
 		for(j=centerj - k;j<centerj+k;j++)
 		{
 			if(i>=n || i <0 || j>=n || j <0 ) continue;
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		j = centerj + k;
 		for(i=centeri - k;i<centeri+k;i++)
 		{
 			if(i>=n || i <0 || j>=n || j <0 ) continue;
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		i = centeri + k;
 		for(j=centerj + k;j>centerj-k;j--)
 		{
 			if(i>=n || i <0 || j>=n || j <0 ) continue;
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 		
 		j = centerj - k;
 		for(i=centeri + k;i>centeri-k;i--)
 		{
 			if(i>=n || i <0 || j>=n || j <0 ) continue;
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r)) return 1;
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
-		LOG_FORMAT("k:%d", k);
 	}
 	
 	return 0;
