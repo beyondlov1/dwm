@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 int getppidof(int pid)
 {
@@ -47,5 +48,6 @@ int main(int argc, char const *argv[])
     // int b = getppidof(420724);
     // printf("%d", b);
     alloc_si();
+    printf("%f", log(1.0/2));
     return 0;
 }

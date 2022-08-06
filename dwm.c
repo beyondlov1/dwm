@@ -414,7 +414,7 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
-static Client *focuschain;
+static Client *focuschain, *FC_HEAD;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
 
@@ -1324,13 +1324,8 @@ focusstack(const Arg *arg)
 void 
 lru(Client *c)
 {
-	LOG_FORMAT("lru start %p\n", c);
 	if(!c) return;
-	if(!focuschain){
-		focuschain = c;
-		return;
-	}
-	if(c == focuschain) return;
+	if(c == focuschain->lastfocus) return;
 	LOG_FORMAT("lru2 start \n");
 	c->focusfreq++;
 	Client *tmp = NULL, *prev = NULL;
@@ -1342,13 +1337,13 @@ lru(Client *c)
 	if(tmp)
 	{
 		prev->lastfocus = tmp->lastfocus;
-		tmp->lastfocus = focuschain;
-		focuschain = tmp;
+		tmp->lastfocus = focuschain->lastfocus;
+		focuschain->lastfocus = tmp;
 	}
 	else
 	{
-		c->lastfocus = focuschain;
-		focuschain = c->lastfocus;
+		c->lastfocus = focuschain->lastfocus;
+		focuschain->lastfocus = c;
 	}
 
 	LOG_FORMAT("lru end \n");
@@ -1358,12 +1353,6 @@ void
 removefromfocuschain(Client *c)
 {
 	if(!c) return;
-	if(!focuschain) return;
-	if(c == focuschain) 
-	{
-		focuschain = c->lastfocus;
-		return;
-	}
 	Client *tmp = NULL, *prev = NULL;
 	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
 	{
@@ -1392,8 +1381,16 @@ closestyclient(Client *t, Client *c1, Client *c2)
 }
 
 double 
-score(Client *c){
-	return log(c->fullscreenfreq+1);
+score(Client *c)
+{
+	int i = 0;
+	Client *tmp;
+	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
+	{
+		if(tmp == c) break;
+		i++;
+	}
+	return log(c->fullscreenfreq+1) + log(1.0/(i+1));
 }
 
 Client *
@@ -1404,8 +1401,6 @@ smartchoose(Client *t, Client *c1, Client *c2)
 	else
 		return c1;
 }
-
-
 
 
 void
@@ -2530,6 +2525,7 @@ setfocus(Client *c)
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
 	c->isfocused = True;
+	lru(c);
 }
 
 void
@@ -2647,7 +2643,10 @@ setmfact(const Arg *arg)
 void
 setup(void)
 {
-	focuschain = NULL;
+	FC_HEAD = (Client*)malloc(sizeof(Client));
+	memset(FC_HEAD, 0, sizeof(FC_HEAD));
+	focuschain = FC_HEAD;
+
 	int i;
 	XSetWindowAttributes wa;
 	Atom utf8string;
@@ -3372,6 +3371,7 @@ void
 unmanage(Client *c, int destroyed)
 {
 	removefromscratchgroupc(c);
+	removefromfocuschain(c);
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
