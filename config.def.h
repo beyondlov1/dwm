@@ -60,6 +60,7 @@ static const Rule rules[] = {
 	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "Evince",               NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
+	{ "Fragcode",             NULL,       NULL,       NULL,       1,           -1 , 5,              0},
 };
 
 
