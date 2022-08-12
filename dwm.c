@@ -1816,8 +1816,12 @@ getwindowpid(Window w)
 	if(Success == XGetWindowProperty(dpy, w, netatom[NetWmPid], 0, 1, False, XA_CARDINAL,
 										&type, &format, &nItems, &bytesAfter, &propPID))
 	{
-		pid = *((unsigned long *)propPID);
-		XFree(propPID);
+		if(propPID){
+			pid = *((unsigned long *)propPID);
+			XFree(propPID);
+		}
+		else 
+			return 0;
 	}
 	return pid;
 }
@@ -1861,23 +1865,30 @@ getppidchain(unsigned long pid, unsigned long *ppidchain, int size, int index){
 void
 manage(Window w, XWindowAttributes *wa)
 {
-	unsigned long pid = getwindowpid(w);
-	int PPIDCHAIN_N = 10;
-	unsigned long ppidchain[PPIDCHAIN_N];
-	getppidchain(pid, ppidchain, PPIDCHAIN_N, 0);
 	Client *tmpparent;
 	int found = 0;
-	for(tmpparent = selmon->stack; tmpparent;tmpparent = tmpparent->snext){
-		for(int i = 0 ; i < PPIDCHAIN_N; i++){
-			if(ppidchain[i] <=1 ) break;
-			if(ppidchain[i] == tmpparent->pid){
-				found = 1;
-				break;
+	unsigned long pid = getwindowpid(w);
+	if(pid){
+		int PPIDCHAIN_N = 10;
+		unsigned long ppidchain[PPIDCHAIN_N];
+		getppidchain(pid, ppidchain, PPIDCHAIN_N, 0);
+		for (tmpparent = selmon->stack; tmpparent; tmpparent = tmpparent->snext)
+		{
+			for (int i = 0; i < PPIDCHAIN_N; i++)
+			{
+				if (ppidchain[i] <= 1)
+					break;
+				if (ppidchain[i] == tmpparent->pid)
+				{
+					found = 1;
+					break;
+				}
 			}
+			if (found)
+				break;
 		}
-		if(found) break;
 	}
-	if(found && tmpparent->tags != 0xFFFFFFFF){
+	if(found && tmpparent && tmpparent->tags != 0xFFFFFFFF){
 		Arg arg = {.ui= tmpparent->tags };
 		view(&arg);
 	}else{
