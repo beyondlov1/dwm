@@ -1862,12 +1862,12 @@ getppidchain(unsigned long pid, unsigned long *ppidchain, int size, int index){
 	}
 }
 
-void
-manage(Window w, XWindowAttributes *wa)
-{
+int 
+manageppidstick(Client *c){
 	Client *tmpparent;
 	int found = 0;
-	unsigned long pid = getwindowpid(w);
+	unsigned long pid = getwindowpid(c->win);
+	c->pid = pid;
 	if(pid){
 		int PPIDCHAIN_N = 10;
 		unsigned long ppidchain[PPIDCHAIN_N];
@@ -1889,31 +1889,51 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 	if(found && tmpparent && tmpparent->tags != 0xFFFFFFFF){
-		Arg arg = {.ui= tmpparent->tags };
-		view(&arg);
-	}else{
-		// 每个tag不能超过 n 个client, 超过则移动到下一个tag
-		int curisfloating = 0;
-		Atom wtype = getwinatomprop(w, netatom[NetWMWindowType]);
-		if (wtype == netatom[NetWMWindowTypeDialog]) curisfloating = 1;
-		if (!curisfloating)
+		Rule * rule = getwinrule(c->win);
+		if (!rule->isfloating)
 		{
-			Rule * rule = getwinrule(w);
-			if (!rule->isfloating)
-			{
-				int tmptags = selmon->tagset[selmon->seltags];
-				while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
-					tmptags = tmptags << 1;
-				Arg arg = {.ui= tmptags };
-				view(&arg);
-				if (rule->nstub == 2 && selmon->sellt == 0)
-				{
-					const Arg arg = {.v = &layouts[1]};
-					setlayout(&arg);
-				}	
-			}
+			c->tags = tmpparent->tags;
+			Arg arg = {.ui= tmpparent->tags };
+			view(&arg);
+			return 1;
+		}else{
+			return 1;
 		}
 	}
+	return 0;
+}
+
+void 
+managestub(Client *c){
+	// 每个tag不能超过 n 个client, 超过则移动到下一个tag
+	int curisfloating = 0;
+	Atom wtype = getwinatomprop(c->win, netatom[NetWMWindowType]);
+	if (wtype == netatom[NetWMWindowTypeDialog]) curisfloating = 1;
+	if (!curisfloating)
+	{
+		Rule * rule = getwinrule(c->win);
+		if (!rule->isfloating)
+		{
+			int tmptags = selmon->tagset[selmon->seltags];
+			while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
+				tmptags = tmptags << 1;
+			c->tags = tmptags;
+			Arg arg = {.ui= tmptags };
+			view(&arg);
+			if (rule->nstub == 2 && selmon->sellt == 0)
+			{
+				const Arg arg = {.v = &layouts[1]};
+				setlayout(&arg);
+			}	
+		}
+	}
+}
+
+
+void
+manage(Window w, XWindowAttributes *wa)
+{
+	
 
 	Client *c, *t = NULL;
 	Window trans = None;
@@ -1921,7 +1941,6 @@ manage(Window w, XWindowAttributes *wa)
 
 	c = ecalloc(1, sizeof(Client));
 	c->win = w;
-	c->pid = pid;
 	/* geometry */
 	c->x = c->oldx = wa->x;
 	c->y = c->oldy = wa->y;
@@ -1939,6 +1958,8 @@ manage(Window w, XWindowAttributes *wa)
 		c->mon = selmon;
 		applyrules(c);
 	}
+
+	if(!manageppidstick(c)) managestub(c);
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
