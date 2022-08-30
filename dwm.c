@@ -277,7 +277,7 @@ static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachstack(Client *c);
 static void addtoscratchgroup(const Arg *arg);
-static void addtoscratchgroupc(Client *c);
+static ScratchItem* addtoscratchgroupc(Client *c);
 static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
@@ -2039,9 +2039,11 @@ manage(Window w, XWindowAttributes *wa)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
 	if(isnextscratch){
-		c->tags = 1 << 8;
-		addtoscratchgroupc(c);
+		unsigned int curtags = c->tags;
+		ScratchItem* si = addtoscratchgroupc(c);
+		c->tags = curtags;
 		isnextscratch = 0;
+		si->pretags = 1 << (LENGTH(tags) - 1);
 	}
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
@@ -3276,7 +3278,7 @@ hidescratchgroup(ScratchGroup *sg)
 	sg->isfloating = 0;
 }
 
-void 
+ScratchItem*
 addtoscratchgroupc(Client *c)
 {
 	if (!c) return;
@@ -3297,6 +3299,7 @@ addtoscratchgroupc(Client *c)
 		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
 	showscratchgroup(scratchgroupptr);
+	return scratchitemptr;
 }
 
 void 
