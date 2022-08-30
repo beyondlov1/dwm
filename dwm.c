@@ -244,6 +244,30 @@ struct ScratchGroup
 	int isfloating;
 };
 
+typedef struct Tag Tag;
+struct Tag
+{
+	int tags;
+	int tagindex;
+	Tag *prev;
+	Tag *next;
+	time_t lastviewtime;
+	long lastviewtimeusec;
+	int skip;
+};
+
+typedef struct TagStat TagStat;
+struct TagStat
+{
+	time_t laststaytime;
+	time_t totalstaytime;
+	time_t lastviewtime;
+	int curviewdist; // distance in linked list 
+	int curvalidviewdist; // skip distance in linked list 
+	int jumpcnt;
+	int validjumpcnt;
+};
+
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -253,6 +277,7 @@ static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachstack(Client *c);
 static void addtoscratchgroup(const Arg *arg);
+static void addtoscratchgroupc(Client *c);
 static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
@@ -335,7 +360,9 @@ static void sigstatusbar(const Arg *arg);
 static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
+static void sspawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
+static void smartview(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -417,9 +444,14 @@ static Window root, wmcheckwin;
 static Client *focuschain, *FC_HEAD;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
+static Tag *HEADTAG, *TAILTAG;
+static int isnextscratch = 0;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
+
+static Tag *tagarray[LENGTH(tags)+1];
+static TagStat *taggraph[LENGTH(tags)+1][LENGTH(tags)+1];
 
 struct Pertag {
 	unsigned int curtag, prevtag; /* current and previous tag */
@@ -2006,6 +2038,11 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
+	if(isnextscratch){
+		c->tags = 1 << 8;
+		addtoscratchgroupc(c);
+		isnextscratch = 0;
+	}
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
 	focus(NULL);
@@ -2675,6 +2712,30 @@ setup(void)
 	memset(FC_HEAD, 0, sizeof(FC_HEAD));
 	focuschain = FC_HEAD;
 
+	int tagi;
+	for(tagi = 0; tagi < LENGTH(tags)+1; tagi++){
+		Tag *tag = (Tag*)malloc(sizeof(Tag));
+		tagarray[tagi] = tag;
+		memset(tag, 0, sizeof(Tag));
+	}
+	HEADTAG = (Tag*)malloc(sizeof(Tag));
+	memset(HEADTAG, 0, sizeof(Tag));
+	TAILTAG = (Tag*)malloc(sizeof(Tag));
+	memset(TAILTAG, 0, sizeof(Tag));
+	HEADTAG->prev = TAILTAG;
+	TAILTAG->next = HEADTAG;
+
+	int taggi;
+	for(taggi = 0; taggi < LENGTH(tags)+1; taggi++){
+		int taggj;
+		for(taggj = 0; taggj < LENGTH(tags)+1; taggj++){
+			TagStat *edge = (TagStat*)malloc(sizeof(TagStat));
+			taggraph[taggi][taggj] = edge;
+			memset(edge, 0, sizeof(TagStat));
+		}
+	}
+	
+
 	int i;
 	XSetWindowAttributes wa;
 	Atom utf8string;
@@ -2860,6 +2921,13 @@ spawn(const Arg *arg)
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
+}
+
+void
+sspawn(const Arg *arg)
+{
+	spawn(arg);
+	isnextscratch = 1;
 }
 
 void
@@ -3209,9 +3277,8 @@ hidescratchgroup(ScratchGroup *sg)
 }
 
 void 
-addtoscratchgroup(const Arg *arg)
+addtoscratchgroupc(Client *c)
 {
-	Client * c = selmon->sel ;
 	if (!c) return;
 	ScratchItem* scratchitemptr;
 	scratchitemptr = findingroup(scratchgroupptr, c);
@@ -3230,6 +3297,13 @@ addtoscratchgroup(const Arg *arg)
 		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
 	showscratchgroup(scratchgroupptr);
+}
+
+void 
+addtoscratchgroup(const Arg *arg)
+{
+	Client * c = selmon->sel ;
+	addtoscratchgroupc(c);
 }
 
 void 
@@ -3973,6 +4047,13 @@ updatewmhints(Client *c)
 	}
 }
 
+long
+getcurrusec(){
+	struct timeval us;
+	gettimeofday(&us,NULL);
+	return us.tv_sec * 1000000 + us.tv_usec;
+}
+
 void
 view(const Arg *arg)
 {
@@ -4004,6 +4085,41 @@ view(const Arg *arg)
 	selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 	selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
 
+
+    // ------------- test smartview ---------------//
+	// record lastviewtime
+	int tagindex = selmon->pertag->curtag;
+	Tag *tag = tagarray[tagindex];
+	tag->tags = selmon->tagset[selmon->seltags];
+	tag->tagindex = tagindex;
+	tag->lastviewtime = time(NULL);
+	tag->lastviewtimeusec = getcurrusec();
+	tag->skip = 0;
+	Tag *head = HEADTAG;
+	Tag *prev = tag->prev;
+	Tag *next = tag->next;
+
+	// record edge
+	TagStat *thisedge = taggraph[HEADTAG->prev->tagindex][tagindex];
+	thisedge->lastviewtime = tag->lastviewtime;
+	thisedge->jumpcnt ++;
+	if(HEADTAG->prev->prev){
+		TagStat *prevedge = taggraph[HEADTAG->prev->prev->tagindex][HEADTAG->prev->tagindex];
+		LOG_FORMAT("prev->head edge, %d->%d\n", HEADTAG->prev->prev->tagindex, HEADTAG->prev->tagindex);
+		prevedge->laststaytime = tag->lastviewtime - HEADTAG->prev->lastviewtime;
+		prevedge->totalstaytime += tag->lastviewtime - HEADTAG->prev->lastviewtime;
+	}
+   // ------------- test smartview end---------------//
+
+	tag->prev = head->prev;
+	tag->next = head;
+	head->prev->next = tag;
+	head->prev = tag;
+	if(prev)
+		prev->next = next;
+	if(next)
+		next->prev = prev;
+
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
@@ -4011,6 +4127,162 @@ view(const Arg *arg)
 	arrange(selmon);
 	updatecurrentdesktop();
 }
+
+
+// ------------- test smartview ---------------//
+void
+smartviewtest(Tag *tag)
+{
+	double staypmatrix[LENGTH(tags)+1][LENGTH(tags)+1];
+	double leavepmatrix[LENGTH(tags)+1][LENGTH(tags)+1];
+	int i;
+	for(i=1; i< LENGTH(tags) + 1 ; i++){
+		TagStat **row = taggraph[i];
+		int rowsumcnt = 0;
+		int j;
+		for(j=1;j< LENGTH(tags) + 1 ; j++){
+			rowsumcnt += row[j]->jumpcnt + 1;
+		}
+		for(j=1; j< LENGTH(tags) + 1 ; j++){
+			staypmatrix[i][j] = (1.0/exp(time(NULL) - tagarray[j]->lastviewtime + 1.1))*(row[j]->jumpcnt + 1)*1.0 / rowsumcnt * (1- (1/exp(row[j]->laststaytime)));
+			leavepmatrix[i][j] = (1.0/exp(time(NULL) - tagarray[j]->lastviewtime + 1.1))*(row[j]->jumpcnt + 1)*1.0 / rowsumcnt * (1/exp(row[j]->laststaytime));
+			// staypmatrix[i][j] = (row[j]->jumpcnt + 1)*1.0 / rowsumcnt * (1- (1/exp(row[j]->laststaytime)));
+			// leavepmatrix[i][j] = (row[j]->jumpcnt + 1)*1.0 / rowsumcnt * (1/exp(row[j]->laststaytime));
+		}
+	}
+	
+	double rowp[LENGTH(tags)+1];
+
+	int j;
+	for(j=1; j< LENGTH(tags) + 1 ; j++){
+		double sumjp = 0;
+		double sumip = 0;
+		int i;
+		for(i=1; i< LENGTH(tags) + 1 ; i++){
+			sumjp += staypmatrix[j][i];
+			sumip += staypmatrix[i][j];
+		}
+		
+		rowp[j] = staypmatrix[tag->tagindex][j] + leavepmatrix[tag->tagindex][j] * sumjp + staypmatrix[j][tag->tagindex] + leavepmatrix[j][tag->tagindex] * sumip;
+	}
+
+	LOG_FORMAT("taggraph result:\n");
+	for(i=1; i< LENGTH(tags) + 1 ; i++){
+		for(j=1; j< LENGTH(tags) + 1 ; j++){
+			LOG_FORMAT(" (%d %d %d %d) ", taggraph[i][j]->jumpcnt, taggraph[i][j]->lastviewtime,taggraph[i][j]->laststaytime, taggraph[i][j]->totalstaytime);
+		}
+		LOG_FORMAT("\n");
+	}
+	LOG_FORMAT("\n");
+
+	LOG_FORMAT("calc p result:");
+	for(j=1; j< LENGTH(tags) + 1 ; j++){
+		LOG_FORMAT("%d_%f,", j, rowp[j]);
+	}
+	LOG_FORMAT("\n");
+
+	int maxindex = 0;
+	double maxp = 0;
+	for(j=1; j< LENGTH(tags) + 1 ; j++){
+		if(maxp < rowp[j]){
+			maxp = rowp[j];
+			maxindex = j;
+		}
+	}
+
+	const Arg arg2 = {.ui = tagarray[maxindex]->tags};
+	view(&arg2);
+}
+
+void 
+smartviewtest2(){
+	Tag * tag;
+	int i = 0;
+	for(tag = HEADTAG->prev ; tag != TAILTAG; tag = tag->prev, i ++);
+	int n = i;
+	double pl[n];
+	double fornextp = 0.0;
+	pl[0] = 0.0;
+	long laststaytimel[n];
+	for(i = 1, tag = HEADTAG->prev->prev ; tag && tag != TAILTAG; tag = tag->prev,i++){
+		laststaytimel[i] = tag->next->lastviewtimeusec - tag->lastviewtimeusec;
+	}
+	double rlaststaytimel[n];
+	long minstaytime = LONG_MAX;
+	for(i = 1, tag = HEADTAG->prev->prev ; tag && tag != TAILTAG; tag = tag->prev,i++){
+		if(minstaytime > laststaytimel[i])
+			minstaytime = laststaytimel[i];
+	}
+	for(i = 1, tag = HEADTAG->prev->prev ; tag && tag != TAILTAG; tag = tag->prev,i++){
+		rlaststaytimel[i] = laststaytimel[i] * 1.0 / minstaytime ;
+	}
+	int supplied = 0;
+	for(i = 1, tag = HEADTAG->prev->prev ; tag && tag != TAILTAG; tag = tag->prev,i ++){
+		double p = -log(i*1.0/LENGTH(tags))/exp(1) + fornextp;
+		if (rlaststaytimel[i] > 2 && !supplied){
+			p += 0.5;
+			supplied = 1;
+		} 
+		pl[i] = p;
+	}
+	LOG_FORMAT("smartviewtest2, pl:");
+	for(i = 0,tag = HEADTAG->prev ; tag != TAILTAG; tag = tag->prev, i ++){
+		LOG_FORMAT(" %d:%f ", tag->tagindex, pl[i]);
+	}
+
+	int maxindex = 0;
+	double maxp = 0;
+	for(i = 0,tag = HEADTAG->prev ; tag != TAILTAG; tag = tag->prev, i ++){
+		if(maxp < pl[i]){
+			maxindex = tag->tagindex;
+			maxp = pl[i];
+		}
+	}
+
+	const Arg arg2 = {.ui = tagarray[maxindex]->tags};
+	view(&arg2);
+}
+
+void
+smartview(const Arg *arg){
+	ScratchGroup *sg = scratchgroupptr;
+	if(sg->isfloating){
+		hidescratchgroup(sg);
+	}else{
+		if(arg->ui & TAGMASK){
+			view(arg);
+		}else{
+			Tag *tag = tagarray[selmon->pertag->curtag];
+			smartviewtest2(tag);
+			return;
+			
+			// LOG_FORMAT("tag: %d, time:%d", tag->tagindex, tag->lastviewtime);
+			Tag *last = tag;
+			Tag *tmp;
+			for(tmp = tag->prev; tmp && tmp != TAILTAG ; last = tmp, tmp = tmp->prev){
+				time_t stayperiod = last->lastviewtime - tmp->lastviewtime;
+				if(!tmp->skip && stayperiod > 1){
+					const Arg arg2 = {.ui = tmp->tags};
+					view(&arg2);
+					return;
+				}
+				// at least two
+				if(tmp->prev != TAILTAG){
+					tmp->skip = 1;
+					LOG_FORMAT("tag: %d skipped , stay:%ds\n", tmp->tagindex, stayperiod);
+				}
+			}
+			if(tag->prev != TAILTAG){
+				Tag *valid;
+				for(valid = tag->prev; valid->skip; valid = valid->prev);
+				const Arg arg2 = {.ui = valid->tags};
+				view(&arg2);
+			}
+		}
+	}
+}
+
+// ------------- test smartview end---------------//
 
 void
 relview(const Arg *arg)

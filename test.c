@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/timeb.h>
 
 int getppidof(int pid)
 {
@@ -43,6 +44,18 @@ alloc_si()
 
 int main(int argc, char const *argv[])
 {
+    struct timeval us;
+    gettimeofday(&us,NULL);
+    printf("gettimeofday: tv_sec=%ld, tv_usec=%ld\n", us.tv_sec, us.tv_usec);
+
+    struct timespec time;
+    printf("%lld.%.9ld seconds have elapsed!", (long long) time.tv_sec, time.tv_nsec);
+    printf("\nOR \n%ld seconds and %ld nanoseconds have elapsed!", time.tv_sec, time.tv_nsec);
+    return 0;
+    
+    struct timeb t;
+    ftime(&t);
+    printf("%ld %d", t.time, t.millitm);
     int a = 1;
     a |= 0;
     // int b = getppidof(420724);
