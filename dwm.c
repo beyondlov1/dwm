@@ -400,6 +400,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void zoomi(const Arg *arg);
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -579,6 +580,8 @@ rerule(const Arg *arg)
 		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 	}
 	arrange(selmon);
+	Arg arg2 = {.ui=selmon->sel->tags};
+	view(&arg2);
 }
 
 int
@@ -4425,6 +4428,37 @@ void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
+	c->fullscreenfreq ++;
+	if (!selmon->lt[selmon->sellt]->arrange
+	|| (selmon->sel && selmon->sel->isfloating))
+		return;
+	if (c == nexttiled(selmon->clients))
+		if (!c || !(c = nexttiled(c->next)))
+			return;
+	pop(c);
+}
+
+
+void
+zoomi(const Arg *arg)
+{
+	int targeti = arg->i;
+	Client *c;
+	if(targeti == 0){
+		c = selmon->sel;
+	}else{
+		Client *lastc;
+		int i = 0;
+		for(c = selmon->clients; c; c = c->next){
+			if(ISVISIBLE(c)){
+				lastc = c;
+				if(targeti == i) break;
+				i++;
+			}
+		}
+		if(!c) c = lastc;
+	}
+	if(!c) return;
 	c->fullscreenfreq ++;
 	if (!selmon->lt[selmon->sellt]->arrange
 	|| (selmon->sel && selmon->sel->isfloating))

@@ -55,7 +55,7 @@ static const Rule rules[] = {
 	{ "Google-chrome",        NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "Sidekick-browser",     NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              -1},
-	{ "Code",                 NULL,       NULL,       NULL,       0,           -1 , 5,              0},
+	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "Evince",               NULL,       NULL,       NULL,       0,           -1 , 5,              2},
@@ -148,6 +148,10 @@ static Key keys[] = {
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY|ControlMask,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
+	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
+	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
+	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },
+	{ MODKEY,             XK_KP_Delete, zoomi,           {.i=1000} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    smartview,           {0} },
 	{ MODKEY,                       XK_u,    relview,           {.i=-1} },
@@ -180,15 +184,15 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-	TAGKEYS(                        XK_KP_End,                      0)
-	TAGKEYS(                        XK_KP_Down,                      1)
-	TAGKEYS(                        XK_KP_Page_Down,                      2)
-	TAGKEYS(                        XK_KP_Left,                      3)
-	TAGKEYS(                        XK_KP_Begin,                      4)
-	TAGKEYS(                        XK_KP_Right,                      5)
-	TAGKEYS(                        XK_KP_Home,                      6)
-	TAGKEYS(                        XK_KP_Up,                      7)
-	TAGKEYS(                        XK_KP_Page_Up,                      8)
+	// TAGKEYS(                        XK_KP_End,                      0)
+	// TAGKEYS(                        XK_KP_Down,                      1)
+	// TAGKEYS(                        XK_KP_Page_Down,                      2)
+	// TAGKEYS(                        XK_KP_Left,                      3)
+	// TAGKEYS(                        XK_KP_Begin,                      4)
+	// TAGKEYS(                        XK_KP_Right,                      5)
+	// TAGKEYS(                        XK_KP_Home,                      6)
+	// TAGKEYS(                        XK_KP_Up,                      7)
+	// TAGKEYS(                        XK_KP_Page_Up,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_q,      quit,           {1} }, 
 	// { 0, XF86XK_AudioMute,        spawn, SHCMD("pamixer -t; pkill -RTMIN+7 dwmblocks") },
