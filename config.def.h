@@ -51,7 +51,7 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub*/
-	{ "firefox",              NULL,       NULL,       NULL,       0,           -1 , 5,              2},
+	{"firefox", NULL, NULL, NULL,       0,           -1 , 5,              2},
 	{ "Google-chrome",        NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "Sidekick-browser",     NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              -1},
@@ -61,6 +61,7 @@ static const Rule rules[] = {
 	{ "Evince",               NULL,       NULL,       NULL,       0,           -1 , 5,              2},
 	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
 	{ "Fragcode",             NULL,       NULL,       NULL,       1,           -1 , 5,              0},
+	{ "Thunar",             NULL,       NULL,       NULL,       1,           -1 , 5,              0},
 };
 
 
