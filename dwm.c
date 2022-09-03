@@ -231,6 +231,7 @@ struct ScratchItem
 	ScratchItem *next;
 	ScratchItem *prev;
 	int x,y,w,h;
+	const char **cmd;
 };
 
 
@@ -314,6 +315,8 @@ static pid_t getstatusbarpid();
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
+static void hidescratchgroup(ScratchGroup *sg);
+static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
@@ -363,6 +366,7 @@ static void spawn(const Arg *arg);
 static void sspawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
+static void showscratchgroup(ScratchGroup *sg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -447,11 +451,12 @@ static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
 static Tag *HEADTAG, *TAILTAG;
 static int isnextscratch = 0;
+static const char **nextscratchcmd;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-static Tag *tagarray[LENGTH(tags)+1];
+	static Tag *tagarray[LENGTH(tags) + 1];
 static TagStat *taggraph[LENGTH(tags)+1][LENGTH(tags)+1];
 
 struct Pertag {
@@ -1965,6 +1970,19 @@ managestub(Client *c){
 }
 
 
+int 
+scratchsingle(char *cmd[]){
+	const ScratchItem *si = NULL;
+	for (si = scratchgroupptr->head->next; si && si !=  scratchgroupptr->tail; si = si->next)
+	{
+		if (si->cmd == cmd){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
 void
 manage(Window w, XWindowAttributes *wa)
 {
@@ -2047,6 +2065,9 @@ manage(Window w, XWindowAttributes *wa)
 		c->tags = curtags;
 		isnextscratch = 0;
 		si->pretags = 1 << (LENGTH(tags) - 1);
+		si->cmd = nextscratchcmd;
+	}else{
+		hidescratchgroupv(scratchgroupptr, 0);
 	}
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
@@ -2931,8 +2952,14 @@ spawn(const Arg *arg)
 void
 sspawn(const Arg *arg)
 {
+	if (!scratchgroupptr->isfloating && scratchsingle(arg->v))
+	{
+		showscratchgroup(scratchgroupptr);
+		return;
+	}
 	spawn(arg);
 	isnextscratch = 1;
+	nextscratchcmd = arg->v;
 }
 
 void
@@ -3259,15 +3286,16 @@ hidescratchitem(ScratchItem *si)
 }
 
 void 
-hidescratchgroup(ScratchGroup *sg)
+hidescratchgroupv(ScratchGroup *sg, int isarrange)
 {
 	ScratchItem *si;
-	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
-		Client * c = si->c;
-		if(!c) continue;
+		Client *c = si->c;
+		if (!c)
+			continue;
 		c->isfloating = 0;
-		if(si->pretags)
+		if (si->pretags)
 			c->tags = si->pretags;
 		else
 			c->tags = selmon->tagset[selmon->seltags];
@@ -3276,9 +3304,17 @@ hidescratchgroup(ScratchGroup *sg)
 		si->w = c->w;
 		si->h = c->h;
 	}
-	focus(NULL);
-	arrange(selmon);
+	if(isarrange){
+		focus(NULL);
+		arrange(selmon);
+	}
 	sg->isfloating = 0;
+}
+
+void 
+hidescratchgroup(ScratchGroup *sg)
+{
+	hidescratchgroupv(sg, 1);
 }
 
 ScratchItem*

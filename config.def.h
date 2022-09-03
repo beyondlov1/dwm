@@ -50,20 +50,19 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub*/
-	{"firefox", NULL, NULL, NULL,       0,           -1 , 5,              2},
-	{ "Google-chrome",        NULL,       NULL,       NULL,       0,           -1 , 5,              2},
-	{ "Sidekick-browser",     NULL,       NULL,       NULL,       0,           -1 , 5,              2},
-	{ "X-terminal-emulator",  NULL,       NULL,       NULL,       0,           -1 , 1,              -1},
-	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
-	{ "jetbrains-idea",       NULL,       NULL,       NULL,       0,           -1 , 5,              0},
-	{ "jetbrains-datagrip",   NULL,       NULL,       NULL,       0,           -1 , 5,              2},
-	{ "Evince",               NULL,       NULL,       NULL,       0,           -1 , 5,              2},
-	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
-	{ "Fragcode",             NULL,       NULL,       NULL,       1,           -1 , 5,              0},
-	{ "Thunar",             NULL,       NULL,       NULL,       1,           -1 , 5,              0},
+	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub */
+	{"firefox", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"Google-chrome", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"Sidekick-browser", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"X-terminal-emulator", NULL, NULL, NULL, 0, -1, 1, -1},
+	{"Code", NULL, NULL, 1 << 3, 0, -1, 5, 0, 0},
+	{"jetbrains-idea", NULL, NULL, NULL, 0, -1, 5, 0},
+	{"jetbrains-datagrip", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"Evince", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"flameshot", NULL, NULL, 0xFF, 1, -1, 5, 0},
+	{"Fragcode", NULL, NULL, NULL, 1, -1, 5, 0},
+	{"Thunar", NULL, NULL, NULL, 1, -1, 5, 0},
 };
-
 
 static const Rule subjrules[] = {
 	/* xprop(1):
