@@ -2066,6 +2066,7 @@ manage(Window w, XWindowAttributes *wa)
 		isnextscratch = 0;
 		si->pretags = 1 << (LENGTH(tags) - 1);
 		si->cmd = nextscratchcmd;
+		nextscratchcmd = NULL;
 	}else{
 		hidescratchgroupv(scratchgroupptr, 0);
 	}
