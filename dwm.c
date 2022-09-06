@@ -351,6 +351,7 @@ static void setdesktopnames(void);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setgaps(const Arg *arg);
+static void setlayoutv(const Arg *arg, int isarrange);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setnumdesktops(void);
@@ -1964,6 +1965,9 @@ managestub(Client *c){
 			{
 				const Arg arg = {.v = &layouts[1]};
 				setlayout(&arg);
+			}else{
+				const Arg arg = {.v = &layouts[selmon->sellt]};
+				setlayout(&arg);
 			}	
 		}
 	}
@@ -2012,7 +2016,7 @@ manage(Window w, XWindowAttributes *wa)
 		applyrules(c);
 	}
 
-	if(!manageppidstick(c)) managestub(c);
+	if(!manageppidstick(c) && !isnextscratch) managestub(c);
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
@@ -2675,6 +2679,38 @@ setgaps(const Arg *arg)
 	p->realgap = MAX(p->realgap, 0);
 	p->gappx = p->realgap * p->isgap;
 	arrange(selmon);
+}
+
+
+void
+setlayoutv(const Arg *arg, int isarrange)
+{
+	unsigned int i;
+	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
+		selmon->sellt ^= 1;
+	if (arg && arg->v)
+		selmon->lt[selmon->sellt] = (Layout *)arg->v;
+	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
+
+	for(i=0; i<LENGTH(tags); ++i)
+		if(selmon->tagset[selmon->seltags] & 1<<i)
+		{
+			selmon->pertag->ltidxs[i+1][selmon->sellt] = selmon->lt[selmon->sellt]; 
+			selmon->pertag->sellts[i+1] = selmon->sellt;
+		}
+	
+	if(selmon->pertag->curtag == 0)
+	{
+		selmon->pertag->ltidxs[0][selmon->sellt] = selmon->lt[selmon->sellt]; 
+		selmon->pertag->sellts[0] = selmon->sellt;
+	}
+
+	if(isarrange){
+		if (selmon->sel)
+			arrange(selmon);
+		else
+			drawbar(selmon);
+	}
 }
 
 void
