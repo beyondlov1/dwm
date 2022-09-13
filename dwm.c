@@ -3300,7 +3300,7 @@ showscratchgroup(ScratchGroup *sg)
 	}
 	if(sg->head->next && sg->head->next->c) 
 		focus(sg->head->next->c);
-	// arrange(selmon);
+	arrange(selmon);
 	sg->isfloating = 1;
 }
 
