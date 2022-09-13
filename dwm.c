@@ -230,6 +230,7 @@ struct ScratchItem
 	int pretags;
 	ScratchItem *next;
 	ScratchItem *prev;
+	int placed;
 	int x,y,w,h;
 	const char **cmd;
 };
@@ -1990,7 +1991,9 @@ scratchsingle(char *cmd[]){
 void
 manage(Window w, XWindowAttributes *wa)
 {
-	
+	// hidescratchgroup if needed (example: open app from terminal)
+	if(scratchgroupptr->isfloating)
+		hidescratchgroupv(scratchgroupptr, 0);
 
 	Client *c, *t = NULL;
 	Window trans = None;
@@ -2063,6 +2066,7 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
+	// for sspawn
 	if(isnextscratch){
 		unsigned int curtags = c->tags;
 		ScratchItem* si = addtoscratchgroupc(c);
@@ -2071,9 +2075,8 @@ manage(Window w, XWindowAttributes *wa)
 		si->pretags = 1 << (LENGTH(tags) - 1);
 		si->cmd = nextscratchcmd;
 		nextscratchcmd = NULL;
-	}else{
-		hidescratchgroupv(scratchgroupptr, 0);
 	}
+
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
 	focus(NULL);
@@ -3059,6 +3062,7 @@ geo( geo_t *g, Client *c, int x, int y, int w, int h, int interact)
 	g->interact =interact;
 }
 
+// expand focused client
 void
 tile2(Monitor *m)
 {
@@ -3276,10 +3280,12 @@ showscratchgroup(ScratchGroup *sg)
 			r.h = newh;
 		}
 
-		if(!si->x) si->x = r.x;
-		if(!si->y) si->y = r.y;
-		if(!si->w) si->w = r.w;
-		if(!si->h) si->h = r.h;
+		if(!si->placed) {
+			si->x = r.x;
+			si->y = r.y;
+			si->w = r.w;
+			si->h = r.h;
+		}
 
 		c->x = si->x;
 		c->y = si->y;
@@ -3318,6 +3324,7 @@ hidescratchitem(ScratchItem *si)
 	si->y = c->y;
 	si->w = c->w;
 	si->h = c->h;
+	si->placed = 1;
 	focus(NULL);
 	arrange(selmon);
 }
@@ -3340,6 +3347,7 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		si->y = c->y;
 		si->w = c->w;
 		si->h = c->h;
+		si->placed = 1;
 	}
 	if(isarrange){
 		focus(NULL);
@@ -4324,6 +4332,10 @@ smartviewtest2(){
 
 void
 smartview(const Arg *arg){
+	// smart failed, fallback to origin. expect reborn.
+	view(arg);
+	return;
+
 	ScratchGroup *sg = scratchgroupptr;
 	if(sg->isfloating){
 		hidescratchgroup(sg);
@@ -4332,8 +4344,8 @@ smartview(const Arg *arg){
 			view(arg);
 		}else{
 			Tag *tag = tagarray[selmon->pertag->curtag];
-			smartviewtest2(tag);
-			return;
+			// smartviewtest2(tag);
+			// return;
 			
 			// LOG_FORMAT("tag: %d, time:%d", tag->tagindex, tag->lastviewtime);
 			Tag *last = tag;

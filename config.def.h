@@ -125,7 +125,6 @@ static const char *browser[] = {"sidk.sh",NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_q,      spawn,          {.v = browser } },
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
@@ -160,6 +159,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_o,    relview,           {.i=1} },
 	{ MODKEY,                       XK_a,    relview,           {.i=-1} },
 	{ MODKEY,                       XK_d,    relview,           {.i=1} },
+	{ MODKEY,                       XK_q,      relview,          {.i = -1 } },
+	{ MODKEY,                       XK_w,      relview,          {.i = 1 } },
 	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
