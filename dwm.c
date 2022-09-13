@@ -4332,10 +4332,7 @@ smartviewtest2(){
 
 void
 smartview(const Arg *arg){
-	// smart failed, fallback to origin. expect reborn.
-	view(arg);
-	return;
-
+	
 	ScratchGroup *sg = scratchgroupptr;
 	if(sg->isfloating){
 		hidescratchgroup(sg);
@@ -4343,6 +4340,10 @@ smartview(const Arg *arg){
 		if(arg->ui & TAGMASK){
 			view(arg);
 		}else{
+			// smart failed, fallback to origin. expect reborn.
+			view(arg);
+			return;
+
 			Tag *tag = tagarray[selmon->pertag->curtag];
 			// smartviewtest2(tag);
 			// return;
