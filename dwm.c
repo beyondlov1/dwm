@@ -1413,6 +1413,23 @@ closestxclient(Client *t, Client *c1, Client *c2){
 		return c1;
 }
 
+int
+avgx(Client *c)
+{
+	return c->x + c->w / 2;
+}
+
+Client *
+closestxgravityclient(Client *t, Client *c1, Client *c2)
+{
+	if(t == c1) return c2;
+	if(t == c2) return c1;
+	if (abs(avgx(c1) - avgx(t)) > abs(avgx(c2) - avgx(t)))
+		return c2;
+	else
+		return c1;
+}
+
 Client *
 closestyclient(Client *t, Client *c1, Client *c2)
 {
@@ -1495,13 +1512,13 @@ focusgrid(const Arg *arg)
 		{
 			if (cc&& c != cc && c->y < cc->y && ISVISIBLE(c))
 			{
-				if (abs(cc->y - c->y) < min && cc->x == c->x)
+				if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))
 				{
 					min = abs(cc->y - c->y);
 					closest = c;
 				}
 				else if (abs(cc->y - c->y) == min)
-					closest = closestxclient(cc, c, closest);
+					closest = closestxgravityclient(cc, c, closest);
 			}
 		}
 		c = closest;
@@ -1514,13 +1531,13 @@ focusgrid(const Arg *arg)
 		{
 			if (cc && c != cc&& c->y > cc->y && ISVISIBLE(c))
 			{
-				if (abs(cc->y - c->y) < min && cc->x == c->x)
+				if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))
 				{
 					min = abs(cc->y - c->y);
 					closest = c;
 				}
 				else if (abs(cc->y - c->y) == min)
-					closest = closestxclient(cc, c, closest);
+					closest = closestxgravityclient(cc, c, closest);
 			}
 		}
 		c = closest;
@@ -3088,7 +3105,6 @@ tile2(Monitor *m)
 			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
 			geo(gmap+i,c, m->wx + m->gap->gappx, m->wy + my, mw - (2*c->bw) - m->gap->gappx, h - (2*c->bw), 0);
 			geo_t g = gmap[i];
-			// resize(g.c, g.x, g.y, g.w, g.h, g.interact);
 			if (my + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
 				my += (g.h + 2*c->bw) + m->gap->gappx;
 			masterend = i;
@@ -3099,7 +3115,6 @@ tile2(Monitor *m)
 			h = (m->wh - ty) / (n - i) - m->gap->gappx;
 			geo(gmap+i,c, m->wx + mw + m->gap->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gap->gappx, h - (2*c->bw), 0);
 			geo_t g = gmap[i];
-			//resize(g.c, g.x, g.y, g.w, g.h, g.interact);
 			if (ty + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
 				ty += (g.h + 2*c->bw) + m->gap->gappx;
 		}
@@ -3122,6 +3137,8 @@ tile2(Monitor *m)
 		return;
 	}
 
+	// int focused_slave_w = m->ww * m->mfact;
+	int focused_slave_w = m->ww / 2; 
 	int currenty = 0;
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 	{
@@ -3130,16 +3147,23 @@ tile2(Monitor *m)
 			resize(g.c, g.x, g.y, g.w, g.h, g.interact);
 			continue;
 		}
+		int x;
+		int y;
+		int w;
 		int h;
 		if(i == focused_slave_index){
+			x = g.x + g.w - focused_slave_w;
+			y = currenty + m->gap->gappx;
+			w = focused_slave_w;
 			h = focused_slave_h;
 		}else{
+			x = g.x;
+			y = currenty + m->gap->gappx;
+			w = g.w;
 			h = unfocused_slave_h;
 		}
-		resize(g.c, g.x, currenty + m->gap->gappx, g.w, h - m->gap->gappx, g.interact);
+		resize(g.c, x, y, w, h - m->gap->gappx, g.interact);
 		currenty += h;
-		// resize(g.c, g.x, g.y, g.w, g.h, g.interact);
-		//LOG("aa","bb");
 	}
 	
 }
