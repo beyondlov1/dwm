@@ -147,6 +147,7 @@ static Key keys[] = {
 	// { MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY|ControlMask,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
+	{ Mod1Mask,             XK_Tab, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },
