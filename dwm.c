@@ -407,6 +407,7 @@ static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 static void zoomi(const Arg *arg);
+static void smartzoom(const Arg *arg);
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -4579,6 +4580,24 @@ zoomi(const Arg *arg)
 	pop(c);
 }
 
+void 
+smartzoom(const Arg *arg)
+{
+	int isselcslave = 0;
+	int i;
+	Client *c;
+	for (i = 0, c = nexttiled(selmon->clients); c; c = nexttiled(c->next), i++)
+	{
+		if (i >= selmon->nmaster && c == selmon->sel) isselcslave = 1;
+	}
+	if(isselcslave){
+		const Arg arg = {0};
+		zoom(&arg);
+	}else{
+		const Arg arg = {.i = 1};
+		zoomi(&arg);
+	}
+}
 
 void
 setcurrentdesktop(void){
