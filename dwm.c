@@ -1543,7 +1543,7 @@ focusgrid(const Arg *arg)
 		}
 		c = closest;
 	}
-	if(cc && selmon->sellt == 1){
+	if(cc && selmon->sellt == 1 && !scratchgroupptr->isfloating){
 		if(arg->i == FOCUS_LEFT) {
 			Client *i;
 			for(i = selmon->clients;i;i=i->next){
@@ -1994,11 +1994,12 @@ managestub(Client *c){
 
 
 int 
-scratchsingle(char *cmd[]){
-	const ScratchItem *si = NULL;
+scratchsingle(char *cmd[],ScratchItem **siptr){
+	ScratchItem *si = NULL;
 	for (si = scratchgroupptr->head->next; si && si !=  scratchgroupptr->tail; si = si->next)
 	{
 		if (si->cmd == cmd){
+			*siptr = si;
 			return 1;
 		}
 	}
@@ -3010,9 +3011,12 @@ spawn(const Arg *arg)
 void
 sspawn(const Arg *arg)
 {
-	if (!scratchgroupptr->isfloating && scratchsingle(arg->v))
+	ScratchItem *si;
+	if (!scratchgroupptr->isfloating && scratchsingle(arg->v, &si))
 	{
 		showscratchgroup(scratchgroupptr);
+		focus(si->c);
+		arrange(selmon);
 		return;
 	}
 	spawn(arg);

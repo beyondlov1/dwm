@@ -122,10 +122,13 @@ static const char *roficmd[] = {"rofi","-show","combi",NULL};
 static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
+static const char *notecmd[] = {"qt-note.sh",NULL};
+
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
+	{ MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
@@ -155,7 +158,7 @@ static Key keys[] = {
 	{ MODKEY,             XK_comma, zoomi,           {.i=1} },
 	{ MODKEY,             XK_period, zoomi,           {.i=1000} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
-	// { MODKEY,                       XK_Tab,    smartview,           {0} },
+	{ Mod1Mask,                       XK_Tab,    smartview,           {0} },
 	{ MODKEY,                       XK_u,    relview,           {.i=-1} },
 	{ MODKEY,                       XK_o,    relview,           {.i=1} },
 	{ MODKEY,                       XK_a,    relview,           {.i=-1} },
