@@ -176,7 +176,7 @@ struct Monitor {
 	Client *sel;
 	Client *stack;
 	Monitor *next;
-	Window barwin;
+	Window barwin,switcher;
 	const Layout *lt[2];
 	Pertag *pertag;
 };
@@ -385,6 +385,7 @@ static void unmapnotify(XEvent *e);
 static void updatecurrentdesktop(void);
 static void updatebarpos(Monitor *m);
 static void updatebars(void);
+static void updateswitcher(void);
 static void updateclientlist(void);
 static int updategeom(void);
 static void updatenumlockmask(void);
@@ -1220,13 +1221,30 @@ drawbar(Monitor *m)
 	drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
 }
 
+void 
+drawswitcher(Monitor *m)
+{
+	// do nothing !
+	// drw_setscheme(drw, scheme[SchemeNorm]);
+	// drw_rect(drw, 0,0, m->ww/6, m->wh/6, 1, 0);
+	// drw_rect(drw, m->ww/6,0, m->ww/6, m->wh/6, 1, 0);
+	// drw_rect(drw, m->ww/,0, m->ww/6, m->wh/6, 1, 0);
+	// drw_rect(drw, 0,0, m->ww/6, m->wh/6, 1, 0);
+	// drw_setscheme(drw, scheme[SchemeSel]);
+	// drw_text(drw, 0,0, m->ww/4, m->wh/4, 0, "helllo world", 0);
+	// drw_map(drw,m->switcher, 0,0, m->ww/2, m->wh/2);
+}
+
 void
 drawbars(void)
 {
 	Monitor *m;
 
 	for (m = mons; m; m = m->next)
+	{
 		drawbar(m);
+		drawswitcher(m);
+	}
 }
 
 void
@@ -2187,6 +2205,24 @@ motionnotify(XEvent *e)
 		focus(NULL);
 	}
 	mon = m;
+
+	if(ev->y >selmon->by && ev->y < selmon->by + bh){
+		int x = 0, i = 0;
+		Client *c;
+		unsigned int occ = 0;
+		for(c = m->clients; c; c=c->next)
+			occ |= c->tags;
+		do {
+			/* Do not reserve space for vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
+			x += TEXTW(tags[i]);
+		} while (ev->x >= x && ++i < LENGTH(tags));
+		if (i < LENGTH(tags) && 1 << i != selmon->tagset[selmon->seltags]) {
+			const Arg arg = {.ui = 1 << i};
+			view(&arg);
+		}
+	}
 }
 
 void
@@ -2888,6 +2924,7 @@ setup(void)
 	updatesystray();
 	/* init bars */
 	updatebars();
+	updateswitcher();
 	updatestatus();
 	/* supporting window for NetWMCheck */
 	wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
@@ -3807,6 +3844,30 @@ updatebars(void)
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
 	}
+}
+
+void
+updateswitcher(void){
+	// do nothing !
+	// Monitor *m;
+	// XSetWindowAttributes wa = {
+	// 	.override_redirect = True,
+	// 	.background_pixmap = ParentRelative,
+	// 	.event_mask = ButtonPressMask|ExposureMask
+	// };
+	// XClassHint ch = {"dwm", "dwm"};
+	// for (m = mons; m; m = m->next) {
+	// 	if (m->switcher)
+	// 		continue;
+		
+	// 	m->switcher = XCreateWindow(dpy, root, m->ww/2, m->wh/2, m->ww/2, m->wh/2, 0, DefaultDepth(dpy, screen),
+	// 			CopyFromParent, DefaultVisual(dpy, screen),
+	// 			CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	// 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
+	// 	XMapRaised(dpy, m->switcher);
+	// 	XSetClassHint(dpy, m->switcher, &ch);
+	// 	drw_setscheme(drw, scheme[SchemeNorm]);
+	// }
 }
 
 void
