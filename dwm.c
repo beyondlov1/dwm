@@ -244,6 +244,7 @@ struct ScratchGroup
 	int tags;
 	int pretags;
 	int isfloating;
+	Client *lastfocused;
 };
 
 typedef struct Tag Tag;
@@ -3352,7 +3353,11 @@ showscratchgroup(ScratchGroup *sg)
 		arrange(selmon);
 		resize(si->c,si->x,si->y, si->w,si->h,1);
 	}
-	if(sg->head->next && sg->head->next->c) 
+
+	if(sg->lastfocused){
+		focus(sg->lastfocused);
+	}
+	else if(sg->head->next && sg->head->next->c) 
 		focus(sg->head->next->c);
 	arrange(selmon);
 	sg->isfloating = 1;
@@ -3361,6 +3366,7 @@ showscratchgroup(ScratchGroup *sg)
 void
 hidescratchitem(ScratchItem *si)
 {
+	scratchgroupptr->lastfocused = selmon->sel;
 	Client * c = si->c;
 	if(!c) return;
 	c->isfloating = 0;
@@ -3380,6 +3386,7 @@ hidescratchitem(ScratchItem *si)
 void 
 hidescratchgroupv(ScratchGroup *sg, int isarrange)
 {
+	scratchgroupptr->lastfocused = selmon->sel;
 	ScratchItem *si;
 	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
