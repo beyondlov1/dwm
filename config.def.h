@@ -23,11 +23,13 @@ static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
 static const char col_cyan[]        = "#43A5F5";
-static const char *colors[][3]      = {
+static const char *colors[][3] = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  "#00BFFF"  },
-	[SchemeScr]  = { col_gray4, col_cyan,  "#cf110b"  },
+	[SchemeNorm] = {col_gray3, col_gray1, col_gray2},
+	[SchemeSel] = {col_gray4, col_cyan, "#00BFFF"},
+	[SchemeScr] = {col_gray4, col_cyan, "#cf110b"},
+	[SchemeInvalidNormal] = {col_gray1, col_gray1, col_gray2},
+	[SchemeInvalidSel] = {col_gray1, col_cyan, "#00BFFF"},
 };
 
 /* tagging */

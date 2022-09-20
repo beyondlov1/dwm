@@ -45,6 +45,7 @@
 
 #include "drw.h"
 #include "util.h"
+#include "list.h"
 
 /* macros */
 #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
@@ -86,7 +87,7 @@ static FILE *logfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel , SchemeScr}; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -1246,6 +1247,49 @@ drawbars(void)
 		drawbar(m);
 }
 
+int
+gettagindex(unsigned int tags)
+{
+	int curtagindex = -1;
+	while (tags)
+	{
+		tags = tags >> 1;
+		curtagindex++;
+	}
+	return curtagindex;
+}
+
+struct TagClient
+{
+	Client *client;
+	struct list_head head;
+};
+
+void 
+free_list(struct TagClient *tc)
+{
+	// fixme?
+	struct list_head *freehead;
+	struct list_head *head = &tc->head;
+	struct list_head *last = tc->head.prev;
+	while (NULL != head)
+	{
+		freehead = head;
+		head = head->next;
+		if (head == last)
+		{
+			struct TagClient *freetc = list_entry(freehead, struct TagClient, head);
+			free(freetc);
+			break;
+		}
+		if (freehead)
+		{
+			struct TagClient *freetc = list_entry(freehead, struct TagClient, head);
+			free(freetc);
+		}
+	}
+}
+
 void
 drawswitcher(Monitor *m)
 {
@@ -1275,8 +1319,30 @@ drawswitcher(Monitor *m)
 		tag = tag >> 1;
 		curtagindex ++;
 	}
-	
+
 	int i;
+
+	struct TagClient *tagclientsmap[LENGTH(tags)];
+	for(i = 0; i < LENGTH(tags); i++){
+		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+		tagclient->head.next = &tagclient->head;
+		tagclient->head.prev = &tagclient->head;
+		tagclient->client = NULL;
+		tagclientsmap[i] = tagclient;
+	}
+
+	Client *c;
+	for(c=selmon->clients; c; c = c->next)
+	{
+		int tagindex = gettagindex(c->tags);
+		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+		tagclient->client = c;
+		list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
+		LOG_FORMAT("%s:%d", c->name, tagindex);
+		LOG_FORMAT("aaaa %p == %p;", &tagclient->head, &tagclientsmap[tagindex]->head);
+	}
+
+	
 	for(i = 0; i < LENGTH(tags); i++){
 		int row = i/3;
 		int col = i%3;
@@ -1285,10 +1351,15 @@ drawswitcher(Monitor *m)
 		}else{
 			drw_setscheme(drw, scheme[SchemeNorm]);
 		}
-		drw_text(drw, col*ww/3, row*wh/3, ww/3, wh/3, 10, tags[i], 0);
+		if (!list_empty(&tagclientsmap[i]->head))
+			drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 10, tags[i], 0);
 	}
 	drw_map(drw, m->switcher, 0,0, ww, wh);
-	
+
+	for (i = 0; i < LENGTH(tags); i++)
+	{
+		free_list(tagclientsmap[i]);
+	}
 }
 
 void 
