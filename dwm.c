@@ -297,6 +297,9 @@ static void detachstack(Client *c);
 static Monitor *dirtomon(int dir);
 static void drawbar(Monitor *m);
 static void drawbars(void);
+static void drawswitcher(Monitor *m);
+static void destroyswitcher(Monitor *m);
+static void toggleswitchers(const Arg *arg);
 static void enqueue(Client *c);
 static void enqueuestack(Client *c);
 static void enternotify(XEvent *e);
@@ -772,6 +775,18 @@ buttonpress(XEvent *e)
 				}
 			}
 		}
+	}else if(ev->window == selmon->switcher){
+		int rx = ev->x;
+		int ry = ev->y;
+		int iw = selmon->ww / 6;
+		int ih = selmon->wh / 6;
+		int col = rx/iw;
+		int row = ry/ih;
+		int tagindex = col+row*3;
+		unsigned int tags = 1 << tagindex;
+		const Arg arg = {.ui = tags};
+		view(&arg);
+		destroyswitcher(selmon);
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
 		LOG("buttonpress.elseif", c->name);
@@ -1229,6 +1244,69 @@ drawbars(void)
 
 	for (m = mons; m; m = m->next)
 		drawbar(m);
+}
+
+void
+drawswitcher(Monitor *m)
+{
+	if(m->switcher) return;
+	XSetWindowAttributes wa = {
+		.override_redirect = True,
+		.background_pixmap = ParentRelative,
+		.event_mask = ButtonPressMask|ExposureMask
+	};
+	XClassHint ch = {"dwm", "dwm"};
+	int ww = m->ww/2;
+	int wh = m->wh/2;
+	int wx = m->ww/2-ww/2;
+	int wy = m->wh/2-wh/2;
+	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
+				CopyFromParent, DefaultVisual(dpy, screen),
+				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
+	XMapRaised(dpy, m->switcher);
+	XSetClassHint(dpy, m->switcher, &ch);
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);
+	unsigned int tag = m->tagset[m->seltags];
+	int curtagindex = -1;
+	while (tag)
+	{
+		tag = tag >> 1;
+		curtagindex ++;
+	}
+	
+	int i;
+	for(i = 0; i < LENGTH(tags); i++){
+		int row = i/3;
+		int col = i%3;
+		if(curtagindex == i){
+			drw_setscheme(drw, scheme[SchemeSel]);
+		}else{
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+		drw_text(drw, col*ww/3, row*wh/3, ww/3, wh/3, 10, tags[i], 0);
+	}
+	drw_map(drw, m->switcher, 0,0, ww, wh);
+	
+}
+
+void 
+destroyswitcher(Monitor *m)
+{
+	XUnmapWindow(dpy, m->switcher);
+	XDestroyWindow(dpy, m->switcher);
+	selmon->switcher = 0L;	
+}
+
+void
+toggleswitchers(const Arg *arg)
+{
+	if(selmon->switcher){
+		destroyswitcher(selmon);
+	}else{
+		drawswitcher(selmon);
+	}
 }
 
 void
