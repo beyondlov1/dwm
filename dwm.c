@@ -1342,7 +1342,7 @@ drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 		list_for_each(head, &tagclientsmap[i]->head)
 		{
 			struct TagClient *tc = list_entry(head, struct TagClient,head);
-			drw_text(drw, col * ww / 3, y, ww / 3, bh, 10, tc->client->name, 0);
+			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, tc->client->name, 0);
 			y = y + bh;
 		}
 	}
