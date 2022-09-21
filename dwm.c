@@ -588,6 +588,7 @@ rerule(const Arg *arg)
 		if (ch.res_name)
 			XFree(ch.res_name);	
 	}
+	LOG_FORMAT("rerule 1\n");
 	unsigned int maxtags = getmaxtags();
 	for(c = selmon->clients; c; c = c->next)
 	{
@@ -595,9 +596,12 @@ rerule(const Arg *arg)
 			c->tags = maxtags << 1;
 		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 	}
+	LOG_FORMAT("rerule 2\n");
 	arrange(selmon);
+	LOG_FORMAT("rerule 3\n");
 	Arg arg2 = {.ui=selmon->sel->tags};
 	view(&arg2);
+	LOG_FORMAT("rerule 4\n");
 }
 
 int
@@ -1492,7 +1496,7 @@ void
 focusin(XEvent *e)
 {
 	XFocusChangeEvent *ev = &e->xfocus;
-
+	if(ev->window == selmon->switcher) return;
 	if (selmon->sel && ev->window != selmon->sel->win)
 		setfocus(selmon->sel);
 }
@@ -2196,6 +2200,7 @@ scratchsingle(char *cmd[],ScratchItem **siptr){
 void
 manage(Window w, XWindowAttributes *wa)
 {
+	LOG_FORMAT("manage w: %ld\n", w);
 	// hidescratchgroup if needed (example: open app from terminal)
 	if(scratchgroupptr->isfloating)
 		hidescratchgroupv(scratchgroupptr, 0);
