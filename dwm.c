@@ -1392,6 +1392,10 @@ destroyswitcher(Monitor *m)
 void
 toggleswitchers(const Arg *arg)
 {
+	ScratchGroup *sg = scratchgroupptr;
+	if(sg->isfloating){
+		hidescratchgroup(sg);
+	}
 	if(selmon->switcher){
 		destroyswitcher(selmon);
 	}else{
