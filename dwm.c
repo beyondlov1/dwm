@@ -374,6 +374,8 @@ static void sspawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
+static void switchermove(const Arg *arg);
+static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -460,6 +462,7 @@ static ScratchGroup *scratchgroupptr;
 static Tag *HEADTAG, *TAILTAG;
 static int isnextscratch = 0;
 static const char **nextscratchcmd;
+static int switchercurtagindex;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1248,15 +1251,24 @@ drawbars(void)
 }
 
 int
-gettagindex(unsigned int tags)
+gettagindex(unsigned int tag)
 {
+	int len = LENGTH(tags);
 	int curtagindex = -1;
-	while (tags)
+	while (tag)
 	{
-		tags = tags >> 1;
+		if(curtagindex >= len) return len - 1;
+		tag = tag >> 1;
 		curtagindex++;
 	}
 	return curtagindex;
+}
+
+int
+getcurtagindex(Monitor *m)
+{
+	unsigned int tag = m->tagset[m->seltags];
+	return gettagindex(tag);
 }
 
 struct TagClient
@@ -1268,57 +1280,24 @@ struct TagClient
 void 
 free_list(struct TagClient *tc)
 {
-	// fixme?
 	struct list_head *freehead;
 	struct list_head *head = &tc->head;
 	struct list_head *last = tc->head.prev;
 	while (NULL != head)
 	{
+		head->prev->next = NULL;
 		freehead = head;
 		head = head->next;
-		if (head == last)
-		{
-			struct TagClient *freetc = list_entry(freehead, struct TagClient, head);
-			free(freetc);
-			break;
-		}
-		if (freehead)
-		{
-			struct TagClient *freetc = list_entry(freehead, struct TagClient, head);
-			free(freetc);
-		}
+		struct TagClient *freetc = list_entry(freehead, struct TagClient, head);
+		free(freetc);
 	}
 }
 
 void
-drawswitcher(Monitor *m)
+drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 {
-	if(m->switcher) return;
-	XSetWindowAttributes wa = {
-		.override_redirect = True,
-		.background_pixmap = ParentRelative,
-		.event_mask = ButtonPressMask|ExposureMask
-	};
-	XClassHint ch = {"dwm", "dwm"};
-	int ww = m->ww/2;
-	int wh = m->wh/2;
-	int wx = m->ww/2-ww/2;
-	int wy = m->wh/2-wh/2;
-	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
-				CopyFromParent, DefaultVisual(dpy, screen),
-				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
-	XMapRaised(dpy, m->switcher);
-	XSetClassHint(dpy, m->switcher, &ch);
 	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_rect(drw, 0, 0, ww, wh, 1, 1);
-	unsigned int tag = m->tagset[m->seltags];
-	int curtagindex = -1;
-	while (tag)
-	{
-		tag = tag >> 1;
-		curtagindex ++;
-	}
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
 
 	int i;
 
@@ -1338,8 +1317,6 @@ drawswitcher(Monitor *m)
 		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
 		tagclient->client = c;
 		list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
-		LOG_FORMAT("%s:%d", c->name, tagindex);
-		LOG_FORMAT("aaaa %p == %p;", &tagclient->head, &tagclientsmap[tagindex]->head);
 	}
 
 	
@@ -1347,19 +1324,61 @@ drawswitcher(Monitor *m)
 		int row = i/3;
 		int col = i%3;
 		if(curtagindex == i){
-			drw_setscheme(drw, scheme[SchemeSel]);
+			if (!list_empty(&tagclientsmap[i]->head))
+				drw_setscheme(drw, scheme[SchemeSel]);
+			else
+				drw_setscheme(drw, scheme[SchemeInvalidSel]);
 		}else{
-			drw_setscheme(drw, scheme[SchemeNorm]);
+			if (!list_empty(&tagclientsmap[i]->head))
+				drw_setscheme(drw, scheme[SchemeNorm]);
+			else
+				drw_setscheme(drw, scheme[SchemeInvalidNormal]);
 		}
-		if (!list_empty(&tagclientsmap[i]->head))
-			drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 10, tags[i], 0);
+		drw_rect(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 1, 1);
+		int y = row * wh / 3;
+		drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, bh, 10, tags[i], 0);
+		y = y + bh;
+		struct list_head *head;
+		list_for_each(head, &tagclientsmap[i]->head)
+		{
+			struct TagClient *tc = list_entry(head, struct TagClient,head);
+			drw_text(drw, col * ww / 3, y, ww / 3, bh, 10, tc->client->name, 0);
+			y = y + bh;
+		}
 	}
 	drw_map(drw, m->switcher, 0,0, ww, wh);
+
+	switchercurtagindex = curtagindex;
+	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, CurrentTime);
 
 	for (i = 0; i < LENGTH(tags); i++)
 	{
 		free_list(tagclientsmap[i]);
 	}
+}
+
+void
+drawswitcher(Monitor *m)
+{
+	if(m->switcher) return;
+	XSetWindowAttributes wa = {
+		.override_redirect = True,
+		.background_pixmap = ParentRelative,
+		.event_mask = ButtonPressMask|ExposureMask|KeyPressMask
+	};
+	
+	XClassHint ch = {"dwm", "dwm"};
+	int ww = m->ww/2;
+	int wh = m->wh/2;
+	int wx = m->ww/2-ww/2;
+	int wy = m->wh/2-wh/2;
+	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
+				CopyFromParent, DefaultVisual(dpy, screen),
+				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
+	XMapRaised(dpy, m->switcher);
+	XSetClassHint(dpy, m->switcher, &ch);
+	drawswitcherwin(m, ww, wh, getcurtagindex(m));
 }
 
 void 
@@ -1921,11 +1940,23 @@ keypress(XEvent *e)
 
 	ev = &e->xkey;
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-	for (i = 0; i < LENGTH(keys); i++)
-		if (keysym == keys[i].keysym
-		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
-		&& keys[i].func)
-			keys[i].func(&(keys[i].arg));
+	if(selmon->switcher)
+	{
+		for (i = 0; i < LENGTH(switcherkeys); i++)
+			if (keysym == switcherkeys[i].keysym
+			&& CLEANMASK(switcherkeys[i].mod) == CLEANMASK(ev->state)
+			&& switcherkeys[i].func)
+				switcherkeys[i].func(&(switcherkeys[i].arg));
+	}
+	else
+	{
+		for (i = 0; i < LENGTH(keys); i++)
+			if (keysym == keys[i].keysym
+			&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
+			&& keys[i].func)
+				keys[i].func(&(keys[i].arg));
+	}
+
 }
 
 
@@ -4810,6 +4841,34 @@ void updatecurrentdesktop(void){
 	}
 	long data[] = { i };
 	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
+}
+
+
+
+void
+switchermove(const Arg *arg)
+{
+	int selcurtagindex = switchercurtagindex;
+	if(arg->i == -1) selcurtagindex -= 1;
+	if(arg->i == 1) selcurtagindex += 1;
+	if(arg->i == -2) selcurtagindex += 3;
+	if(arg->i == 2) selcurtagindex -= 3;
+	if(selcurtagindex < 0) selcurtagindex = 0;
+	if(selcurtagindex >= LENGTH(tags)) selcurtagindex = LENGTH(tags) - 1;
+	unsigned int tags = 1 << selcurtagindex;
+	const Arg varg = {.ui = tags};
+	view(&varg);
+	drawswitcherwin(selmon, selmon->ww/2, selmon->wh/2, selcurtagindex);
+}
+
+void
+switcherview(const Arg *arg)
+{
+	unsigned int tags = 1 << switchercurtagindex;
+	const Arg varg = {.ui = tags};
+	view(&varg);
+	const Arg tsarg = {0};
+	toggleswitchers(&tsarg);
 }
  
 

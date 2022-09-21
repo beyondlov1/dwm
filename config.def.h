@@ -23,13 +23,14 @@ static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
 static const char col_cyan[]        = "#43A5F5";
+static const char col_white[]        = "#FFFFFF";
 static const char *colors[][3] = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = {col_gray3, col_gray1, col_gray2},
 	[SchemeSel] = {col_gray4, col_cyan, "#00BFFF"},
 	[SchemeScr] = {col_gray4, col_cyan, "#cf110b"},
-	[SchemeInvalidNormal] = {col_gray1, col_gray1, col_gray2},
-	[SchemeInvalidSel] = {col_gray1, col_cyan, "#00BFFF"},
+	[SchemeInvalidNormal] = {col_gray2, col_gray1, col_gray2},
+	[SchemeInvalidSel] = {col_gray2, col_cyan, "#00BFFF"},
 };
 
 /* tagging */
@@ -153,7 +154,7 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
-	{ MODKEY,             XK_Tab, togglescratchgroup,           {0} },
+	{ MODKEY,             XK_Tab,   toggleswitchers,           {0} },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },
@@ -221,6 +222,20 @@ static Key keys[] = {
 	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -10% ") },
 	{ 0, XF86XK_AudioMute,       spawn, SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle") },
 	{ 0, XF86XK_AudioMicMute,        spawn, SHCMD("pactl set-source-mute @DEFAULT_SOURCE@ toggle") },
+};
+
+static Key switcherkeys[] = {
+	{0, XK_Left, switchermove, {.i = -1}},
+	{0, XK_Right, switchermove, {.i = 1}},
+	{0, XK_Up, switchermove, {.i = 2}},
+	{0, XK_Down, switchermove, {.i = -2}},
+	{0, XK_h, switchermove, {.i = -1}},
+	{0, XK_l, switchermove, {.i = 1}},
+	{0, XK_k, switchermove, {.i = 2}},
+	{0, XK_j, switchermove, {.i = -2}},
+	{0, XK_Return, switcherview, {0}},
+	{MODKEY, XK_Tab, toggleswitchers, {0}},
+	{0, XK_Escape, toggleswitchers, {0}},
 };
 
 /* button definitions */
