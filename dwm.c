@@ -555,7 +555,7 @@ rerule(const Arg *arg)
 {
 	Client *c;
 	for(c = selmon->clients; c; c = c->next){
-			const char *class, *instance;
+		const char *class, *instance;
 		unsigned int i;
 		const Rule *r;
 		Monitor *m;
@@ -588,7 +588,6 @@ rerule(const Arg *arg)
 		if (ch.res_name)
 			XFree(ch.res_name);	
 	}
-	LOG_FORMAT("rerule 1\n");
 	unsigned int maxtags = getmaxtags();
 	for(c = selmon->clients; c; c = c->next)
 	{
@@ -596,12 +595,11 @@ rerule(const Arg *arg)
 			c->tags = maxtags << 1;
 		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 	}
-	LOG_FORMAT("rerule 2\n");
 	arrange(selmon);
-	LOG_FORMAT("rerule 3\n");
-	Arg arg2 = {.ui=selmon->sel->tags};
-	view(&arg2);
-	LOG_FORMAT("rerule 4\n");
+	if(selmon->sel){
+		Arg arg2 = {.ui=selmon->sel->tags};
+		view(&arg2);
+	}
 }
 
 int
@@ -1346,14 +1344,18 @@ drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 		list_for_each(head, &tagclientsmap[i]->head)
 		{
 			struct TagClient *tc = list_entry(head, struct TagClient,head);
-			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, tc->client->name, 0);
+			XClassHint ch = { NULL, NULL };
+			XGetClassHint(dpy, tc->client->win, &ch);
+			char *class    = ch.res_class ? ch.res_class : broken;
+			char *instance = ch.res_name  ? ch.res_name  : broken;
+			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
 			y = y + bh;
 		}
 	}
 	drw_map(drw, m->switcher, 0,0, ww, wh);
 
 	switchercurtagindex = curtagindex;
-	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, CurrentTime);
+	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 
 	for (i = 0; i < LENGTH(tags); i++)
 	{
@@ -1388,6 +1390,11 @@ drawswitcher(Monitor *m)
 void 
 destroyswitcher(Monitor *m)
 {
+	if(selmon->sel){
+		XSetInputFocus(dpy, selmon->sel->win, RevertToPointerRoot, CurrentTime);
+	}else{
+		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+	}
 	XUnmapWindow(dpy, m->switcher);
 	XDestroyWindow(dpy, m->switcher);
 	selmon->switcher = 0L;	
@@ -1496,7 +1503,10 @@ void
 focusin(XEvent *e)
 {
 	XFocusChangeEvent *ev = &e->xfocus;
-	if(ev->window == selmon->switcher) return;
+	if(ev->window == selmon->switcher) {
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot,0);
+		return;
+	}
 	if (selmon->sel && ev->window != selmon->sel->win)
 		setfocus(selmon->sel);
 }
@@ -2200,7 +2210,6 @@ scratchsingle(char *cmd[],ScratchItem **siptr){
 void
 manage(Window w, XWindowAttributes *wa)
 {
-	LOG_FORMAT("manage w: %ld\n", w);
 	// hidescratchgroup if needed (example: open app from terminal)
 	if(scratchgroupptr->isfloating)
 		hidescratchgroupv(scratchgroupptr, 0);
@@ -4416,7 +4425,6 @@ view(const Arg *arg)
 	selmon->sellt = selmon->pertag->sellts[selmon->pertag->curtag];
 	selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 	selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
-
 
     // ------------- test smartview ---------------//
 	// record lastviewtime

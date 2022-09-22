@@ -137,6 +137,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
 	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
+	{ Mod1Mask,                       XK_grave,      togglescratchgroup,  {0} },
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 	{ MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
