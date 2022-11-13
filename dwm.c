@@ -774,7 +774,7 @@ buttonpress(XEvent *e)
 			click = ClkWinTitle;
 			Client *c;
 			for(c = selmon->clients; c; c = c->next){
-				if (ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
+				if ( ISVISIBLE(c) && ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
 				{
 					focus(c);
 					break;
