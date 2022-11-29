@@ -326,6 +326,7 @@ static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
+static void killclientc(Client *c);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
@@ -776,7 +777,14 @@ buttonpress(XEvent *e)
 			for(c = selmon->clients; c; c = c->next){
 				if ( ISVISIBLE(c) && ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
 				{
-					focus(c);
+					if(ev->button == Button1)
+					{
+						focus(c);
+					}
+					if (ev->button == Button3)
+					{
+						killclientc(c);
+					}
 					break;
 				}
 			}
@@ -1978,24 +1986,29 @@ keypress(XEvent *e)
 }
 
 
+void 
+killclientc(Client* c)
+{
+	if (!c)
+		return;
+
+	if (!sendevent(c->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0, 0, 0))
+	{
+		XGrabServer(dpy);
+		XSetErrorHandler(xerrordummy);
+		XSetCloseDownMode(dpy, DestroyAll);
+		XKillClient(dpy, c->win);
+		XSync(dpy, False);
+		XSetErrorHandler(xerror);
+		XUngrabServer(dpy);
+	}
+}
 
 
 void
 killclient(const Arg *arg)
 {
-	if (!selmon->sel)
-		return;
-
-	if (!sendevent(selmon->sel->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0 , 0, 0)) {
-		XGrabServer(dpy);
-		XSetErrorHandler(xerrordummy);
-		XSetCloseDownMode(dpy, DestroyAll);
-		XKillClient(dpy, selmon->sel->win);
-		XSync(dpy, False);
-		XSetErrorHandler(xerror);
-		XUngrabServer(dpy);
-	}
-
+	killclientc(selmon->sel);
 }
 
 int 
