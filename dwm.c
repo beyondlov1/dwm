@@ -2969,6 +2969,15 @@ setlayoutv(const Arg *arg, int isarrange)
 void
 setlayout(const Arg *arg)
 {
+	Client *curc = selmon->sel;
+	if (curc && curc->isscratched && curc->isfloating && ISVISIBLE(selmon->sel))
+	{
+		const Arg scratcharg = {0};
+		togglescratchgroup(&scratcharg);
+		const Arg tagarg = {.ui = curc->tags};
+		view(&tagarg);
+		focus(curc);
+	}
 	unsigned int i;
 	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
 		selmon->sellt ^= 1;
