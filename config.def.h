@@ -94,11 +94,13 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 
 /* Include */
 #include "gaplessgrid.c"
+#include "gapgrid.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile2 },    /* first entry is default */
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
+	{ "HHH",      gapgrid },
 	{ "HHH",      gaplessgrid },
 };
 
@@ -157,7 +159,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ControlMask,                       XK_l,      setmfact,       {.f = +0.05} },
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
-	{ MODKEY,             XK_Tab,   toggleswitchers,           {0} },
+	// { MODKEY,             XK_Tab,   toggleswitchers,           {0} },
+	{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },

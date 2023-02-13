@@ -1630,6 +1630,8 @@ closestxgravityclient(Client *t, Client *c1, Client *c2)
 Client *
 closestyclient(Client *t, Client *c1, Client *c2)
 {
+	if(t == c1) return c2;
+	if(t == c2) return c1;
 	if (abs(c1->y - t->y) > abs(c2->y - t->y))
 		return c2;
 	else
@@ -1677,8 +1679,14 @@ focusgrid(const Arg *arg)
 				{
 					min = abs(cc->x - c->x);
 					closest = c;
-				}else if (abs(cc->x - c->x) == min)
-					closest = smartchoose(cc, c, closest);
+				}
+				else if (abs(cc->x - c->x) == min){
+					if((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
+						closest = closestyclient(cc,c, closest);
+					}else{
+						closest = smartchoose(cc, c, closest);
+					}
+				}
 			}
 		}
 		c = closest;
@@ -1695,8 +1703,13 @@ focusgrid(const Arg *arg)
 					min = abs(cc->x - c->x);
 					closest = c;
 				}
-				else if (abs(cc->x - c->x) == min)
-					closest = smartchoose(cc, c, closest);
+				else if (abs(cc->x - c->x) == min){
+					if((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
+						closest = closestyclient(cc,c, closest);
+					}else{
+						closest = smartchoose(cc, c, closest);
+					}
+				}
 			}
 		}
 		c = closest;
@@ -2974,6 +2987,12 @@ setlayout(const Arg *arg)
 	{
 		const Arg scratcharg = {0};
 		togglescratchgroup(&scratcharg);
+		const Arg tagarg = {.ui = curc->tags};
+		view(&tagarg);
+		focus(curc);
+	}
+	if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK)
+	{
 		const Arg tagarg = {.ui = curc->tags};
 		view(&tagarg);
 		focus(curc);
@@ -4427,11 +4446,18 @@ view(const Arg *arg)
 	int i;
 	unsigned int tmptag;
 
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+	unsigned oldseltags = selmon->seltags;
+	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags]  // 与原来的tag相同
+			&& (selmon->tagset[oldseltags] & TAGMASK) != TAGMASK)  // 原来不是tag全选
 		return;
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK) {
-		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+		if (arg->ui == ~0 && (selmon->tagset[oldseltags] & TAGMASK) == TAGMASK){
+			// 如果所有tag都显示了,就回到原来的tag. 只要这里不赋值, 默认就是原来的. see: selmon->seltags ^= 1
+			selmon->tagset[selmon->seltags] = selmon->sel->tags;
+		}else{
+			selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+		}
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 
 		if (arg->ui == ~0)
@@ -4451,6 +4477,12 @@ view(const Arg *arg)
 	selmon->sellt = selmon->pertag->sellts[selmon->pertag->curtag];
 	selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 	selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
+
+	if((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
+		selmon->sellt = 0;
+		selmon->lt[selmon->sellt] = &layouts[3];
+		selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
+	}
 
     // ------------- test smartview ---------------//
 	// record lastviewtime
