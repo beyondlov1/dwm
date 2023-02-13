@@ -38,10 +38,12 @@ static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-data
 
 /* launcher commands (They must be NULL terminated) */
 static const char* chrome[]      = { "google-chrome-stable", NULL, NULL };
+static const char *terminal[] = {"x-terminal-emulator", NULL, NULL};
 
 static const Launcher launchers[] = {
        /* command       name to display */
 	{ chrome,         "Google" },
+	{ terminal,         "Terminal" },
 };
 
 /* Lockfile */
@@ -66,6 +68,7 @@ static const Rule rules[] = {
 	{"flameshot", NULL, NULL, 0xFF, 1, -1, 5, 0},
 	{"Fragcode", NULL, NULL, NULL, 1, -1, 5, 0},
 	{"Thunar", NULL, NULL, NULL, 1, -1, 5, 0},
+	{"ToDesk", NULL, NULL, NULL, 0, -1, 5, 2},
 };
 
 static const Rule subjrules[] = {
