@@ -3254,9 +3254,13 @@ sspawn(const Arg *arg)
 	ScratchItem *si;
 	if (!scratchgroupptr->isfloating && scratchsingle(arg->v, &si))
 	{
+		LOG_FORMAT("sspawn: before showscratchgroup");
 		showscratchgroup(scratchgroupptr);
+		LOG_FORMAT("sspawn: after showscratchgroup");
 		focus(si->c);
+		LOG_FORMAT("sspawn: after focus");
 		arrange(selmon);
+		LOG_FORMAT("sspawn: after arrange");
 		return;
 	}
 	spawn(arg);
