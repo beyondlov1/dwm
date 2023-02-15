@@ -893,6 +893,7 @@ clientmessage(XEvent *e)
 			if (!(c = (Client *)calloc(1, sizeof(Client))))
 				die("fatal: could not malloc() %u bytes\n", sizeof(Client));
 			if (!(c->win = cme->data.l[2])) {
+				removefromscratchgroupc(c);
 				free(c);
 				return;
 			}
@@ -3542,6 +3543,7 @@ showscratchgroup(ScratchGroup *sg)
 	sc.w = selmon->ww;
 	sc.h = selmon->wh;
 	int i = 0;
+	LOG_FORMAT("showscratchgroup: before focus and arrange -1");
 	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
 		Client * c = si->c;
@@ -3588,20 +3590,21 @@ showscratchgroup(ScratchGroup *sg)
 		ts[i].h = si->h;
 
 		i++;
-	} 
-	
+	}
+	LOG_FORMAT("showscratchgroup: before focus and arrange");
 	for(si = sg->head->next; si && si != sg->tail; si = si->next)
 	{
 		focus(si->c);
 		arrange(selmon);
 		resize(si->c,si->x,si->y, si->w,si->h,1);
 	}
-
+	LOG_FORMAT("showscratchgroup: before focus and arrange 2");
 	if(sg->lastfocused){
 		focus(sg->lastfocused);
 	}
 	else if(sg->head->next && sg->head->next->c) 
 		focus(sg->head->next->c);
+	LOG_FORMAT("showscratchgroup: before focus and arrange 3");
 	arrange(selmon);
 	sg->isfloating = 1;
 }
