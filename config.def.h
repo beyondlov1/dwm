@@ -38,7 +38,7 @@ static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-data
 
 /* launcher commands (They must be NULL terminated) */
 static const char* chrome[]      = { "google-chrome-stable", NULL, NULL };
-static const char *terminal[] = {"terminator", NULL, NULL};
+static const char *terminal[] = {"terminator", NULL };
 
 static const Launcher launchers[] = {
        /* command       name to display */
@@ -61,6 +61,7 @@ static const Rule rules[] = {
 	{"Sidekick-browser", NULL, NULL, NULL, 0, -1, 5, 2},
 	{"Brave-browser-nightly", NULL, NULL, NULL, 0, -1, 5, 2},
 	{"X-terminal-emulator", NULL, NULL, NULL, 0, -1, 1, -1},
+	{"Terminator", NULL, NULL, NULL, 0, -1, 1, -1},
 	{"Code", NULL, NULL, 1 << 3, 0, -1, 5, 0, 0},
 	{"jetbrains-idea", NULL, NULL, NULL, 0, -1, 5, 0},
 	{"jetbrains-datagrip", NULL, NULL, NULL, 0, -1, 5, 2},
@@ -82,6 +83,7 @@ static const Rule subjrules[] = {
 	{ "Sidekick-browser",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
 	{ "Brave-browser-nightly",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
 	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
+	{ "Terminator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2},
