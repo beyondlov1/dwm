@@ -1498,7 +1498,9 @@ focus(Client *c)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 		else
 			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+		LOG_FORMAT("focus: before setfocus");
 		setfocus(c);
+		LOG_FORMAT("focus: after setfocus");
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -2881,14 +2883,18 @@ void
 setfocus(Client *c)
 {
 	if (!c->neverfocus) {
+		LOG_FORMAT("setfocus: 1 ");
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
 			XA_WINDOW, 32, PropModeReplace,
 			(unsigned char *) &(c->win), 1);
+		LOG_FORMAT("setfocus: 2 ");
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
 	c->isfocused = True;
+	LOG_FORMAT("setfocus: 3 ");
 	lru(c);
+	LOG_FORMAT("setfocus: 4 ");
 }
 
 void
