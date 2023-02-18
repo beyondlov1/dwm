@@ -100,11 +100,13 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 /* Include */
 #include "gaplessgrid.c"
 #include "gapgrid.c"
+#include "gapgridsorted.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile2 },    /* first entry is default */
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
+	{ "HHH",      gapgridsorted },
 	{ "HHH",      gapgrid },
 	{ "HHH",      gaplessgrid },
 };

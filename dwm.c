@@ -4456,12 +4456,13 @@ view(const Arg *arg)
 	unsigned int tmptag;
 
 	unsigned oldseltags = selmon->seltags;
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags]  // 与原来的tag相同
-			&& (selmon->tagset[oldseltags] & TAGMASK) != TAGMASK)  // 原来不是tag全选
+	int isoverview = (selmon->tagset[oldseltags] & TAGMASK) == TAGMASK;
+	if ((arg->ui & TAGMASK) == selmon->tagset[oldseltags] // 与原来的tag相同
+		&& !isoverview)									  // 原来不是tag全选
 		return;
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK) {
-		if (arg->ui == ~0 && (selmon->tagset[oldseltags] & TAGMASK) == TAGMASK){
+		if (arg->ui == ~0 && isoverview){
 			// 如果所有tag都显示了,就回到原来的tag. 只要这里不赋值, 默认就是原来的. see: selmon->seltags ^= 1
 			selmon->tagset[selmon->seltags] = selmon->sel->tags;
 		}else{
@@ -4530,6 +4531,11 @@ view(const Arg *arg)
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
+	if (arg->ui == ~0 && isoverview)
+	{
+		detach(selmon->sel);
+		attach(selmon->sel);
+	}
 	focus(NULL);
 	arrange(selmon);
 	updatecurrentdesktop();

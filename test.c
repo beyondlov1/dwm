@@ -4,6 +4,8 @@
 #include <math.h>
 #include <sys/timeb.h>
 
+#define LENGTH(X) (sizeof X / sizeof X[0])
+
 int getppidof(int pid)
 {
     char dir[1024]={0};
@@ -42,8 +44,51 @@ alloc_si()
 	return si;
 }
 
+int cmp(ScratchItem *a, ScratchItem *b)
+{
+    return a->tags - b->tags;
+}
+
+void sort(void *clist[], size_t n, int (*cmp)(const void *, const void *))
+{
+    int i;
+    for (size_t i = 0; i < n; i++)
+    {
+        for (size_t j = i + 1; j < n; j++)
+        {
+            if (cmp(clist[j], clist[i]) < 0)
+            {
+                void *tmp = clist[i];
+                clist[i] = clist[j];
+                clist[j] = tmp;
+            }
+        }
+    }
+}
+
 int main(int argc, char const *argv[])
 {
+    ScratchItem a1 = {.tags = 1};
+    ScratchItem a2 = {.tags = 2};
+    ScratchItem a3 = {.tags = 3};
+    ScratchItem a4 = {.tags = 4};
+
+    // printf("a");
+
+    ScratchItem *alist[4];
+    alist[0] = &a3;
+    alist[1] = &a2;
+    alist[2] = &a4;
+    alist[3] = &a1;
+
+    sort(alist, 4, cmp);
+
+    for (size_t i = 0; i < 4; i++)
+    {
+        printf("a: %d", alist[i]->tags);
+    }
+    
+
     struct timeval us;
     gettimeofday(&us,NULL);
     printf("gettimeofday: tv_sec=%ld, tv_usec=%ld\n", us.tv_sec, us.tv_usec);
