@@ -3657,7 +3657,19 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		si->placed = 1;
 	}
 	if(isarrange){
-		focus(NULL);
+		int curtags = selmon->tagset[selmon->seltags];
+		Client *c;
+		for(c = selmon->stack;c;c=c->snext){
+			int found = 0;
+			for (si = sg->tail->prev; si && si != sg->head; si = si->prev){
+				Client *itemc = si->c;
+				if (itemc == c)
+					found = 1;
+			}
+			if (ISVISIBLE(c) && !found)
+				break;
+		}
+		if(c) focus(c); else focus(NULL);
 		arrange(selmon);
 	}
 	sg->isfloating = 0;
