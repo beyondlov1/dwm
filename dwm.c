@@ -672,13 +672,18 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 void
 arrange(Monitor *m)
 {
+	LOG_FORMAT("arrange 1");
 	if (m)
 		showhide(m->stack);
 	else for (m = mons; m; m = m->next)
 		showhide(m->stack);
+	LOG_FORMAT("arrange 2");
 	if (m) {
+		LOG_FORMAT("arrange 3");
 		arrangemon(m);
+		LOG_FORMAT("arrange 4");
 		restack(m);
+		LOG_FORMAT("arrange 5");
 	} else for (m = mons; m; m = m->next)
 		arrangemon(m);
 }
@@ -3358,6 +3363,7 @@ geo( geo_t *g, Client *c, int x, int y, int w, int h, int interact)
 void
 tile2(Monitor *m)
 {
+	LOG_FORMAT("tile2 1");
 	unsigned int i, n, h, mw, my, ty, masterend = 0;
 	Client *c;
 
@@ -3370,6 +3376,7 @@ tile2(Monitor *m)
 	else
 		mw = m->ww - m->gap->gappx;
 
+	LOG_FORMAT("tile2 2");
 
 	int focused_slave_index = -1;
 	geo_t gmap[n];
@@ -3394,7 +3401,9 @@ tile2(Monitor *m)
 				ty += (g.h + 2*c->bw) + m->gap->gappx;
 		}
 	}
-	
+
+	LOG_FORMAT("tile2 3");
+
 	int slave_cnt = n - masterend - 1;
 	int focused_slave_h = m->wh -  m->gap->gappx;
 	if(slave_cnt > 0) focused_slave_h = (m->wh - m->gap->gappx) / slave_cnt ;
@@ -3411,6 +3420,8 @@ tile2(Monitor *m)
 		onlyg.c->bw = onlyg.c->oldbw;
 		return;
 	}
+
+	LOG_FORMAT("tile2 4");
 
 	// int focused_slave_w = m->ww * m->mfact;
 	int focused_slave_w = m->ww / 2; 
@@ -3440,7 +3451,8 @@ tile2(Monitor *m)
 		resize(g.c, x, y, w, h - m->gap->gappx, g.interact);
 		currenty += h;
 	}
-	
+
+	LOG_FORMAT("tile2 5");
 }
 
 void
