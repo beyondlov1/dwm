@@ -235,6 +235,7 @@ static Key keys[] = {
 	{ MODKEY, XK_F12,        spawn, SHCMD("echo \"$(mpc -f %file% | sed -n \"1,1p\") $(mpc | sed -n \"2,2p\" | awk '{print $4}' | grep -Eo \"[0-9]*\") \" >> $HOME/.config/netease/play_skip.log.csv;mpc next; ") },
 	// { 0, XF86XK_AudioPlay,        spawn, SHCMD("mpc toggle; pkill -RTMIN+1 dwmblocks") },
 	{ MODKEY, XK_F11,        spawn, SHCMD("mpc toggle; pkill -RTMIN+1 dwmblocks") },
+	{ MODKEY, XK_F8,        spawn, SHCMD("mpc sticker $(mpc current) set like yes") },
 	{ 0, XF86XK_AudioStop,        spawn, SHCMD("mpc stop; pkill -RTMIN+1 dwmblocks") },
 	{ 0, XF86XK_AudioRaiseVolume, spawn, SHCMD("pactl set-sink-volume @DEFAULT_SINK@ +10%") },
 	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -10% ") },
