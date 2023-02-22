@@ -2162,6 +2162,7 @@ manageppidstick(Client *c){
 	int found = 0;
 	unsigned long pid = getwindowpid(c->win);
 	c->pid = pid;
+	LOG_FORMAT("manageppidstick 1");
 	if(pid){
 		int PPIDCHAIN_N = 10;
 		unsigned long ppidchain[PPIDCHAIN_N];
@@ -2182,7 +2183,9 @@ manageppidstick(Client *c){
 				break;
 		}
 	}
-	if(found && tmpparent && tmpparent->tags != 0xFFFFFFFF){
+	LOG_FORMAT("manageppidstick 2");
+	if (found && tmpparent && (tmpparent->tags & TAGMASK) != TAGMASK)
+	{
 		Rule * rule = getwinrule(c->win);
 		if (!rule->isfloating)
 		{
@@ -2194,23 +2197,29 @@ manageppidstick(Client *c){
 			return 1;
 		}
 	}
+	LOG_FORMAT("manageppidstick 3");
 	return 0;
 }
 
 void 
 managestub(Client *c){
+	LOG_FORMAT("managestub 1");
 	// 每个tag不能超过 n 个client, 超过则移动到下一个tag
 	int curisfloating = 0;
 	Atom wtype = getwinatomprop(c->win, netatom[NetWMWindowType]);
 	if (wtype == netatom[NetWMWindowTypeDialog]) curisfloating = 1;
 	if (!curisfloating)
 	{
+		LOG_FORMAT("managestub 2");
 		Rule * rule = getwinrule(c->win);
+		LOG_FORMAT("managestub 3");
 		if (!rule->isfloating)
 		{
 			int tmptags = selmon->tagset[selmon->seltags];
+			LOG_FORMAT("managestub 4");
 			while (counttagnstub(selmon->clients, tmptags) >= (3 - rule->nstub))
 				tmptags = tmptags << 1;
+			LOG_FORMAT("managestub 5");
 			c->tags = tmptags;
 			Arg arg = {.ui= tmptags };
 			view(&arg);
@@ -2224,6 +2233,7 @@ managestub(Client *c){
 			}	
 		}
 	}
+	LOG_FORMAT("managestub 6");
 }
 
 
@@ -2263,6 +2273,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	updatetitle(c);
 
+	LOG_FORMAT("manage 1");
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -2271,8 +2282,11 @@ manage(Window w, XWindowAttributes *wa)
 		c->mon = selmon;
 		applyrules(c);
 	}
+	LOG_FORMAT("manage 2");
 
+	LOG_FORMAT("manage 3");
 	if(!manageppidstick(c) && !isnextscratch) managestub(c);
+	LOG_FORMAT("manage 4");
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
@@ -2319,6 +2333,7 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
+	LOG_FORMAT("manage 5");
 	// for sspawn
 	if(isnextscratch){
 		unsigned int curtags = c->tags;
@@ -2329,6 +2344,7 @@ manage(Window w, XWindowAttributes *wa)
 		si->cmd = nextscratchcmd;
 		nextscratchcmd = NULL;
 	}
+	LOG_FORMAT("manage 6");
 
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
@@ -2350,6 +2366,7 @@ manage(Window w, XWindowAttributes *wa)
 	{
 		Arg arg = {0};
 		zoom(&arg);
+		LOG_FORMAT("manage 7");
 	}
 	
 }
