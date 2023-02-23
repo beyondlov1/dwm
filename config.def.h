@@ -62,7 +62,7 @@ static const Rule rules[] = {
 	{"Brave-browser-nightly", NULL, NULL, NULL, 0, -1, 5, 2},
 	{"X-terminal-emulator", NULL, NULL, NULL, 0, -1, 1, -1},
 	{"Terminator", NULL, NULL, NULL, 0, -1, 1, -1},
-	{"Code", NULL, NULL, 1 << 3, 0, -1, 5, 0, 0},
+	{"Code", NULL, NULL, NULL, 0, -1, 5, 0},
 	{"jetbrains-idea", NULL, NULL, NULL, 0, -1, 5, 0},
 	{"jetbrains-datagrip", NULL, NULL, NULL, 0, -1, 5, 2},
 	{"Evince", NULL, NULL, NULL, 0, -1, 5, 2},
