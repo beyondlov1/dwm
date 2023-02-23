@@ -3573,10 +3573,12 @@ showscratchgroup(ScratchGroup *sg)
 	rect_t sc;
 	// sc.x = selmon->gap->gappx + 10;
 	// sc.y = selmon->gap->gappx + 10;
-	sc.x = 0;
-	sc.y = 0;
-	sc.w = selmon->ww;
-	sc.h = selmon->wh;
+
+	// 这里故意偏差1px, 为了不让scratchgroup中的窗口与全屏的窗口x,y重合, 导致键盘focus选不中
+	sc.x = 1;
+	sc.y = 1;
+	sc.w = selmon->ww - 1;
+	sc.h = selmon->wh - 1;
 	int i = 0;
 	LOG_FORMAT("showscratchgroup: before focus and arrange -1");
 	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
@@ -3909,6 +3911,19 @@ calcy(rect_t sc, int j, int steph, int h)
 	return sc.y + j*steph ;
 }
 
+/**
+ * @brief 把sc-(w*h)分为(n-1)*(n-1)块, 从中心开始尝试放入, 向外扩散转圈, 直到有一个满足与其他窗口(ts)交叉比例(maxintersectradio), 得到的结果放入r
+ * 
+ * @param sc 
+ * @param w 
+ * @param h 
+ * @param n 
+ * @param ts 
+ * @param tsn 
+ * @param r 
+ * @param maxintersectradio 
+ * @return int 
+ */
 int
 fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
