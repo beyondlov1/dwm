@@ -42,6 +42,7 @@
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
 #include <math.h>
+#include <time.h>
 
 #include "drw.h"
 #include "util.h"
@@ -492,9 +493,16 @@ LOG(char *content, char * content2){
 
 void
 LOG_FORMAT(char *format, ...){
+	time_t tnow;
+    tnow=time(0); 
+    struct tm *sttm;  
+    sttm=localtime(&tnow);  
+    fprintf(logfile,"%04u-%02u-%02u %02u:%02u:%02u: ",sttm->tm_year+1900,sttm->tm_mon+1,\
+            sttm->tm_mday,sttm->tm_hour,sttm->tm_min,sttm->tm_sec);
 	va_list ap;
 	va_start(ap,format);
 	vfprintf(logfile,format, ap);
+	fprintf(logfile,"\n");
 	va_end(ap);
 	fflush(logfile);
 }
