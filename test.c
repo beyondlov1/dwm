@@ -70,6 +70,20 @@ void sort(void *clist[], size_t n, int (*cmp)(const void *, const void *))
 int main(int argc, char const *argv[])
 {
 
+    int aaa[5] = {1,2,3,4,5,6};
+    printf("%p", aaa[2]);
+    printf("%p", aaa[3]);
+    printf("%p", aaa[4]);
+    printf("%p", aaa[5]);
+
+	int brr[5] = { 6,7,8,9,10 };
+    int arr[5] = { 1,2,3,4,5 };
+	brr[7] = 20;
+	printf("%d\n", arr[0]);
+    printf("%d\n", arr[1]);
+    printf("%d\n", arr[2]);
+    printf("%d\n", arr[3]);
+
     time_t tnow;
     tnow=time(0);      // 获取当前时间
     printf("tnow=%lu\n",tnow);   // 输出整数表示的时间
