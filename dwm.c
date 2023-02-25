@@ -232,7 +232,7 @@ struct ScratchItem
 	int pretags;
 	ScratchItem *next;
 	ScratchItem *prev;
-	int placed;
+	int placed; // 是否已经调整过大小和位置, 如果是, 则下次显示用原来的大小和位置
 	int x,y,w,h;
 	const char **cmd;
 };
@@ -3654,17 +3654,27 @@ showscratchgroup(ScratchGroup *sg)
 	sg->isfloating = 1;
 }
 
+/**
+ * @brief 隐藏单个scratchitem
+ * 
+ * @param si 
+ * @param returntags 0:c设置为之前的tags
+ */
 void
-hidescratchitem(ScratchItem *si)
+hidescratchitem(ScratchItem *si, int returntags)
 {
 	scratchgroupptr->lastfocused = selmon->sel;
 	Client * c = si->c;
 	if(!c) return;
 	c->isfloating = 0;
-	if(si->pretags)
-		c->tags = si->pretags;
+	if (returntags)
+		c-> tags = returntags;
 	else
-		c->tags = selmon->tagset[selmon->seltags];
+		if (si->pretags)
+			c->tags = si->pretags;
+		else
+			c->tags = selmon->tagset[selmon->seltags];
+
 	si->x = c->x;
 	si->y = c->y;
 	si->w = c->w;
@@ -3689,6 +3699,12 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			c->tags = si->pretags;
 		else
 			c->tags = selmon->tagset[selmon->seltags];
+
+		if (c->tags == selmon->tagset[selmon->seltags])
+		{
+			c->tags = 1 << (LENGTH(tags) - 1);
+		}
+
 		si->x = c->x;
 		si->y = c->y;
 		si->w = c->w;
@@ -3762,7 +3778,7 @@ removefromscratchgroupc(Client *c)
 		found->next->prev = found->prev;
 		found->prev = NULL;
 		found->next = NULL;
-		hidescratchitem(found);
+		hidescratchitem(found, 0);
 		free_si(found);
 	}
 }

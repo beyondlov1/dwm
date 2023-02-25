@@ -142,7 +142,7 @@ static const char *notecmd[] = {"qt-note.sh",NULL};
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
-	{ MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
+	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
