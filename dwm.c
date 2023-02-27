@@ -958,6 +958,9 @@ clientmessage(XEvent *e)
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		// if (c != selmon->sel && !c->isurgent)
 		// 	seturgent(c, 1);
+		if((c->tags & TAGMASK) == TAGMASK){
+			return;
+		}
 		for (i = 0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);
 		if (i < LENGTH(tags)) {
 			const Arg a = {.ui = 1 << i};
