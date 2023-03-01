@@ -37,7 +37,6 @@ gapgridsortedneat(Monitor *m)
 		}else{
 			ch = rows ? m->wh / rows : m->wh;
 		}
-		LOG_FORMAT("ch: %d", ch);
 		cw = m->ww / cols;
 		cx = m->wx + cn * cw;
 		cy = m->wy + rn * ch;

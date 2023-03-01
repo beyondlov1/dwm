@@ -140,11 +140,12 @@ static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
-
+static const char *querycmd[] = {"queryclip.sh", NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
+	{ MODKEY,                       XK_q, tsspawn,          {.v = querycmd } },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
@@ -183,8 +184,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_o,    relview,           {.i=1} },
 	{ MODKEY,                       XK_a,    relview,           {.i=-1} },
 	{ MODKEY,                       XK_d,    relview,           {.i=1} },
-	{ MODKEY,                       XK_q,      relview,          {.i = -1 } },
-	{ MODKEY,                       XK_w,      relview,          {.i = 1 } },
+	// { MODKEY,                       XK_q,      relview,          {.i = -1 } },
+	// { MODKEY,                       XK_w,      relview,          {.i = 1 } },
 	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },

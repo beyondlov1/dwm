@@ -125,7 +125,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,isfocused;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -388,6 +388,7 @@ static void togglescratch(const Arg *arg);
 static void togglescratchgroup(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
+static void tsspawn(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
@@ -462,8 +463,13 @@ static Client *focuschain, *FC_HEAD;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
 static Tag *HEADTAG, *TAILTAG;
+
 static int isnextscratch = 0;
 static const char **nextscratchcmd;
+
+static int isnexttemp = 0;
+static const char **nexttempcmd;
+
 static int switchercurtagindex;
 
 /* configuration, allows nested code to access above variables */
@@ -1468,6 +1474,10 @@ enternotify(XEvent *e)
 	Monitor *m;
 	XCrossingEvent *ev = &e->xcrossing;
 
+	// if(selmon->sel && selmon->sel->istemp) {
+	// 	killclientc(selmon->sel);
+	// }
+
 	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
 		return;
 	c = wintoclient(ev->window);
@@ -2006,6 +2016,9 @@ keypress(XEvent *e)
 			&& switcherkeys[i].func)
 				switcherkeys[i].func(&(switcherkeys[i].arg));
 	}
+	else if(selmon->sel->istemp && keysym == XK_Escape){
+		killclientc(selmon->sel);
+	}
 	else
 	{
 		for (i = 0; i < LENGTH(keys); i++)
@@ -2299,6 +2312,8 @@ manage(Window w, XWindowAttributes *wa)
 	if(!manageppidstick(c) && !isnextscratch) managestub(c);
 	LOG_FORMAT("manage 4");
 
+	if(isnexttemp) c->istemp = 1;
+
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
 	if (c->y + HEIGHT(c) > c->mon->my + c->mon->mh)
@@ -2329,7 +2344,11 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+	if(c->istemp){
+		XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask|KeyPressMask);
+	}else{
+		XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+	}
 	grabbuttons(c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
@@ -2380,6 +2399,7 @@ manage(Window w, XWindowAttributes *wa)
 		LOG_FORMAT("manage 7");
 	}
 	
+	isnexttemp = 0;
 }
 
 void
@@ -3326,6 +3346,14 @@ sspawn(const Arg *arg)
 	isnextscratch = 1;
 	nextscratchcmd = arg->v;
 }
+
+void tsspawn(const Arg *arg)
+{
+	sspawn(arg);
+	isnexttemp = 1;
+	nexttempcmd = arg->v;
+}
+
 
 void
 tag(const Arg *arg)
