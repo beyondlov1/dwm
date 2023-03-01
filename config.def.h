@@ -98,14 +98,17 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 
 /* Include */
+#include "sort.c"
 #include "gaplessgrid.c"
 #include "gapgrid.c"
 #include "gapgridsorted.c"
+#include "gapgridsortedneat.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile2 },    /* first entry is default */
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
+	{ "HHH",      gapgridsortedneat },
 	{ "HHH",      gapgridsorted },
 	{ "HHH",      gapgrid },
 	{ "HHH",      gaplessgrid },
