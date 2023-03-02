@@ -147,7 +147,7 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querycmd } },
-	{ MODKEY,                       XK_d, tsspawn,          {.v = dictcmd } },
+	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
