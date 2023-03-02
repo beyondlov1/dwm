@@ -1533,6 +1533,7 @@ focus(Client *c)
 	}
 	selmon->sel = c;
 	drawbars();
+	LOG_FORMAT("focus: over");
 }
 
 /* there are some broken focus acquiring clients needing extra handling */
@@ -2016,7 +2017,7 @@ keypress(XEvent *e)
 			&& switcherkeys[i].func)
 				switcherkeys[i].func(&(switcherkeys[i].arg));
 	}
-	else if(selmon->sel->istemp && keysym == XK_Escape){
+	else if(selmon->sel && selmon->sel->istemp && keysym == XK_Escape){
 		killclientc(selmon->sel);
 	}
 	else
@@ -3472,7 +3473,9 @@ tile2(Monitor *m)
 	{
 		geo_t onlyg = gmap[0];
 		onlyg.c->bw = 0;
+		LOG_FORMAT("tile2 6");
 		resize(onlyg.c, onlyg.c->mon->wx, onlyg.c->mon->wy, onlyg.c->mon->ww, onlyg.c->mon->wh, onlyg.interact);
+		LOG_FORMAT("tile2 7");
 		onlyg.c->bw = onlyg.c->oldbw;
 		return;
 	}
