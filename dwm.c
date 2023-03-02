@@ -1526,12 +1526,13 @@ focus(Client *c)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		LOG_FORMAT("focus: before setfocus");
 		setfocus(c);
+		selmon->sel = c;
 		LOG_FORMAT("focus: after setfocus");
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+		LOG_FORMAT("focus: c or c->win is NULL");
 	}
-	selmon->sel = c;
 	drawbars();
 	LOG_FORMAT("focus: over");
 }
