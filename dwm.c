@@ -467,7 +467,7 @@ static Tag *HEADTAG, *TAILTAG;
 static int isnextscratch = 0;
 static const char **nextscratchcmd;
 
-static int isnexttemp = 0;
+static volatile int isnexttemp = 0;
 static const char **nexttempcmd;
 
 static int switchercurtagindex;
@@ -2018,6 +2018,7 @@ keypress(XEvent *e)
 			&& switcherkeys[i].func)
 				switcherkeys[i].func(&(switcherkeys[i].arg));
 	}
+	// for tsspawn
 	else if(selmon->sel && selmon->sel->istemp && keysym == XK_Escape){
 		killclientc(selmon->sel);
 	}
@@ -2314,7 +2315,8 @@ manage(Window w, XWindowAttributes *wa)
 	if(!manageppidstick(c) && !isnextscratch) managestub(c);
 	LOG_FORMAT("manage 4");
 
-	if(isnexttemp) c->istemp = 1;
+	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
+	if(isnexttemp) c->istemp = 1; else c->istemp = 0;
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
@@ -2346,11 +2348,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	if(c->istemp){
-		XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask|KeyPressMask);
-	}else{
-		XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
-	}
+    XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
@@ -2402,6 +2400,15 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	
 	isnexttemp = 0;
+
+	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
+	if (c->istemp)
+	{
+		XSetWindowAttributes wa = {.event_mask = EnterWindowMask | FocusChangeMask | PropertyChangeMask | StructureNotifyMask | KeyPressMask};
+		XChangeWindowAttributes(dpy, c->win, CWEventMask, &wa);
+	}
+
+	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 }
 
 void
@@ -3344,16 +3351,16 @@ sspawn(const Arg *arg)
 		LOG_FORMAT("sspawn: after arrange");
 		return;
 	}
-	spawn(arg);
 	isnextscratch = 1;
 	nextscratchcmd = arg->v;
+	spawn(arg);
 }
 
 void tsspawn(const Arg *arg)
 {
-	sspawn(arg);
 	isnexttemp = 1;
 	nexttempcmd = arg->v;
+	sspawn(arg);
 }
 
 
