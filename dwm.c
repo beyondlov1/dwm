@@ -2321,7 +2321,7 @@ manage(Window w, XWindowAttributes *wa)
 	LOG_FORMAT("manage 2");
 
 	LOG_FORMAT("manage 3");
-	if(!manageppidstick(c) && !isnextscratch) managestub(c);
+	if(!manageppidstick(c) && !isnextscratch && !isnexttemp) managestub(c);
 	LOG_FORMAT("manage 4");
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
@@ -2345,6 +2345,7 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->istemp)
 	{
 		c->isfloating = True;
+		c->tags = TAGMASK;
 		c->w = c->mon->ww / 2.5;
 		c->h = c->mon->wh / 2;
 		c->x = c->mon->wx + (c->mon->ww - WIDTH(c));
