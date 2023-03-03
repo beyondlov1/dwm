@@ -1541,6 +1541,7 @@ focus(Client *c)
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 		LOG_FORMAT("focus: c or c->win is NULL");
+		return;
 	}
 	drawbars();
 	LOG_FORMAT("focus: over");
