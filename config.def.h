@@ -147,7 +147,7 @@ static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://yo
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
-	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
+	{ MODKEY,                       XK_q, tsspawn,          {.v = querycmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
