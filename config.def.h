@@ -140,8 +140,8 @@ static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
-static const char *querycmd[] = {"~/software/queryclip.sh", "http://bing.com?q=%s", NULL};
-static const char *dictcmd[] = {"~software/queryclip.sh", "http://youdao.com?word=%s&lang=en", NULL};
+static const char *querycmd[] = {"/home/beyond/software/queryclip.sh", "http://bing.com?q=%s", NULL};
+static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com?word=%s&lang=en", NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
