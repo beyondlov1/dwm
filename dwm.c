@@ -569,6 +569,15 @@ void
 rerule(const Arg *arg)
 {
 	Client *c;
+	
+	for(c = selmon->clients; c; c = c->next){
+		if (c->istemp)
+		{
+			killclientc(c);
+			continue;
+		}
+	}
+	
 	for(c = selmon->clients; c; c = c->next){
 		const char *class, *instance;
 		unsigned int i;
@@ -2333,6 +2342,15 @@ manage(Window w, XWindowAttributes *wa)
 		c->bw = borderpx;
 	}
 
+	if (c->istemp)
+	{
+		c->isfloating = True;
+		c->w = c->mon->ww / 2.5;
+		c->h = c->mon->wh / 2;
+		c->x = c->mon->wx + (c->mon->ww - WIDTH(c));
+		c->y = c->mon->wy + (c->mon->wh - HEIGHT(c))/2;
+	}
+	
 	selmon->tagset[selmon->seltags] &= ~scratchtag;
 	if (!strcmp(c->name, scratchpadname)) {
 		c->mon->tagset[c->mon->seltags] |= c->tags = scratchtag;
@@ -3360,7 +3378,7 @@ void tsspawn(const Arg *arg)
 {
 	isnexttemp = 1;
 	nexttempcmd = arg->v;
-	sspawn(arg);
+	spawn(arg);
 }
 
 
