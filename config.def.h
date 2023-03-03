@@ -141,12 +141,13 @@ static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
 static const char *querycmd[] = {"/home/beyond/software/queryclip.sh", "http://bing.com?q=%s", NULL};
-static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com?word=%s&lang=en", NULL};
+static const char *querybrowsercmd[] = {"/home/beyond/software/browserclip.sh", "http://bing.com?q=%s", NULL};
+static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
-	{ MODKEY,                       XK_q, tsspawn,          {.v = querycmd } },
+	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
@@ -157,8 +158,12 @@ static Key keys[] = {
 	{ Mod1Mask,                       XK_grave,      togglescratchgroup,  {0} },
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
-	{ MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_k,      rotatestack,    {.i = -1 } },
+	// { MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
+	// { MODKEY|ShiftMask,             XK_k,      rotatestack,    {.i = -1 } },
+	{ MODKEY|ShiftMask,                       XK_j,      movey,     {.i = 100 } },
+	{ MODKEY|ShiftMask,                       XK_k,      movey,     {.i = -100 } },
+	{ MODKEY|ShiftMask,                       XK_l,      movex,     {.i = 200 } },
+	{ MODKEY|ShiftMask,                       XK_h,      movex,     {.i = -200 } },
 	{ MODKEY,                       XK_j,      focusgrid,     {.i = -2 } },
 	{ MODKEY,                       XK_k,      focusgrid,     {.i = +2 } },
 	{ MODKEY,                       XK_l,      focusgrid,     {.i = +1 } },

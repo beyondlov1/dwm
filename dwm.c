@@ -334,6 +334,8 @@ static void maprequest(XEvent *e);
 static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
+static void movex(const Arg *arg);
+static void movey(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
@@ -2706,6 +2708,49 @@ resize(Client *c, int x, int y, int w, int h, int interact)
 {
 	if (applysizehints(c, &x, &y, &w, &h, interact))
 		resizeclient(c, x, y, w, h);
+}
+
+void
+movex(const Arg *arg)
+{
+	int delta = arg->i;
+	if (selmon->sel)
+	{
+		if (!selmon->sel->isfloating)
+		{
+			Client *c;
+			for (c = selmon->clients; c; c = c->next)
+				if (ISVISIBLE(c) && c->isfloating)
+					break;
+			if (c)
+				focus(c);
+		}
+		if (selmon->sel->isfloating)
+		{
+			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 1);
+		}
+	}
+}
+
+void 
+movey(const Arg *arg)
+{
+	int delta = arg->i;
+	if (selmon->sel)
+	{
+		if (!selmon->sel->isfloating)
+		{
+			Client *c;
+			for(c = selmon->clients; c; c=c->next)
+				if (ISVISIBLE(c) && c->isfloating)
+					break;
+			if(c) focus(c);
+		}
+		if (selmon->sel->isfloating)
+		{
+			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 1);
+		}
+	}
 }
 
 void
