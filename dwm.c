@@ -2329,7 +2329,14 @@ manage(Window w, XWindowAttributes *wa)
 	LOG_FORMAT("manage 4");
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
-	if(isnexttemp) c->istemp = 1; else c->istemp = 0;
+	if(isnexttemp) {
+		c->istemp = 1;
+		// only one tmp window
+		Client *tmpc;
+		for(tmpc = selmon->clients;tmpc;tmpc=tmpc->next)
+			if(tmpc->istemp) 
+				killclientc(tmpc);
+	 } else c->istemp = 0;
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
 		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
