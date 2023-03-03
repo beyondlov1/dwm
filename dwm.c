@@ -619,6 +619,7 @@ rerule(const Arg *arg)
 			c->tags = maxtags << 1;
 		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 	}
+	selmon->sellt = 0;
 	arrange(selmon);
 	if(selmon->sel){
 		Arg arg2 = {.ui=selmon->sel->tags};
