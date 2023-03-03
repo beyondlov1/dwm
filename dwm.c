@@ -475,7 +475,7 @@ static int switchercurtagindex;
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-	static Tag *tagarray[LENGTH(tags) + 1];
+static Tag *tagarray[LENGTH(tags) + 1];
 static TagStat *taggraph[LENGTH(tags)+1][LENGTH(tags)+1];
 
 struct Pertag {
@@ -3196,7 +3196,7 @@ setup(void)
 	wmatom[WMState] = XInternAtom(dpy, "WM_STATE", False);
 	wmatom[WMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 	netatom[NetActiveWindow] = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
-   netatom[NetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
+    netatom[NetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
 	netatom[NetSystemTray] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_S0", False);
 	netatom[NetSystemTrayOP] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_OPCODE", False);
 	netatom[NetSystemTrayOrientation] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_ORIENTATION", False);
@@ -5104,7 +5104,6 @@ switcherview(const Arg *arg)
 	toggleswitchers(&tsarg);
 }
  
-
 int
 main(int argc, char *argv[])
 {
