@@ -4674,6 +4674,9 @@ view(const Arg *arg)
 		}
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 
+		if (arg->ui == ~0 && !isoverview && scratchgroupptr && scratchgroupptr->isfloating)
+			hidescratchgroupv(scratchgroupptr, 0);
+
 		if (arg->ui == ~0)
 			selmon->pertag->curtag = 0;
 		else {
