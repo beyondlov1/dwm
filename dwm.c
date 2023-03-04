@@ -4208,30 +4208,30 @@ unfocus(Client *c, int setfocus)
 void
 unmanage(Client *c, int destroyed)
 {
-	Client *debugc;
-	LOG_FORMAT("unmanage c, name:%s, p:%p", c->name, c);
+	// Client *debugc;
+	// LOG_FORMAT("unmanage c, name:%s, p:%p", c->name, c);
 	removefromscratchgroupc(c);
-	ScratchItem *tmp = NULL;
-	for (tmp = scratchgroupptr->head->next; tmp && tmp != scratchgroupptr->tail; tmp = tmp->next){
-		debugc = tmp->c;
-		LOG_FORMAT("removefromscratchgroupc, name:%s, p:%p", debugc->name, debugc);
-	}
+	// ScratchItem *tmp = NULL;
+	// for (tmp = scratchgroupptr->head->next; tmp && tmp != scratchgroupptr->tail; tmp = tmp->next){
+	// 	debugc = tmp->c;
+	// 	LOG_FORMAT("removefromscratchgroupc, name:%s, p:%p", debugc->name, debugc);
+	// }
 
 	removefromfocuschain(c);
-	for (debugc = focuschain; debugc; debugc = debugc->lastfocus)
-	{
-		LOG_FORMAT("removefromfocuschain, name:%s, p:%p", debugc->name, debugc);
-	}
+	// for (debugc = focuschain; debugc; debugc = debugc->lastfocus)
+	// {
+	// 	LOG_FORMAT("removefromfocuschain, name:%s, p:%p", debugc->name, debugc);
+	// }
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
-	LOG_FORMAT("unmanage 1");
+	// LOG_FORMAT("unmanage 1");
 	detach(c);
 	detachstack(c);
-	LOG_FORMAT("unmanage 2");
-	for(debugc = selmon->stack; debugc; debugc=debugc->snext){
-		LOG_FORMAT("unmanage 3, name:%s, p:%p", debugc->name, debugc);
-	}
+	// LOG_FORMAT("unmanage 2");
+	// for(debugc = selmon->stack; debugc; debugc=debugc->snext){
+	// 	LOG_FORMAT("unmanage 3, name:%s, p:%p", debugc->name, debugc);
+	// }
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
