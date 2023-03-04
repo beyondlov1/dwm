@@ -87,6 +87,7 @@ int main(int argc, char const *argv[])
     time_t tnow;
     tnow=time(0);      // 获取当前时间
     printf("tnow=%lu\n",tnow);   // 输出整数表示的时间
+    printf("tnow=%lu\n",tnow - 1);   // 输出整数表示的时间
 
     struct tm *sttm;  
     sttm=localtime(&tnow);  // 把整数的时间转换为struct tm结构体的时间

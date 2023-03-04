@@ -471,6 +471,9 @@ static const char **nextscratchcmd;
 
 static volatile int isnexttemp = 0;
 static const char **nexttempcmd;
+static time_t lastnexttemptime;
+
+static time_t lastmanagetime;
 
 static int switchercurtagindex;
 
@@ -2294,6 +2297,7 @@ scratchsingle(char *cmd[],ScratchItem **siptr){
 void
 manage(Window w, XWindowAttributes *wa)
 {
+	lastmanagetime = time(0);
 	// hidescratchgroup if needed (example: open app from terminal)
 	if(scratchgroupptr->isfloating)
 		hidescratchgroupv(scratchgroupptr, 0);
@@ -2325,6 +2329,7 @@ manage(Window w, XWindowAttributes *wa)
 	LOG_FORMAT("manage 2");
 
 	LOG_FORMAT("manage 3");
+	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1);
 	if(!manageppidstick(c) && !isnextscratch && !isnexttemp) managestub(c);
 	LOG_FORMAT("manage 4");
 
@@ -3433,6 +3438,7 @@ void tsspawn(const Arg *arg)
 {
 	isnexttemp = 1;
 	nexttempcmd = arg->v;
+	lastnexttemptime = time(0);
 	spawn(arg);
 }
 
