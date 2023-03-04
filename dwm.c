@@ -246,7 +246,6 @@ struct ScratchGroup
 	int tags;
 	int pretags;
 	int isfloating;
-	Client *lastfocused;
 };
 
 typedef struct Tag Tag;
@@ -1544,8 +1543,14 @@ focus(Client *c)
 		selmon->sel = c;
 		LOG_FORMAT("focus: after setfocus");
 	} else {
-		/*XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);*/
-		/*XDeleteProperty(dpy, root, netatom[NetActiveWindow]);*/
+		// XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+		// XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+		// Client *t;
+		// if (c == c->mon->sel)
+		// {
+		// 	for (t = c->mon->stack; t && !ISVISIBLE(t); t = t->snext);
+		// 	c->mon->sel = t;
+		// }
 		LOG_FORMAT("focus: c or c->win is NULL");
 		return;
 	}
@@ -3349,6 +3354,7 @@ showhide(Client *c)
 {
 	if (!c)
 		return;
+	// LOG_FORMAT("showhide 1: c->name: %s ,p:%p| ", c->name, c);
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
 		XMoveWindow(dpy, c->win, c->x, c->y);
@@ -3766,10 +3772,7 @@ showscratchgroup(ScratchGroup *sg)
 		resize(si->c,si->x,si->y, si->w,si->h,1);
 	}
 	LOG_FORMAT("showscratchgroup: before focus and arrange 2");
-	if(sg->lastfocused){
-		focus(sg->lastfocused);
-	}
-	else if(sg->head->next && sg->head->next->c) 
+	if(sg->head->next && sg->head->next->c) 
 		focus(sg->head->next->c);
 	LOG_FORMAT("showscratchgroup: before focus and arrange 3");
 	arrange(selmon);
@@ -3785,7 +3788,6 @@ showscratchgroup(ScratchGroup *sg)
 void
 hidescratchitem(ScratchItem *si, int returntags)
 {
-	scratchgroupptr->lastfocused = selmon->sel;
 	Client * c = si->c;
 	if(!c) return;
 	c->isfloating = 0;
@@ -3809,7 +3811,6 @@ hidescratchitem(ScratchItem *si, int returntags)
 void 
 hidescratchgroupv(ScratchGroup *sg, int isarrange)
 {
-	scratchgroupptr->lastfocused = selmon->sel;
 	ScratchItem *si;
 	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
@@ -4207,13 +4208,30 @@ unfocus(Client *c, int setfocus)
 void
 unmanage(Client *c, int destroyed)
 {
+	Client *debugc;
+	LOG_FORMAT("unmanage c, name:%s, p:%p", c->name, c);
 	removefromscratchgroupc(c);
+	ScratchItem *tmp = NULL;
+	for (tmp = scratchgroupptr->head->next; tmp && tmp != scratchgroupptr->tail; tmp = tmp->next){
+		debugc = tmp->c;
+		LOG_FORMAT("removefromscratchgroupc, name:%s, p:%p", debugc->name, debugc);
+	}
+
 	removefromfocuschain(c);
+	for (debugc = focuschain; debugc; debugc = debugc->lastfocus)
+	{
+		LOG_FORMAT("removefromfocuschain, name:%s, p:%p", debugc->name, debugc);
+	}
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
+	LOG_FORMAT("unmanage 1");
 	detach(c);
 	detachstack(c);
+	LOG_FORMAT("unmanage 2");
+	for(debugc = selmon->stack; debugc; debugc=debugc->snext){
+		LOG_FORMAT("unmanage 3, name:%s, p:%p", debugc->name, debugc);
+	}
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -4674,7 +4692,7 @@ view(const Arg *arg)
 		}
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 
-		if (arg->ui == ~0 && !isoverview && scratchgroupptr && scratchgroupptr->isfloating)
+		if (arg->ui == ~0 && scratchgroupptr && scratchgroupptr->isfloating)
 			hidescratchgroupv(scratchgroupptr, 0);
 
 		if (arg->ui == ~0)

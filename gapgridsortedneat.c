@@ -12,8 +12,21 @@ gapgridsortedneat(Monitor *m)
 		return;
 
 	/* grid dimensions */
-	rows = 2;
-	cols = n/rows + (n%rows > 0 ? 1: 0);
+	int rcanadidates[n];
+	int j = 0;
+	rows = 1;
+	for (; rows <= n; rows++)
+	{
+		cols = n/rows + (n%rows > 0 ? 1: 0);
+		if (rows * 1.0 / cols >= 1 && rows * 1.0/ cols <= 2)
+		{
+			rcanadidates[j] = rows;	
+			j ++;
+		}
+	}
+
+	rows = rcanadidates[(j-1)/2];
+	cols = n / rows + (n % rows > 0 ? 1 : 0);
 
 	/* window geometries */
 	cw = 0;
@@ -29,19 +42,21 @@ gapgridsortedneat(Monitor *m)
 		c = sorted[i];
 		rn = i % rows;
 		cn = i / rows;
-		if (cn == cols - 1 && i == n - 1 && i % rows == 0)
+		int lastch = ch;
+		int lastcw = cw;
+		if (cn == cols - 1 && rn == 0 && i == n - 1)
 		{
 			// 最后一列的唯一一个
 			ch = m->wh;
 		}else if(cn == cols-1 && i == n-1 ){
 			// 最后一列的最后一个
-			ch = m->wh - cy - ch;
+			ch = m->wh - cy - lastch;
 		}else{
 			ch = rows ? m->wh / rows : m->wh;
 		}
 		cw = m->ww / cols;
-		cx = m->wx + cn * cw;
-		cy = m->wy + rn * ch;
+		cx = m->wx + cn * lastcw;
+		cy = m->wy + rn * lastch;
 		int tmpbw = c->bw;
 		c->bw = borderpx;
 		resize(c, cx, cy, cw - 2 * c->bw - c->mon->gap->gappx, ch - 2 * c->bw - c->mon->gap->gappx, False);
