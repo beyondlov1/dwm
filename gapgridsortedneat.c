@@ -2,7 +2,9 @@
 void
 gapgridsortedneat(Monitor *m) 
 {
-	hidescratchgroupv(scratchgroupptr,0);
+	if (scratchgroupptr && scratchgroupptr->isfloating)
+		hidescratchgroupv(scratchgroupptr, 0);
+
 	unsigned int n, cols, rows, cn, rn, i, cx, cy, cw, ch = 0;
 	Client *c;
 
