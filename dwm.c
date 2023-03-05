@@ -246,6 +246,7 @@ struct ScratchGroup
 	int tags;
 	int pretags;
 	int isfloating;
+	Client *lastfocused;
 };
 
 typedef struct Tag Tag;
@@ -503,12 +504,16 @@ LOG(char *content, char * content2){
 
 void
 LOG_FORMAT(char *format, ...){
+
+	struct timeval us;
+	gettimeofday(&us, NULL);
+
 	time_t tnow;
-    tnow=time(0); 
+	tnow=time(0); 
     struct tm *sttm;  
-    sttm=localtime(&tnow);  
-    fprintf(logfile,"%04u-%02u-%02u %02u:%02u:%02u: ",sttm->tm_year+1900,sttm->tm_mon+1,\
-            sttm->tm_mday,sttm->tm_hour,sttm->tm_min,sttm->tm_sec);
+    sttm=localtime(&tnow);
+	fprintf(logfile, "%04u-%02u-%02u %02u:%02u:%02u.%03u: ", sttm->tm_year + 1900, sttm->tm_mon + 1,
+			sttm->tm_mday, sttm->tm_hour, sttm->tm_min, sttm->tm_sec, us.tv_usec/1000);
 	va_list ap;
 	va_start(ap,format);
 	vfprintf(logfile,format, ap);
@@ -1543,8 +1548,8 @@ focus(Client *c)
 		selmon->sel = c;
 		LOG_FORMAT("focus: after setfocus");
 	} else {
-		// XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
-		// XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 		// Client *t;
 		// if (c == c->mon->sel)
 		// {
@@ -1552,7 +1557,7 @@ focus(Client *c)
 		// 	c->mon->sel = t;
 		// }
 		LOG_FORMAT("focus: c or c->win is NULL");
-		return;
+		// return;
 	}
 	drawbars();
 	LOG_FORMAT("focus: over");
@@ -3767,12 +3772,15 @@ showscratchgroup(ScratchGroup *sg)
 	LOG_FORMAT("showscratchgroup: before focus and arrange");
 	for(si = sg->head->next; si && si != sg->tail; si = si->next)
 	{
-		focus(si->c);
-		arrange(selmon);
+		// focus(si->c);
+		// arrange(selmon);
+		XRaiseWindow(dpy, si->c->win);
 		resize(si->c,si->x,si->y, si->w,si->h,1);
 	}
 	LOG_FORMAT("showscratchgroup: before focus and arrange 2");
-	if(sg->head->next && sg->head->next->c) 
+	if (sg->lastfocused)
+		focus(sg->lastfocused);
+	else if (sg->head->next && sg->head->next->c)
 		focus(sg->head->next->c);
 	LOG_FORMAT("showscratchgroup: before focus and arrange 3");
 	arrange(selmon);
@@ -3788,6 +3796,20 @@ showscratchgroup(ScratchGroup *sg)
 void
 hidescratchitem(ScratchItem *si, int returntags)
 {
+	// sg lastfocus
+	ScratchGroup *sg= scratchgroupptr;
+	sg->lastfocused = NULL;
+	ScratchItem *sitmp;
+	for (sitmp = sg->tail->prev; sitmp && sitmp != sg->head; sitmp = sitmp->prev)
+	{
+		if (sitmp->c == selmon->sel)
+		{
+			sg->lastfocused = selmon->sel;
+			break;
+		}
+	}
+
+
 	Client * c = si->c;
 	if(!c) return;
 	c->isfloating = 0;
@@ -3811,7 +3833,18 @@ hidescratchitem(ScratchItem *si, int returntags)
 void 
 hidescratchgroupv(ScratchGroup *sg, int isarrange)
 {
+	// sg lastfocus
+	sg->lastfocused = NULL;
 	ScratchItem *si;
+	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	{
+		if (si->c == selmon->sel){
+			sg->lastfocused =selmon->sel;
+			break;
+		}
+	}
+
+
 	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
 		Client *c = si->c;
@@ -3901,8 +3934,13 @@ removefromscratchgroupc(Client *c)
 		found->next->prev = found->prev;
 		found->prev = NULL;
 		found->next = NULL;
-		hidescratchitem(found, 0);
+		// hidescratchitem(found, 0);
+		if (c == scratchgroupptr->lastfocused)
+			scratchgroupptr->lastfocused = NULL;
 		free_si(found);
+	}else{
+		if(c == scratchgroupptr->lastfocused) 
+			scratchgroupptr->lastfocused = NULL;
 	}
 }
 
