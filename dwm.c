@@ -3833,6 +3833,8 @@ hidescratchitem(ScratchItem *si, int returntags)
 void 
 hidescratchgroupv(ScratchGroup *sg, int isarrange)
 {
+	if(!sg || !sg->isfloating) return;
+
 	// sg lastfocus
 	sg->lastfocused = NULL;
 	ScratchItem *si;
@@ -3861,11 +3863,13 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			c->tags = 1 << (LENGTH(tags) - 1);
 		}
 
-		si->x = c->x;
-		si->y = c->y;
-		si->w = c->w;
-		si->h = c->h;
-		si->placed = 1;
+		if (c->isfloating){
+			si->x = c->x;
+			si->y = c->y;
+			si->w = c->w;
+			si->h = c->h;
+			si->placed = 1;
+		}
 	}
 	if(isarrange){
 		int curtags = selmon->tagset[selmon->seltags];
