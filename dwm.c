@@ -702,14 +702,40 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 	return *x != c->x || *y != c->y || *w != c->w || *h != c->h;
 }
 
+
+// not used
+// try to arrange all tag eagerly, but not good
+void 
+arrangealltag(Monitor *m)
+{
+	LOG_FORMAT("arrangealltag 1");
+	if (m)
+		showhidealltag(m->stack);
+	else
+		for (m = mons; m; m = m->next)
+			showhidealltag(m->stack);
+	LOG_FORMAT("arrangealltag 2");
+	if (m)
+	{
+		LOG_FORMAT("arrangealltag 3");
+		arrangemon(m);
+		LOG_FORMAT("arrangealltag 4");
+		restack(m);
+		LOG_FORMAT("arrangealltag 5");
+	}
+	else
+		for (m = mons; m; m = m->next)
+			arrangemon(m);
+}
+
 void
 arrange(Monitor *m)
 {
 	LOG_FORMAT("arrange 1");
 	if (m)
-		showhidealltag(m->stack);
+		showhide(m->stack);
 	else for (m = mons; m; m = m->next)
-		showhidealltag(m->stack);
+		showhide(m->stack);
 	LOG_FORMAT("arrange 2");
 	if (m) {
 		LOG_FORMAT("arrange 3");
@@ -2754,7 +2780,7 @@ movex(const Arg *arg)
 		}
 		if (selmon->sel->isfloating)
 		{
-			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 1);
+			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 0);
 		}
 	}
 }
@@ -2775,7 +2801,7 @@ movey(const Arg *arg)
 		}
 		if (selmon->sel->isfloating)
 		{
-			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 1);
+			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 0);
 		}
 	}
 }
@@ -3366,17 +3392,18 @@ showhide(Client *c)
 	// LOG_FORMAT("showhide 1: c->name: %s ,p:%p| ", c->name, c);
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
-		XMoveWindow(dpy, c->win, c->x, c->y);
+		XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
 		/* hide clients bottom up */
 		showhide(c->snext);
-		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+		XMoveResizeWindow(dpy, c->win, WIDTH(c) * -1, c->y, c->w, c->h);
 	}
 }
 
+// not used
 void showhidealltag(Client *c)
 {
 	if (!c) return;
@@ -3384,9 +3411,11 @@ void showhidealltag(Client *c)
 	for(;c;c = c->snext){
 		if (ISVISIBLE(c)) 
 		{
-			XMoveWindow(dpy, c->win, c->x, c->y);
-			if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
-				resize(c, c->x, c->y, c->w, c->h, 0);
+			// XMoveWindow(dpy, c->win, c->x, c->y);
+			if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen){
+				// resize(c, c->x, c->y, c->w, c->h, 0);
+				// XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+			}
 		}
 	}
 	unsigned int seltags = selmon->tagset[selmon->seltags];
@@ -3394,12 +3423,16 @@ void showhidealltag(Client *c)
 	for (i = 0; i < LENGTH(tags); i++)
 	{
 		selmon->tagset[selmon->seltags] = 1 << i;
-		if (selmon->lt[selmon->pertag->sellts[i]]->arrange && !(seltags & (1<<i)))
+		if (selmon->lt[selmon->pertag->sellts[i+1]]->arrange && !(seltags & (1<<i)))
 		{
-			selmon->lt[selmon->pertag->sellts[i]]->arrange(selmon);
+			selmon->lt[selmon->pertag->sellts[i+1]]->arrange(selmon);
 			for (c = oc; c; c = c->snext)
 				if (!(c->tags & seltags))
-					XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+				{
+					// resize(c, WIDTH(c) * -1, c->y, c->w, c->h, 0);
+					// XMoveWindow(dpy, c->win, WIDTH(c) * -1, c->y);
+					XMoveResizeWindow(dpy, c->win, WIDTH(c) * -1, c->y,  c->w, c->h);
+				}
 			
 		}
 	}
@@ -3808,7 +3841,7 @@ showscratchgroup(ScratchGroup *sg)
 		// focus(si->c);
 		// arrange(selmon);
 		XRaiseWindow(dpy, si->c->win);
-		resize(si->c,si->x,si->y, si->w,si->h,1);
+		resize(si->c,si->x,si->y, si->w,si->h,0);
 	}
 	LOG_FORMAT("showscratchgroup: before focus and arrange 2");
 	if (sg->lastfocused)
