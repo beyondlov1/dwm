@@ -707,9 +707,9 @@ arrange(Monitor *m)
 {
 	LOG_FORMAT("arrange 1");
 	if (m)
-		showhide(m->stack);
+		showhidealltag(m->stack);
 	else for (m = mons; m; m = m->next)
-		showhide(m->stack);
+		showhidealltag(m->stack);
 	LOG_FORMAT("arrange 2");
 	if (m) {
 		LOG_FORMAT("arrange 3");
@@ -2652,7 +2652,7 @@ propertynotify(XEvent *e)
 			// idea 弹窗后其他窗口会变成floating, 这里先注释掉
 			// && (c->isfloating = (wintoclient(trans)) != NULL)
 			)
-				arrange(c->mon);
+			arrange(c->mon);
 			break;
 		case XA_WM_NORMAL_HINTS:
 			updatesizehints(c);
@@ -2729,6 +2729,10 @@ removesystrayicon(Client *i)
 void
 resize(Client *c, int x, int y, int w, int h, int interact)
 {
+	if (c->x == x && c->y == y && c->w == w && c->h == h)
+		return;
+	
+	// LOG_FORMAT("resize, c->name:%s, %d %d %d %d", c->name, x, y, w, h);
 	if (applysizehints(c, &x, &y, &w, &h, interact))
 		resizeclient(c, x, y, w, h);
 }
@@ -3371,6 +3375,35 @@ showhide(Client *c)
 		showhide(c->snext);
 		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
 	}
+}
+
+void showhidealltag(Client *c)
+{
+	if (!c) return;
+	Client *oc = c;
+	for(;c;c = c->snext){
+		if (ISVISIBLE(c)) 
+		{
+			XMoveWindow(dpy, c->win, c->x, c->y);
+			if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
+				resize(c, c->x, c->y, c->w, c->h, 0);
+		}
+	}
+	unsigned int seltags = selmon->tagset[selmon->seltags];
+	int i;
+	for (i = 0; i < LENGTH(tags); i++)
+	{
+		selmon->tagset[selmon->seltags] = 1 << i;
+		if (selmon->lt[selmon->pertag->sellts[i]]->arrange && !(seltags & (1<<i)))
+		{
+			selmon->lt[selmon->pertag->sellts[i]]->arrange(selmon);
+			for (c = oc; c; c = c->snext)
+				if (!(c->tags & seltags))
+					XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+			
+		}
+	}
+	selmon->tagset[selmon->seltags] = seltags;
 }
 
 void
