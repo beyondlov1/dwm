@@ -5058,7 +5058,10 @@ relview(const Arg *arg)
 	unsigned int nexttags = 0;
 	if (arg->i > 0)
 	{
-		nexttags = selmon->tagset[selmon->seltags] << arg->i;
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK ) 
+			nexttags = 1;
+		else 
+			nexttags = selmon->tagset[selmon->seltags] << arg->i;
 		while (counttag(selmon->clients, nexttags) == 0)
 		{
 			if (nexttags > maxtags)
@@ -5072,12 +5075,15 @@ relview(const Arg *arg)
 	}
 	if (arg->i < 0)
 	{
-		nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK ) 
+			nexttags = maxtags;
+		else 
+			nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
 		while (counttag(selmon->clients, nexttags) == 0)
 		{
 			if (!nexttags)
 			{
-		  		nexttags = maxtags ;
+				nexttags = maxtags ;
 				break;
 			}else {
 				nexttags = nexttags >> 1;
