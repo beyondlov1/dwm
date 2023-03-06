@@ -412,6 +412,8 @@ static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
+static void reltag(const Arg *arg);
+static void reltagd(const Arg *arg);
 static void removefromscratchgroup(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
@@ -2784,10 +2786,6 @@ movex(const Arg *arg)
 		{
 			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 0);
 		}
-		ScratchItem *found = findscratchitem(selmon->sel, scratchgroupptr);
-		if(found){
-			found->placed = 1;
-		}
 	}
 }
 
@@ -2808,10 +2806,6 @@ movey(const Arg *arg)
 		if (selmon->sel->isfloating)
 		{
 			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 0);
-		}
-		ScratchItem *found = findscratchitem(selmon->sel, scratchgroupptr);
-		if(found){
-			found->placed = 1;
 		}
 	}
 }
@@ -3532,6 +3526,67 @@ void tsspawn(const Arg *arg)
 	lastspawntime = lastnexttemptime;
 }
 
+void reltag(const Arg *arg)
+{
+	unsigned int maxtags = 1 << (LENGTH(tags)-1);
+	unsigned int nexttags = 0;
+	if (arg->i > 0)
+	{
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK)
+			nexttags = 1;
+		else
+			nexttags = selmon->tagset[selmon->seltags] << arg->i;
+		if(nexttags > maxtags) nexttags = 1;
+	}
+	if (arg->i < 0)
+	{
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK)
+			nexttags = maxtags;
+		else
+			nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
+		if(nexttags == 0) nexttags = maxtags;
+	}
+
+	if (selmon->sel && nexttags & TAGMASK)
+	{
+		selmon->sel->tags = nexttags & TAGMASK;
+		focus(NULL);
+		arrange(selmon);
+		Arg viewarg = {.ui = nexttags};
+		view(&viewarg);
+	}
+}
+
+void reltagd(const Arg *arg)
+{
+	unsigned int maxtags = 1 << (LENGTH(tags) - 1);
+	unsigned int nexttags = 0;
+	if (arg->i > 0)
+	{
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK)
+			nexttags = 1;
+		else
+			nexttags = selmon->tagset[selmon->seltags] << arg->i;
+		if (nexttags > maxtags)
+			nexttags = 1;
+	}
+	if (arg->i < 0)
+	{
+		if ((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK)
+			nexttags = maxtags;
+		else
+			nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
+		if (nexttags == 0)
+			nexttags = maxtags;
+	}
+
+	if (selmon->sel && nexttags & TAGMASK)
+	{
+		selmon->sel->tags = nexttags & TAGMASK;
+		focus(NULL);
+		arrange(selmon);
+	}
+}
 
 void
 tag(const Arg *arg)
