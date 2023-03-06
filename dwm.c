@@ -312,6 +312,7 @@ static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static void focusgrid(const Arg *arg);
 static void free_si(ScratchItem *si);
+static ScratchItem *findscratchitem(Client *c, ScratchGroup *sg);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
 static unsigned int getmaxtags();
@@ -2782,6 +2783,10 @@ movex(const Arg *arg)
 		{
 			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 0);
 		}
+		ScratchItem *found = findscratchitem(selmon->sel, scratchgroupptr);
+		if(found){
+			found->placed = 1;
+		}
 	}
 }
 
@@ -2802,6 +2807,10 @@ movey(const Arg *arg)
 		if (selmon->sel->isfloating)
 		{
 			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 0);
+		}
+		ScratchItem *found = findscratchitem(selmon->sel, scratchgroupptr);
+		if(found){
+			found->placed = 1;
 		}
 	}
 }
@@ -3392,14 +3401,14 @@ showhide(Client *c)
 	// LOG_FORMAT("showhide 1: c->name: %s ,p:%p| ", c->name, c);
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
-		XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+		XMoveWindow(dpy, c->win, c->x, c->y);
 		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
 		/* hide clients bottom up */
 		showhide(c->snext);
-		XMoveResizeWindow(dpy, c->win, WIDTH(c) * -1, c->y, c->w, c->h);
+		XMoveWindow(dpy, c->win, WIDTH(c) * -1, c->y);
 	}
 }
 
@@ -3825,6 +3834,7 @@ showscratchgroup(ScratchGroup *sg)
 			si->h = r.h;
 		}
 
+		LOG_FORMAT("showscratchgroup: isplaced: %d, si->x: %d, si->y: %d", si->placed, si->x, si->y);
 		c->x = si->x;
 		c->y = si->y;
 		
@@ -3853,6 +3863,18 @@ showscratchgroup(ScratchGroup *sg)
 	sg->isfloating = 1;
 }
 
+
+ScratchItem 
+*findscratchitem(Client *c, ScratchGroup *sg){
+	ScratchItem *sitmp = NULL;
+	for (sitmp = sg->tail->prev; sitmp && sitmp != sg->head; sitmp = sitmp->prev)
+	{
+		if (sitmp->c == c)
+			return sitmp;
+	}
+	return NULL;
+}
+
 /**
  * @brief 隐藏单个scratchitem
  * 
@@ -3865,15 +3887,8 @@ hidescratchitem(ScratchItem *si, int returntags)
 	// sg lastfocus
 	ScratchGroup *sg= scratchgroupptr;
 	sg->lastfocused = NULL;
-	ScratchItem *sitmp;
-	for (sitmp = sg->tail->prev; sitmp && sitmp != sg->head; sitmp = sitmp->prev)
-	{
-		if (sitmp->c == selmon->sel)
-		{
-			sg->lastfocused = selmon->sel;
-			break;
-		}
-	}
+	ScratchItem *sitmp = findscratchitem(selmon->sel, sg);
+	if(sitmp) sg->lastfocused = selmon->sel;
 
 
 	Client * c = si->c;
@@ -3918,7 +3933,6 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		Client *c = si->c;
 		if (!c)
 			continue;
-		c->isfloating = 0;
 		if (si->pretags)
 			c->tags = si->pretags;
 		else
@@ -3954,6 +3968,8 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		arrange(selmon);
 	}
 	sg->isfloating = 0;
+	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		if(si->c) si->c->isfloating = 0;
 }
 
 void 
