@@ -323,6 +323,7 @@ static pid_t getstatusbarpid();
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
+static long getcurrusec();
 static void hidescratchgroup(ScratchGroup *sg);
 static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
@@ -472,9 +473,9 @@ static const char **nextscratchcmd;
 
 static volatile int isnexttemp = 0;
 static const char **nexttempcmd;
-static time_t lastnexttemptime;
-
-static time_t lastmanagetime;
+static long lastnexttemptime;
+static long lastmanagetime;
+static long lastspawntime;
 
 static int switchercurtagindex;
 
@@ -2334,8 +2335,8 @@ scratchsingle(char *cmd[],ScratchItem **siptr){
 void
 manage(Window w, XWindowAttributes *wa)
 {
-	lastmanagetime = time(0);
-	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1);
+	lastmanagetime = getcurrusec(); 
+	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1000000*5) && lastnexttemptime >= lastspawntime;
 
 	// hidescratchgroup if needed (example: open app from terminal)
 	if(scratchgroupptr->isfloating && !isnexttemp)
@@ -3487,6 +3488,7 @@ sigstatusbar(const Arg *arg)
 void
 spawn(const Arg *arg)
 {
+	lastspawntime = getcurrusec();
 	if (arg->v == dmenucmd)
 		dmenumon[0] = '0' + selmon->num;
 	selmon->tagset[selmon->seltags] &= ~scratchtag;
@@ -3525,8 +3527,9 @@ void tsspawn(const Arg *arg)
 {
 	isnexttemp = 1;
 	nexttempcmd = arg->v;
-	lastnexttemptime = time(0);
+	lastnexttemptime = getcurrusec();
 	spawn(arg);
+	lastspawntime = lastnexttemptime;
 }
 
 
