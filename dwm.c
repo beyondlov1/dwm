@@ -4880,6 +4880,13 @@ view(const Arg *arg)
 
 		if (arg->ui == ~0 && scratchgroupptr && scratchgroupptr->isfloating)
 			hidescratchgroupv(scratchgroupptr, 0);
+		if (arg->ui == ~0){
+			Client *tmpc;
+			for(tmpc = selmon->clients; tmpc; tmpc = tmpc->next)
+			{
+				if(tmpc->isfloating && !tmpc->istemp) tmpc->isfloating = 0;
+			}
+		}
 
 		if (arg->ui == ~0)
 			selmon->pertag->curtag = 0;
