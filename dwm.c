@@ -4009,6 +4009,8 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			si->placed = 1;
 		}
 	}
+	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		if(si->c) si->c->isfloating = 0;
 	if(isarrange){
 		int curtags = selmon->tagset[selmon->seltags];
 		Client *c;
@@ -4016,8 +4018,10 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			int found = 0;
 			for (si = sg->tail->prev; si && si != sg->head; si = si->prev){
 				Client *itemc = si->c;
-				if (itemc == c)
+				if (itemc == c){
 					found = 1;
+					break;
+				}
 			}
 			if (ISVISIBLE(c) && !found)
 				break;
@@ -4026,8 +4030,7 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		arrange(selmon);
 	}
 	sg->isfloating = 0;
-	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
-		if(si->c) si->c->isfloating = 0;
+	
 }
 
 void 
