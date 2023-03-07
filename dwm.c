@@ -2454,7 +2454,8 @@ manage(Window w, XWindowAttributes *wa)
 
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
-	focus(NULL);
+	XRaiseWindow(dpy,c->win);
+	focus(c);
 
 	Client *maxpc = NULL;
 	Client *tmp = NULL;
