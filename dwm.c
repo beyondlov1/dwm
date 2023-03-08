@@ -43,6 +43,7 @@
 #include <X11/Xft/Xft.h>
 #include <math.h>
 #include <time.h>
+#include <Imlib2.h>
 
 #include "drw.h"
 #include "util.h"
@@ -1432,10 +1433,58 @@ drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 			y = y + bh;
 		}
 	}
-	drw_map(drw, m->switcher, 0,0, ww, wh);
+
+
+
+
+	///  ####################### just for fun
+	 /* events we get from X */
+	XEvent ev;
+	/* areas to update */
+	Imlib_Updates updates, current_update;
+	/* our virtual framebuffer image we draw into */
+	Imlib_Image buffer;
+	Display *disp;
+	Visual  *vis;
+	Colormap cm;
+	int      depth;
+   
+   /* connect to X */
+   disp  = dpy;
+   vis   = DefaultVisual(disp, DefaultScreen(disp));
+   depth = DefaultDepth(disp, DefaultScreen(disp));
+   cm    = DefaultColormap(disp, DefaultScreen(disp));
+ 
+   /* set our cache to 2 Mb so it doesn't have to go hit the disk as long as */
+   /* the images we use use less than 2Mb of RAM (that is uncompressed) */
+   imlib_set_cache_size(2048 * 1024);
+   /* set the font cache to 512Kb - again to avoid re-loading */
+   imlib_set_font_cache_size(512 * 1024);
+   /* add the ./ttfonts dir to our font path - you'll want a notepad.ttf */
+   /* in that dir for the text to display */
+//    imlib_add_path_to_font_path("./ttfonts");
+   /* set the maximum number of colors to allocate for 8bpp and less to 128 */
+   imlib_set_color_usage(128);
+   /* dither for depths < 24bpp */
+   imlib_context_set_dither(1);
+   /* set the display , visual, colormap and drawable we are using */
+   imlib_context_set_display(disp);
+   imlib_context_set_visual(vis);
+   imlib_context_set_colormap(cm);
+	imlib_context_set_drawable(selmon->sel->win);
+	// imlib_context_set_drawable(drw->drawable);
+    Imlib_Image image = imlib_create_image_from_drawable(root, 0, 0, ww, wh,1);
+	imlib_context_set_image(image);
+	imlib_image_set_format("jpeg");
+	imlib_save_image("/home/beyond/screen.jpeg");
+	imlib_free_image();
+
+///  ####################### just for fun
+	
+	// drw_map(drw, m->switcher, 0,0, ww, wh);
 
 	switchercurtagindex = curtagindex;
-	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
+	// XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 
 	for (i = 0; i < LENGTH(tags); i++)
 	{
