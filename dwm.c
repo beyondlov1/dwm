@@ -338,6 +338,7 @@ static void killclientc(Client *c);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
+static void mapnotify(XEvent *e);
 static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
@@ -416,6 +417,7 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void updatepreview(void);
+static void updatepreviewc(Client *c, int i);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
@@ -457,6 +459,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[KeyPress] = keypress,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
+	[MapNotify] = mapnotify,
 	[MotionNotify] = motionnotify,
 	[PropertyNotify] = propertynotify,
 	[ResizeRequest] = resizerequest,
@@ -1386,6 +1389,9 @@ free_list(struct TagClient *tc)
 void
 drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 {
+	drawpreviewwin(win, ww,wh, curtagindex);
+	switchercurtagindex = curtagindex;
+	return;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
 
@@ -1487,6 +1493,29 @@ updatepreview(){
 			    tagimages[k] = NULL;	
 			}
 		}
+	}
+}
+
+void 
+updatepreviewc(Client *c,int i){
+	if(!c) return;
+	Imlib_Image image;
+	imlib_context_set_drawable(c->win);
+	// imlib_context_set_drawable(selmon->sel->win);
+	image = imlib_create_image_from_drawable((Pixmap)0, 0, 0, c->w, c->h, 1);
+	// image = imlib_create_image_from_drawable((Pixmap)0, 0, 0,selmon->sel->w, selmon->sel->h, 1);
+	if (tagimages[i])
+	{
+		imlib_context_set_image(tagimages[0]);
+		imlib_free_image();
+	}
+	if (image)
+	{
+		tagimages[i] = image;
+	}
+	else
+	{
+		tagimages[i] = NULL;
 	}
 }
 
@@ -2646,6 +2675,18 @@ maprequest(XEvent *e)
 		return;
 	if (!wintoclient(ev->window))
 		manage(ev->window, &wa);
+}
+
+void 
+mapnotify(XEvent *e){	
+	// updatepreview();
+	Client *c;
+	int i;
+	for(c=selmon->clients;c;c=c->next){
+		updatepreviewc(c,i);
+		i++;
+	}
+	drawpreviewwin(selmon->switcher, selmon->ww/2, selmon->wh/2, getcurtagindex(selmon));
 }
 
 void
