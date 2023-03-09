@@ -1447,6 +1447,7 @@ drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 		free_list(tagclientsmap[i]);
 	}
 }
+Window win;
 
 void drawpreviewwin(Monitor *m)
 {
@@ -1457,7 +1458,6 @@ void drawpreviewwin(Monitor *m)
 	Visual *vis;
 	Colormap cm;
 	int depth;
-	Window win;
 	Imlib_Color_Range range;
 
 	int ww = 640;
@@ -1468,7 +1468,8 @@ void drawpreviewwin(Monitor *m)
 	depth = DefaultDepth(disp, DefaultScreen(disp));
 	cm = DefaultColormap(disp, DefaultScreen(disp));
 
-	win = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
+	if(!win)
+		win = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
 							  0, 0, ww, wh, 0, 0, 0);
 	///  ####################### just for fun
 	XMapWindow(dpy, win);
@@ -1490,31 +1491,30 @@ void drawpreviewwin(Monitor *m)
 	Imlib_Image image;
     // image = imlib_load_image("/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm/desktop.png");
 	// imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
+	// imlib_context_set_image(image);
+	// imlib_free_image();
 
-	
 	int i = 0;
 	Client *c;
 	for(c = selmon->clients; c; c = c->next){
-		if(!ISVISIBLE(c)) continue;
 		imlib_context_set_drawable(c->win);
-		image = imlib_create_image_from_drawable(root, 60, 0, ww*2, wh*2, 1);
+		imlib_context_set_image(buffer);
+		// image = imlib_create_image_from_drawable(root, 0, 0, ww, wh, 1);
+		image = imlib_create_scaled_image_from_drawable((Pixmap)0, 0, 0, ww, wh, ww/3, wh/3, 1, 0);
 		if(image){
-			imlib_context_set_image(buffer);
+			LOG_FORMAT("image loaded");
 			imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
-			imlib_context_set_drawable(win);
-			imlib_context_set_blend(0);
-			imlib_context_set_image(buffer);
-			imlib_render_image_on_drawable_at_size(i * ww / 3, i * wh / 3, ww / 3, wh / 3);
+			imlib_context_set_image(image);
 			imlib_free_image();
 			i++;
 		}
 		
 	}
 
-	// imlib_context_set_drawable(win);
-	// imlib_context_set_blend(0);
-	// imlib_context_set_image(buffer);
-	// imlib_render_image_on_drawable_at_size(i * ww / 3, i * wh / 3, ww / 3, wh / 3);
+	imlib_context_set_drawable(win);
+	imlib_context_set_blend(0);
+	imlib_context_set_image(buffer);
+	imlib_render_image_on_drawable_at_size(0, 0, ww, wh);
 	imlib_free_image();
 
 	// imlib_image_copy_rect(0,0, ww,wh, 0,0);
