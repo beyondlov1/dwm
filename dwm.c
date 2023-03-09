@@ -1389,9 +1389,9 @@ free_list(struct TagClient *tc)
 void
 drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 {
-	drawpreviewwin(win, ww,wh, curtagindex);
-	switchercurtagindex = curtagindex;
-	return;
+	// drawpreviewwin(win, ww,wh, curtagindex);
+	// switchercurtagindex = curtagindex;
+	// return;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
 
@@ -2680,13 +2680,7 @@ maprequest(XEvent *e)
 void 
 mapnotify(XEvent *e){	
 	// updatepreview();
-	Client *c;
-	int i;
-	for(c=selmon->clients;c;c=c->next){
-		updatepreviewc(c,i);
-		i++;
-	}
-	drawpreviewwin(selmon->switcher, selmon->ww/2, selmon->wh/2, getcurtagindex(selmon));
+	// drawpreviewwin(selmon->switcher, selmon->ww/2, selmon->wh/2, getcurtagindex(selmon));
 }
 
 void
