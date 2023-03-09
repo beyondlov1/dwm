@@ -302,7 +302,9 @@ static void drawbar(Monitor *m);
 static void drawbars(void);
 static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
+// 废弃
 static void drawpreview(const Arg *arg);
+// 废弃
 static void drawpreviewwin( Window win, int ww, int wh, int curtagindex);
 static void toggleswitchers(const Arg *arg);
 static void enqueue(Client *c);
@@ -1384,74 +1386,71 @@ free_list(struct TagClient *tc)
 void
 drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 {
-	drawpreviewwin(win, ww, wh, curtagindex);
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	int i;
+
+	struct TagClient *tagclientsmap[LENGTH(tags)];
+	for(i = 0; i < LENGTH(tags); i++){
+		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+		tagclient->head.next = &tagclient->head;
+		tagclient->head.prev = &tagclient->head;
+		tagclient->client = NULL;
+		tagclientsmap[i] = tagclient;
+	}
+
+	Client *c;
+	for(c=selmon->clients; c; c = c->next)
+	{
+		int tagindex = gettagindex(c->tags);
+		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+		tagclient->client = c;
+		list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
+	}
+
+	
+	for(i = 0; i < LENGTH(tags); i++){
+		int row = i/3;
+		int col = i%3;
+		if(curtagindex == i){
+			if (!list_empty(&tagclientsmap[i]->head))
+				drw_setscheme(drw, scheme[SchemeSel]);
+			else
+				drw_setscheme(drw, scheme[SchemeInvalidSel]);
+		}else{
+			if (!list_empty(&tagclientsmap[i]->head))
+				drw_setscheme(drw, scheme[SchemeNorm]);
+			else
+				drw_setscheme(drw, scheme[SchemeInvalidNormal]);
+		}
+		drw_rect(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 1, 1);
+		int y = row * wh / 3;
+		drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, bh, 10, tags[i], 0);
+		y = y + bh;
+		struct list_head *head;
+		list_for_each(head, &tagclientsmap[i]->head)
+		{
+			struct TagClient *tc = list_entry(head, struct TagClient,head);
+			XClassHint ch = { NULL, NULL };
+			XGetClassHint(dpy, tc->client->win, &ch);
+			char *class    = ch.res_class ? ch.res_class : broken;
+			char *instance = ch.res_name  ? ch.res_name  : broken;
+			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
+			y = y + bh;
+		}
+	}
+
+	drw_map(drw,win, 0, 0, ww, wh);
+	
+
 	switchercurtagindex = curtagindex;
-	return;
-	// drw_setscheme(drw, scheme[SchemeNorm]);
-	// drw_rect(drw, 0, 0, ww, wh, 1, 1);	
-
-	// int i;
-
-	// struct TagClient *tagclientsmap[LENGTH(tags)];
-	// for(i = 0; i < LENGTH(tags); i++){
-	// 	struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
-	// 	tagclient->head.next = &tagclient->head;
-	// 	tagclient->head.prev = &tagclient->head;
-	// 	tagclient->client = NULL;
-	// 	tagclientsmap[i] = tagclient;
-	// }
-
-	// Client *c;
-	// for(c=selmon->clients; c; c = c->next)
-	// {
-	// 	int tagindex = gettagindex(c->tags);
-	// 	struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
-	// 	tagclient->client = c;
-	// 	list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
-	// }
-
-	
-	// for(i = 0; i < LENGTH(tags); i++){
-	// 	int row = i/3;
-	// 	int col = i%3;
-	// 	if(curtagindex == i){
-	// 		if (!list_empty(&tagclientsmap[i]->head))
-	// 			drw_setscheme(drw, scheme[SchemeSel]);
-	// 		else
-	// 			drw_setscheme(drw, scheme[SchemeInvalidSel]);
-	// 	}else{
-	// 		if (!list_empty(&tagclientsmap[i]->head))
-	// 			drw_setscheme(drw, scheme[SchemeNorm]);
-	// 		else
-	// 			drw_setscheme(drw, scheme[SchemeInvalidNormal]);
-	// 	}
-	// 	drw_rect(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 1, 1);
-	// 	int y = row * wh / 3;
-	// 	drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, bh, 10, tags[i], 0);
-	// 	y = y + bh;
-	// 	struct list_head *head;
-	// 	list_for_each(head, &tagclientsmap[i]->head)
-	// 	{
-	// 		struct TagClient *tc = list_entry(head, struct TagClient,head);
-	// 		XClassHint ch = { NULL, NULL };
-	// 		XGetClassHint(dpy, tc->client->win, &ch);
-	// 		char *class    = ch.res_class ? ch.res_class : broken;
-	// 		char *instance = ch.res_name  ? ch.res_name  : broken;
-	// 		drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
-	// 		y = y + bh;
-	// 	}
-	// }
-
-	//drw_map(drw,win, 0, 0, ww, wh);
 	
 
-	// switchercurtagindex = curtagindex;
-	
-
-	// for (i = 0; i < LENGTH(tags); i++)
-	// {
-	// 	free_list(tagclientsmap[i]);
-	// }
+	for (i = 0; i < LENGTH(tags); i++)
+	{
+		free_list(tagclientsmap[i]);
+	}
 }
 
 
@@ -1484,13 +1483,13 @@ updatepreview(){
 			if(image){
 				LOG_FORMAT("updatepreview:, k:%d",k);
 				tagimages[k] = image;
+			}else{
+			    tagimages[k] = NULL;	
 			}
 		}
 	}
 }
 
-
-Window win;
 
 void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 {
@@ -1505,7 +1504,7 @@ void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 
 	Imlib_Image image;
     // image = imlib_load_image("/home/beyond/black.jpeg");
-	imlib_context_set_color(105,105,105,255);
+	imlib_context_set_color(0,0,0,255);
 	imlib_image_fill_rectangle(0, 0, ww, wh);
 	// imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
 	// imlib_context_set_image(image);
@@ -1520,10 +1519,11 @@ void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 		// image = imlib_create_image_from_drawable((Pixmap)0, 0, 0,selmon->ww,selmon->wh, 1);
 		image = tagimages[i];
 		// image = imlib_create_scaled_image_from_drawable((Pixmap)0, 0, 0, ww, wh, ww/3, wh/3, 1, 0);
+		row = i/3;
+		col = i%3;
 		if(image){
 			LOG_FORMAT("image loaded, tag:%d", i);
-			row = i/3;
-			col = i%3;
+			
 			imlib_context_set_image(image);
 			int w = imlib_image_get_width();
 			int h = imlib_image_get_height();
@@ -1531,28 +1531,24 @@ void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 			imlib_blend_image_onto_image(image, 0, 0, 0, w, h, col*ww/3, row*wh/3, ww/3, wh/3);
 
 			if(curtagindex == i){
+				imlib_context_set_image(buffer);
 				imlib_context_set_color(255, 200, 10, 100);
-			}else{
-				imlib_context_set_color(0,0,0,0);
+				imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
 			}
-			imlib_context_set_image(buffer);
-			imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
 
 			// imlib_context_set_image(image);
 			// imlib_free_image();
 		}else{
 			if(curtagindex == i){
-				imlib_context_set_color(255, 200, 10, 255);
-			}else{
-				imlib_context_set_color(105,105,105, 255);
+				imlib_context_set_image(buffer);
+				imlib_context_set_color(255, 200, 10, 100);
+				imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
 			}
-			imlib_context_set_image(buffer);
-			imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
 		}		
 	}
 	if(!win)
 		win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, ww, wh, 0, 0, 0);	
-	XMapWindow(dpy, win);
+	// XMapWindow(dpy, win);
 
 	imlib_context_set_drawable(win);
 	imlib_context_set_blend(0);
@@ -1578,8 +1574,6 @@ drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
 
-	updatepreview();
-
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
 		.background_pixmap = ParentRelative,
@@ -1595,9 +1589,10 @@ drawswitcher(Monitor *m)
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
+	XMapWindow(dpy, m->switcher);
+	drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
-	drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 }
 
@@ -3528,7 +3523,7 @@ setup(void)
 	imlib_context_set_display(dpy);
 	imlib_context_set_visual(vis);
 	imlib_context_set_colormap(cm);
-	imlib_context_set_drawable(win);
+	imlib_context_set_drawable(selmon->switcher);
 
     memset(tagimages, 0, sizeof(tagimages));
 }
@@ -5531,6 +5526,7 @@ switchermove(const Arg *arg)
 	const Arg varg = {.ui = tags};
 	view(&varg);
 	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	XMapWindow(dpy, selmon->switcher);
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
 
