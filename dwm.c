@@ -303,7 +303,7 @@ static void drawbars(void);
 static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
 static void drawpreview(const Arg *arg);
-static void drawpreviewwin(Monitor *m);
+static void drawpreviewwin( Window win, int ww, int wh, int curtagindex);
 static void toggleswitchers(const Arg *arg);
 static void enqueue(Client *c);
 static void enqueuestack(Client *c);
@@ -413,6 +413,7 @@ static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
+static void updatepreview(void);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
@@ -489,6 +490,8 @@ static int switchercurtagindex;
 
 static Tag *tagarray[LENGTH(tags) + 1];
 static TagStat *taggraph[LENGTH(tags)+1][LENGTH(tags)+1];
+
+static Imlib_Image tagimages[LENGTH(tags)];
 
 struct Pertag {
 	unsigned int curtag, prevtag; /* current and previous tag */
@@ -1379,8 +1382,10 @@ free_list(struct TagClient *tc)
 }
 
 void
-drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
+drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 {
+	drawpreviewwin(win, ww, wh, curtagindex);
+	return;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
 
@@ -1436,86 +1441,109 @@ drawswitcherwin(Monitor *m, int ww, int wh, int curtagindex)
 		}
 	}
 
-	drw_map(drw, m->switcher, 0, 0, ww, wh);
+	drw_map(drw,win, 0, 0, ww, wh);
 	
 
 	switchercurtagindex = curtagindex;
-	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
+	
 
 	for (i = 0; i < LENGTH(tags); i++)
 	{
 		free_list(tagclientsmap[i]);
 	}
 }
+
+
+void 
+updatepreview(){
+	unsigned int currtags = selmon->tagset[selmon->seltags];
+	if (currtags & TAGMASK)
+	{
+		int i;
+		int cnt = 0;
+		int k = -1;
+		for (i = 0; i < LENGTH(tags); i++)
+		{
+			if(currtags & (1 << i)){
+				cnt += 1;
+				k = i;
+			}
+		}
+		if(cnt == 1)
+		{
+			Imlib_Image image;
+			imlib_context_set_drawable(root);
+			// imlib_context_set_drawable(selmon->sel->win);
+			image = imlib_create_image_from_drawable((Pixmap)0, 0, 0,selmon->ww,selmon->wh, 1);
+			// image = imlib_create_image_from_drawable((Pixmap)0, 0, 0,selmon->sel->w, selmon->sel->h, 1);
+			if(tagimages[k]){
+				imlib_context_set_image(tagimages[k]);
+				imlib_free_image();
+			}
+			if(image){
+				LOG_FORMAT("updatepreview:, k:%d",k);
+				tagimages[k] = image;
+			}
+		}
+	}
+}
+
+
 Window win;
 
-void drawpreviewwin(Monitor *m)
+void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 {
 
-	Imlib_Updates updates, current_update;
+	// int ww = 1800;
+	// int wh = 600;
 	Imlib_Image buffer;
-	Display *disp;
-	Visual *vis;
-	Colormap cm;
-	int depth;
-	Imlib_Color_Range range;
-
-	int ww = 640;
-	int wh = 300;
-
-	disp = dpy;
-	vis = DefaultVisual(disp, DefaultScreen(disp));
-	depth = DefaultDepth(disp, DefaultScreen(disp));
-	cm = DefaultColormap(disp, DefaultScreen(disp));
-
-	if(!win)
-		win = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
-							  0, 0, ww, wh, 0, 0, 0);
-	///  ####################### just for fun
-	XMapWindow(dpy, win);
-
-	imlib_set_cache_size(2048 * 1024);
-	imlib_set_color_usage(128);
-	/* dither for depths < 24bpp */
-	imlib_context_set_dither(1);
-	/* set the display , visual, colormap and drawable we are using */
-	imlib_context_set_display(disp);
-	imlib_context_set_visual(vis);
-	imlib_context_set_colormap(cm);
-	imlib_context_set_drawable(win);
 
 	buffer = imlib_create_image(ww, wh);
 	imlib_context_set_blend(1);
-	imlib_context_set_image(buffer);
+	imlib_context_set_image(buffer);	
 
 	Imlib_Image image;
-    // image = imlib_load_image("/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm/desktop.png");
-	// imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
-	// imlib_context_set_image(image);
-	// imlib_free_image();
+    image = imlib_load_image("/home/beyond/black.jpeg");
+	// imlib_context_set_color(255, 255, 255, 255);
+
+	imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
+	imlib_context_set_image(image);
+	imlib_free_image();
+	imlib_context_set_image(buffer);
 
 	int i = 0;
-	Client *c;
-	for(c = selmon->clients; c; c = c->next){
-		imlib_context_set_drawable(c->win);
-		imlib_context_set_image(buffer);
-		// image = imlib_create_image_from_drawable(root, 0, 0, ww, wh, 1);
-		image = imlib_create_scaled_image_from_drawable((Pixmap)0, 0, 0, ww, wh, ww/3, wh/3, 1, 0);
+	int row = 0;
+	int col = 0;
+	for(i = 0;i< LENGTH(tags); i++){
+		// imlib_context_set_drawable(root);
+		// image = imlib_create_image_from_drawable((Pixmap)0, 0, 0,selmon->ww,selmon->wh, 1);
+		image = tagimages[i];
+		// image = imlib_create_scaled_image_from_drawable((Pixmap)0, 0, 0, ww, wh, ww/3, wh/3, 1, 0);
 		if(image){
-			LOG_FORMAT("image loaded");
-			imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
+			LOG_FORMAT("image loaded, tag:%d", i);
+			row = i/3;
+			col = i%3;
 			imlib_context_set_image(image);
-			imlib_free_image();
-			i++;
+			int w = imlib_image_get_width();
+			int h = imlib_image_get_height();
+			imlib_context_set_image(buffer);
+			imlib_blend_image_onto_image(image, 0, 0, 0, w, h, col*ww/3, row*wh/3, ww/3, wh/3);
+			// imlib_context_set_image(image);
+			// imlib_free_image();
+
+ 			
 		}
-		
 	}
+	if(!win)
+		win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, ww, wh, 0, 0, 0);	
+	XMapWindow(dpy, win);
 
 	imlib_context_set_drawable(win);
 	imlib_context_set_blend(0);
 	imlib_context_set_image(buffer);
 	imlib_render_image_on_drawable_at_size(0, 0, ww, wh);
 	imlib_free_image();
+
 
 	// imlib_image_copy_rect(0,0, ww,wh, 0,0);
 	// imlib_image_set_format("jpeg");
@@ -1526,13 +1554,16 @@ void drawpreviewwin(Monitor *m)
 
 void 
 drawpreview(const Arg *arg){
-	drawpreviewwin(selmon);
+	toggleswitchers(arg);
 }
 
 void
 drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
+
+	updatepreview();
+
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
 		.background_pixmap = ParentRelative,
@@ -1550,7 +1581,8 @@ drawswitcher(Monitor *m)
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
-	drawswitcherwin(m, ww, wh, getcurtagindex(m));
+	drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));
+	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 }
 
 void 
@@ -3459,6 +3491,30 @@ setup(void)
 	scratchgroupptr->tail = alloc_si();
 	scratchgroupptr->head->next = scratchgroupptr->tail;
 	scratchgroupptr->tail->prev = scratchgroupptr->head;
+
+
+	Imlib_Updates updates, current_update;
+	Display *disp;
+	Visual *vis;
+	Colormap cm;
+	int depth;
+	Imlib_Color_Range range;
+
+	vis = DefaultVisual(dpy, DefaultScreen(dpy));
+	depth = DefaultDepth(dpy, DefaultScreen(dpy));
+	cm = DefaultColormap(dpy, DefaultScreen(dpy));
+
+	imlib_set_cache_size(4096 * 1024);
+	imlib_set_color_usage(128);
+	/* dither for depths < 24bpp */
+	imlib_context_set_dither(1);
+	/* set the display , visual, colormap and drawable we are using */
+	imlib_context_set_display(dpy);
+	imlib_context_set_visual(vis);
+	imlib_context_set_colormap(cm);
+	imlib_context_set_drawable(win);
+
+    memset(tagimages, 0, sizeof(tagimages));
 }
 
 
@@ -5458,7 +5514,8 @@ switchermove(const Arg *arg)
 	unsigned int tags = 1 << selcurtagindex;
 	const Arg varg = {.ui = tags};
 	view(&varg);
-	drawswitcherwin(selmon, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
 
 void

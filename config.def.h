@@ -204,7 +204,7 @@ static Key keys[] = {
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_m,      setlayout,      {0} },
 	// { MODKEY,                       XK_g,      toggleswitchers,      {0} },
-	{ MODKEY,                       XK_g,      drawpreview,      {0} },
+	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	// { MODKEY,                       XK_b,      destroyswitchers,      {0} },
 	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
