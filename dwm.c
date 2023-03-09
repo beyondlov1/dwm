@@ -1385,72 +1385,73 @@ void
 drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 {
 	drawpreviewwin(win, ww, wh, curtagindex);
-	return;
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
-
-	int i;
-
-	struct TagClient *tagclientsmap[LENGTH(tags)];
-	for(i = 0; i < LENGTH(tags); i++){
-		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
-		tagclient->head.next = &tagclient->head;
-		tagclient->head.prev = &tagclient->head;
-		tagclient->client = NULL;
-		tagclientsmap[i] = tagclient;
-	}
-
-	Client *c;
-	for(c=selmon->clients; c; c = c->next)
-	{
-		int tagindex = gettagindex(c->tags);
-		struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
-		tagclient->client = c;
-		list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
-	}
-
-	
-	for(i = 0; i < LENGTH(tags); i++){
-		int row = i/3;
-		int col = i%3;
-		if(curtagindex == i){
-			if (!list_empty(&tagclientsmap[i]->head))
-				drw_setscheme(drw, scheme[SchemeSel]);
-			else
-				drw_setscheme(drw, scheme[SchemeInvalidSel]);
-		}else{
-			if (!list_empty(&tagclientsmap[i]->head))
-				drw_setscheme(drw, scheme[SchemeNorm]);
-			else
-				drw_setscheme(drw, scheme[SchemeInvalidNormal]);
-		}
-		drw_rect(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 1, 1);
-		int y = row * wh / 3;
-		drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, bh, 10, tags[i], 0);
-		y = y + bh;
-		struct list_head *head;
-		list_for_each(head, &tagclientsmap[i]->head)
-		{
-			struct TagClient *tc = list_entry(head, struct TagClient,head);
-			XClassHint ch = { NULL, NULL };
-			XGetClassHint(dpy, tc->client->win, &ch);
-			char *class    = ch.res_class ? ch.res_class : broken;
-			char *instance = ch.res_name  ? ch.res_name  : broken;
-			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
-			y = y + bh;
-		}
-	}
-
-	drw_map(drw,win, 0, 0, ww, wh);
-	
-
 	switchercurtagindex = curtagindex;
+	return;
+	// drw_setscheme(drw, scheme[SchemeNorm]);
+	// drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	// int i;
+
+	// struct TagClient *tagclientsmap[LENGTH(tags)];
+	// for(i = 0; i < LENGTH(tags); i++){
+	// 	struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+	// 	tagclient->head.next = &tagclient->head;
+	// 	tagclient->head.prev = &tagclient->head;
+	// 	tagclient->client = NULL;
+	// 	tagclientsmap[i] = tagclient;
+	// }
+
+	// Client *c;
+	// for(c=selmon->clients; c; c = c->next)
+	// {
+	// 	int tagindex = gettagindex(c->tags);
+	// 	struct TagClient *tagclient = (struct TagClient *)malloc(sizeof(struct TagClient));
+	// 	tagclient->client = c;
+	// 	list_add(&tagclient->head, &tagclientsmap[tagindex]->head);
+	// }
+
+	
+	// for(i = 0; i < LENGTH(tags); i++){
+	// 	int row = i/3;
+	// 	int col = i%3;
+	// 	if(curtagindex == i){
+	// 		if (!list_empty(&tagclientsmap[i]->head))
+	// 			drw_setscheme(drw, scheme[SchemeSel]);
+	// 		else
+	// 			drw_setscheme(drw, scheme[SchemeInvalidSel]);
+	// 	}else{
+	// 		if (!list_empty(&tagclientsmap[i]->head))
+	// 			drw_setscheme(drw, scheme[SchemeNorm]);
+	// 		else
+	// 			drw_setscheme(drw, scheme[SchemeInvalidNormal]);
+	// 	}
+	// 	drw_rect(drw, col * ww / 3, row * wh / 3, ww / 3, wh / 3, 1, 1);
+	// 	int y = row * wh / 3;
+	// 	drw_text(drw, col * ww / 3, row * wh / 3, ww / 3, bh, 10, tags[i], 0);
+	// 	y = y + bh;
+	// 	struct list_head *head;
+	// 	list_for_each(head, &tagclientsmap[i]->head)
+	// 	{
+	// 		struct TagClient *tc = list_entry(head, struct TagClient,head);
+	// 		XClassHint ch = { NULL, NULL };
+	// 		XGetClassHint(dpy, tc->client->win, &ch);
+	// 		char *class    = ch.res_class ? ch.res_class : broken;
+	// 		char *instance = ch.res_name  ? ch.res_name  : broken;
+	// 		drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
+	// 		y = y + bh;
+	// 	}
+	// }
+
+	//drw_map(drw,win, 0, 0, ww, wh);
 	
 
-	for (i = 0; i < LENGTH(tags); i++)
-	{
-		free_list(tagclientsmap[i]);
-	}
+	// switchercurtagindex = curtagindex;
+	
+
+	// for (i = 0; i < LENGTH(tags); i++)
+	// {
+	// 	free_list(tagclientsmap[i]);
+	// }
 }
 
 
@@ -1503,13 +1504,13 @@ void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 	imlib_context_set_image(buffer);	
 
 	Imlib_Image image;
-    image = imlib_load_image("/home/beyond/black.jpeg");
-	// imlib_context_set_color(255, 255, 255, 255);
-
-	imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
-	imlib_context_set_image(image);
-	imlib_free_image();
-	imlib_context_set_image(buffer);
+    // image = imlib_load_image("/home/beyond/black.jpeg");
+	imlib_context_set_color(105,105,105,255);
+	imlib_image_fill_rectangle(0, 0, ww, wh);
+	// imlib_blend_image_onto_image(image, 0, 0, 0, ww, wh, 0, 0, ww, wh);
+	// imlib_context_set_image(image);
+	// imlib_free_image();
+	// imlib_context_set_image(buffer);
 
 	int i = 0;
 	int row = 0;
@@ -1528,11 +1529,26 @@ void drawpreviewwin( Window win, int ww, int wh, int curtagindex)
 			int h = imlib_image_get_height();
 			imlib_context_set_image(buffer);
 			imlib_blend_image_onto_image(image, 0, 0, 0, w, h, col*ww/3, row*wh/3, ww/3, wh/3);
+
+			if(curtagindex == i){
+				imlib_context_set_color(255, 200, 10, 100);
+			}else{
+				imlib_context_set_color(0,0,0,0);
+			}
+			imlib_context_set_image(buffer);
+			imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
+
 			// imlib_context_set_image(image);
 			// imlib_free_image();
-
- 			
-		}
+		}else{
+			if(curtagindex == i){
+				imlib_context_set_color(255, 200, 10, 255);
+			}else{
+				imlib_context_set_color(105,105,105, 255);
+			}
+			imlib_context_set_image(buffer);
+			imlib_image_fill_rectangle(col*ww/3, row*wh/3, ww/3, wh/3);
+		}		
 	}
 	if(!win)
 		win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, ww, wh, 0, 0, 0);	
