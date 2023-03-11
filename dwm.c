@@ -89,7 +89,7 @@ static FILE *logfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel}; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -302,6 +302,9 @@ static void drawbar(Monitor *m);
 static void drawbars(void);
 static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
+static void doublepage(Monitor *m);
+static void doublepagemark(const Arg *arg);
+static void cleardoublepage(int view);
 static void toggleswitchers(const Arg *arg);
 static void enqueue(Client *c);
 static void enqueuestack(Client *c);
@@ -761,6 +764,32 @@ arrangemon(Monitor *m)
 	if (m->lt[m->sellt]->arrange)
 		m->lt[m->sellt]->arrange(m);
 }
+
+void arrangemonlayout(Monitor *m, Layout *layout)
+{
+	if(!layout) return;
+	// strncpy(layout->symbol, m->lt[m->sellt]->symbol, sizeof layout->symbol);
+	if (layout->arrange)
+		layout->arrange(m);
+}
+
+void arrangelayout(Monitor *m, Layout *layout)
+{
+	if (m)
+		showhide(m->stack);
+	else
+		for (m = mons; m; m = m->next)
+			showhide(m->stack);
+	if (m)
+	{
+		arrangemonlayout(m, layout);
+		restack(m);
+	}
+	else
+		for (m = mons; m; m = m->next)
+			arrangemonlayout(m, layout);
+}
+
 
 void
 attach(Client *c)
@@ -1848,7 +1877,7 @@ focusgrid(const Arg *arg)
 		}
 		c = closest;
 	}
-	if(cc && selmon->sellt == 1 && !scratchgroupptr->isfloating){
+	if(cc && selmon->lt[selmon->sellt] == &layouts[1] && !scratchgroupptr->isfloating){
 		if(arg->i == FOCUS_LEFT) {
 			Client *i;
 			for(i = selmon->clients;i;i=i->next){
@@ -2554,6 +2583,93 @@ monocle(Monitor *m)
 	if(m->sel) m->sel->fullscreenfreq++;
 }
 
+Client *topcs[2];
+unsigned int topcpretags[2];
+void doublepage(Monitor *m)
+{
+	unsigned int n = 0;
+	Client *c;
+	for (c = m->stack; c; c = c->snext)
+		if (ISVISIBLE(c))
+			n++;
+	if (n > 0) /* override layout symbol */
+		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
+
+	int i = 0;
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
+	{
+		if (topcs[0] == c)
+		{
+			resize(c, m->wx, m->wy, m->ww / 2 - 2 * c->bw, m->wh - 2 * c->bw, 0);
+		}
+		else if(topcs[1] == c){
+			resize(c, m->ww / 2 + m->wx, m->wy, m->ww / 2 - 2 * c->bw, m->wh - 2 * c->bw, 0);
+		}
+		else
+		{
+			unsigned int tmpbw = c->bw;
+			c->bw = 0;
+			resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
+			c->bw = tmpbw;
+		}
+		i++;
+	}
+}
+
+int doubled = 0;
+void doublepagemark(const Arg *arg){
+	if(doubled) {
+		cleardoublepage(1);
+		return;
+	}
+	if (!topcs[0])
+	{
+		topcs[0] = selmon->sel;
+		Client *c = selmon->sel;
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+	}else if(!topcs[1])
+	{
+		topcs[1] = selmon->sel;
+		Client *c = selmon->sel;
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+	}
+	if(topcs[0] && topcs[1]){
+		topcpretags[0] = topcs[0]->tags;
+		topcpretags[1] = topcs[1]->tags;
+		unsigned int targettag = 1 << 7;
+		Arg viewarg = {.ui = targettag};
+		topcs[0]->tags = targettag;
+		topcs[1]->tags = targettag;
+		view(&viewarg);
+		Arg layoutarg = {.v = &layouts[4]};
+		setlayout(&layoutarg);
+		doubled = 1;
+	}
+}
+
+void cleardoublepage(int v){
+	if(!doubled) return;
+	if (topcs[0] && topcpretags[0] && topcs[1] && topcpretags[1])
+	{
+		topcs[0]->tags = topcpretags[0];
+		topcs[1]->tags = topcpretags[1];
+		if(v){
+			Arg viewarg = {.ui = topcpretags[1]};
+			view(&viewarg);
+		}
+	}
+	doubled = 0;
+	topcs[0] = topcs[1] = NULL;
+}
+
 void
 motionnotify(XEvent *e)
 {
@@ -3214,8 +3330,10 @@ setlayout(const Arg *arg)
 	for(i=0; i<LENGTH(tags); ++i)
 		if(selmon->tagset[selmon->seltags] & 1<<i)
 		{
-			selmon->pertag->ltidxs[i+1][selmon->sellt] = selmon->lt[selmon->sellt]; 
+			// 当前选中的layout在 selmon->lt 中的索引, selmon->lt 保存了2个
 			selmon->pertag->sellts[i+1] = selmon->sellt;
+			// 当前选中的layout
+			selmon->pertag->ltidxs[i+1][selmon->pertag->sellts[i+1]] = selmon->lt[selmon->sellt]; 
 		}
 	
 	if(selmon->pertag->curtag == 0)
@@ -4876,6 +4994,8 @@ getcurrusec(){
 void
 view(const Arg *arg)
 {
+	cleardoublepage(0);
+
 	int i;
 	unsigned int tmptag;
 
