@@ -126,7 +126,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -760,11 +760,38 @@ arrange(Monitor *m)
 void
 arrangemon(Monitor *m)
 {
+	Client *c;
+	for(c = selmon->clients;c;c=c->next){
+		if(ISVISIBLE(c) && c->win ){
+			if( c->isdoublepagemarked){
+				XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+			}else{
+				XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+			}
+			if( c->isscratched){
+				if (c == selmon->sel)
+					XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+				else
+					if (c->isdoublepagemarked)
+						XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+					else
+						XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+			}else{
+				if (c == selmon->sel)
+					XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+				else
+					XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+			}
+			
+		}
+	}
+	
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
 	if (m->lt[m->sellt]->arrange)
 		m->lt[m->sellt]->arrange(m);
 }
 
+// unused
 void arrangemonlayout(Monitor *m, Layout *layout)
 {
 	if(!layout) return;
@@ -773,6 +800,7 @@ void arrangemonlayout(Monitor *m, Layout *layout)
 		layout->arrange(m);
 }
 
+// unused
 void arrangelayout(Monitor *m, Layout *layout)
 {
 	if (m)
@@ -2624,8 +2652,10 @@ void doublepagemark(const Arg *arg){
 	}
 	if (!topcs[0])
 	{
-		Arg viewarg1 = {.ui = ~0};
-		view(&viewarg1);
+		if((selmon->tagset[selmon->seltags] & TAGMASK) != TAGMASK){
+			Arg viewarg1 = {.ui = ~0};
+			view(&viewarg1);
+		}
 		topcs[0] = selmon->sel;
 		Client *c = selmon->sel;
 		c->bw = borderpx;
@@ -2633,6 +2663,7 @@ void doublepagemark(const Arg *arg){
 		wc.border_width = c->bw;
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+		c->isdoublepagemarked = 1;
 	}else if(!topcs[1])
 	{
 		topcs[1] = selmon->sel;
@@ -2642,6 +2673,7 @@ void doublepagemark(const Arg *arg){
 		wc.border_width = c->bw;
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+		c->isdoublepagemarked = 1;
 	}
 	if(topcs[0] && topcs[1]){
 		topcpretags[0] = topcs[0]->tags;
@@ -2650,6 +2682,8 @@ void doublepagemark(const Arg *arg){
 		Arg viewarg = {.ui = targettag};
 		topcs[0]->tags = targettag;
 		topcs[1]->tags = targettag;
+		topcs[0]->isdoublepagemarked = 0;
+		topcs[1]->isdoublepagemarked = 0;
 		view(&viewarg);
 		Arg layoutarg = {.v = &layouts[4]};
 		setlayout(&layoutarg);
@@ -2663,13 +2697,16 @@ void cleardoublepage(int v){
 	{
 		topcs[0]->tags = topcpretags[0];
 		topcs[1]->tags = topcpretags[1];
+		topcs[0]->isdoublepagemarked = 0;
+		topcs[1]->isdoublepagemarked = 0;
 		if(v){
-			Arg viewarg = {.ui = topcpretags[1]};
+			Arg viewarg = {.ui = selmon->sel->tags};
 			view(&viewarg);
 		}
 	}
 	doubled = 0;
-	topcs[0] = topcs[1] = NULL;
+	topcs[0] = NULL;
+	topcs[1] = NULL;
 }
 
 void
