@@ -2624,6 +2624,8 @@ void doublepagemark(const Arg *arg){
 	}
 	if (!topcs[0])
 	{
+		Arg viewarg1 = {.ui = ~0};
+		view(&viewarg1);
 		topcs[0] = selmon->sel;
 		Client *c = selmon->sel;
 		c->bw = borderpx;
