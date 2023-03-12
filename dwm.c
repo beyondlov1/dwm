@@ -758,32 +758,42 @@ arrange(Monitor *m)
 }
 
 void
+updateborder(Client *c){
+	if (ISVISIBLE(c) && c->win)
+	{
+		if (c->isdoublepagemarked && c->isscratched && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+
+		if (!c->isdoublepagemarked && c->isscratched && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+
+		if (c->isdoublepagemarked && !c->isscratched && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+
+		if (c->isdoublepagemarked && c->isscratched && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+
+		if (!c->isdoublepagemarked && !c->isscratched && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+
+		if (!c->isdoublepagemarked && c->isscratched && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+
+		if (c->isdoublepagemarked && !c->isscratched && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
+
+		if (!c->isdoublepagemarked && !c->isscratched && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+	
+	}
+}
+
+void
 arrangemon(Monitor *m)
 {
 	Client *c;
 	for(c = selmon->clients;c;c=c->next){
-		if(ISVISIBLE(c) && c->win ){
-			if( c->isdoublepagemarked){
-				XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
-			}else{
-				XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
-			}
-			if( c->isscratched){
-				if (c == selmon->sel)
-					XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
-				else
-					if (c->isdoublepagemarked)
-						XSetWindowBorder(dpy, c->win, scheme[SchemeDoublePageMarked][ColBorder].pixel);
-					else
-						XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
-			}else{
-				if (c == selmon->sel)
-					XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
-				else
-					XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
-			}
-			
-		}
+		updateborder(c);
 	}
 	
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
@@ -1635,13 +1645,10 @@ focus(Client *c)
 		detachstack(c);
 		attachstack(c);
 		grabbuttons(c, 1);
-		if(c->isscratched)
-			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
-		else
-			XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		LOG_FORMAT("focus: before setfocus");
 		setfocus(c);
 		selmon->sel = c;
+		updateborder(c);
 		LOG_FORMAT("focus: after setfocus");
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
@@ -4556,12 +4563,12 @@ unfocus(Client *c, int setfocus)
 	if (!c)
 		return;
 	grabbuttons(c, 0);
-	XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
 	if (setfocus) {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	c->isfocused = False;
+	updateborder(c);
 }
 
 void
