@@ -126,7 +126,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -2683,18 +2683,20 @@ void doublepagemark(const Arg *arg){
 		c->isdoublepagemarked = 1;
 	}
 	if(topcs[0] && topcs[1]){
+		unsigned int targettag = 1 << 7;
 		topcpretags[0] = topcs[0]->tags;
 		topcpretags[1] = topcs[1]->tags;
-		unsigned int targettag = 1 << 7;
-		Arg viewarg = {.ui = targettag};
 		topcs[0]->tags = targettag;
 		topcs[1]->tags = targettag;
 		topcs[0]->isdoublepagemarked = 0;
 		topcs[1]->isdoublepagemarked = 0;
+		Arg viewarg = {.ui = targettag};
 		view(&viewarg);
 		Arg layoutarg = {.v = &layouts[4]};
 		setlayout(&layoutarg);
 		doubled = 1;
+		topcs[0]->isdoubled = 1;
+		topcs[1]->isdoubled = 1;
 	}
 }
 
@@ -2706,8 +2708,10 @@ void cleardoublepage(int v){
 		topcs[1]->tags = topcpretags[1];
 		topcs[0]->isdoublepagemarked = 0;
 		topcs[1]->isdoublepagemarked = 0;
+		topcs[0]->isdoubled = 0;
+		topcs[1]->isdoubled = 0;
 		if(v){
-			Arg viewarg = {.ui = selmon->sel->tags};
+			Arg viewarg = {.ui = ~0};
 			view(&viewarg);
 		}
 	}
@@ -3365,6 +3369,19 @@ setlayout(const Arg *arg)
 		const Arg tagarg = {.ui = curc->tags};
 		view(&tagarg);
 		focus(curc);
+	}
+	if (selmon->sel && !selmon->sel->isdoublepagemarked && selmon->sel->isdoubled)
+	{
+		if(topcs[0] == selmon->sel){
+			const Arg tagarg = {.ui = topcpretags[0]};
+			view(&tagarg);
+		}
+		if (topcs[1] == selmon->sel)
+		{
+			const Arg tagarg = {.ui = topcpretags[1]};
+			view(&tagarg);
+		}
+		cleardoublepage(0);
 	}
 	unsigned int i;
 	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
