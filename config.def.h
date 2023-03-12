@@ -205,7 +205,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	// { MODKEY,                       XK_d,      setlayoutt,      {.v = &layouts[4]} },
-	{ MODKEY,                       XK_z,      doublepagemark,      {.v = &layouts[4]} },
+	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_m,      setlayout,      {0} },
 	// { MODKEY,                       XK_g,      toggleswitchers,      {0} },
