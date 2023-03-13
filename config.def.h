@@ -39,7 +39,7 @@ static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-data
 
 /* launcher commands (They must be NULL terminated) */
 static const char* chrome[]      = { "google-chrome-stable", NULL, NULL };
-static const char *terminal[] = {"terminator", NULL };
+static const char *terminal[] = {"/home/beyond/software/terminator", NULL };
 
 static const Launcher launchers[] = {
        /* command       name to display */
@@ -133,7 +133,6 @@ static const Layout layouts[] = {
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 //static const char *termcmd[]  = { "st", NULL };
-static const char *termcmd[]  = { "terminator", NULL };
 static const char scratchpadname[] = "scratchpad";
 // static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
 static const char *scratchpadcmd[] = {"jumpapp", "chrome", NULL };
@@ -148,7 +147,7 @@ static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://yo
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_Return, sspawn,          {.v = termcmd } },
+	{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
@@ -203,7 +202,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	// { MODKEY,                       XK_d,      setlayoutt,      {.v = &layouts[4]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
