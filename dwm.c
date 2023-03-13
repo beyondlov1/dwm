@@ -3859,33 +3859,35 @@ tile2(Monitor *m)
 		return;
 
 	if (n > m->nmaster)
-		mw = m->nmaster ? m->ww * m->mfact : 0;
+		mw = m->nmaster ? (m->ww - 3*m->gap->gappx)*mfact : 0;
 	else
-		mw = m->ww - m->gap->gappx;
+		mw = m->ww - 2 * m->gap->gappx;
 
 	LOG_FORMAT("tile2 2");
 
 	int focused_slave_index = -1;
 	geo_t gmap[n];
+	int masterh = (m->wh - m->gap->gappx) / (MIN(n,m->nmaster)) - m->gap->gappx;
+	int slaveh = n-MIN(n, m->nmaster) == 0 ? 0 : (m->wh - m->gap->gappx) / (n - MIN(n,m->nmaster)) - m->gap->gappx;
 	for (i = 0, my = ty = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 	{	
 		memset(gmap+i, 0, sizeof(geo_t));
 		if (i < m->nmaster) {
-			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
-			geo(gmap+i,c, m->wx + m->gap->gappx, m->wy + my, mw - (2*c->bw) - m->gap->gappx, h - (2*c->bw), 0);
+			h = masterh;
+			geo(gmap+i,c, m->wx + m->gap->gappx, m->wy + my, mw, h, 0);
 			geo_t g = gmap[i];
-			if (my + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
-				my += (g.h + 2*c->bw) + m->gap->gappx;
+			if (my + g.h + m->gap->gappx < m->wh)
+				my += g.h + m->gap->gappx;
 			masterend = i;
 		} else {
 			if(c->isfocused){
 				focused_slave_index = i;
 			}
-			h = (m->wh - ty) / (n - i) - m->gap->gappx;
-			geo(gmap+i,c, m->wx + mw + m->gap->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gap->gappx, h - (2*c->bw), 0);
+			h = slaveh;
+			geo(gmap+i,c, m->wx + mw + 2 * m->gap->gappx, m->wy + ty, m->ww - mw - 3*m->gap->gappx, h, 0);
 			geo_t g = gmap[i];
-			if (ty + (g.h + 2*c->bw) + m->gap->gappx < m->wh)
-				ty += (g.h + 2*c->bw) + m->gap->gappx;
+			if (ty + g.h + m->gap->gappx < m->wh)
+				ty += g.h + m->gap->gappx;
 		}
 	}
 
