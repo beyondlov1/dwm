@@ -1080,23 +1080,22 @@ clientmessage(XEvent *e)
 		|| cme->data.l[2] == netatom[NetWMFullscreen])
 			setfullscreen(c, (cme->data.l[0] == 1 /* _NET_WM_STATE_ADD    */
 				|| (cme->data.l[0] == 2 /* _NET_WM_STATE_TOGGLE */ && !c->isfullscreen)));
-	} else if (cme->message_type == netatom[NetActiveWindow]) {
+	} else if (cme->send_event && cme->message_type == netatom[NetActiveWindow]) {
 		// if (c != selmon->sel && !c->isurgent)
 		// 	seturgent(c, 1);
 		
-		// needed?
-		/*if((c->tags & TAGMASK) == TAGMASK || (selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){*/
-			/*return;*/
-		/*}*/
-		/*for (i = 0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);*/
-		/*if (i < LENGTH(tags)) {*/
-			/*const Arg a = {.ui = 1 << i};*/
-			/*selmon = c->mon;*/
-			/*view(&a);*/
-			/*focus(c);*/
-			/*LOG("clientmessage", c->name);*/
-			/*restack(selmon);*/
-		/*}*/
+		if((c->tags & TAGMASK) == TAGMASK || (selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
+			return;
+		}
+		for (i = 0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);
+		if (i < LENGTH(tags)) {
+			const Arg a = {.ui = 1 << i};
+			selmon = c->mon;
+			view(&a);
+			focus(c);
+			LOG("clientmessage", c->name);
+			restack(selmon);
+		}
 	}
 }
 
@@ -2499,7 +2498,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-    XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+    	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
@@ -2532,24 +2531,22 @@ manage(Window w, XWindowAttributes *wa)
 	XRaiseWindow(dpy,c->win);
 	focus(c);
 
-	Client *maxpc = NULL;
-	Client *tmp = NULL;
-	int maxp = 0;
-	for (tmp = selmon->clients; tmp; tmp = tmp->next)
-	{
-		if(ISVISIBLE(tmp)){
-			if(tmp->priority > maxp){
-				maxpc = tmp;
-				maxp = tmp->priority;
-			}	
-		}
-	}
-	if (c->priority > 0 && maxpc != c)
-	{
-		Arg arg = {0};
-		zoom(&arg);
-		LOG_FORMAT("manage 7");
-	}
+    // no need and makes bugs
+	// Client *maxpc = NULL;
+	// Client *tmp = NULL;
+	// int maxp = 0;
+	// for (tmp = nexttiled(selmon->clients); tmp; tmp = nexttiled(tmp->next))
+	// {
+	// 	if(tmp->priority > maxp){
+	// 		maxpc = tmp;
+	// 		maxp = tmp->priority;
+	// 	}	
+	// }
+	// if (maxpc && maxpc != c)
+	// {
+	// 	pop(maxpc);
+	// 	LOG_FORMAT("manage 7");
+	// }
 	
 	isnexttemp = 0;
 
@@ -4108,6 +4105,7 @@ showscratchgroup(ScratchGroup *sg)
 	LOG_FORMAT("showscratchgroup: before focus and arrange");
 	for(si = sg->head->next; si && si != sg->tail; si = si->next)
 	{
+		if(si->c) si->c->isfloating = 1;
 		// focus(si->c);
 		// arrange(selmon);
 		XRaiseWindow(dpy, si->c->win);
