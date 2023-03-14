@@ -51,4 +51,5 @@ done' >| ~/.config/dwm/script/init.sh && chmod +x ~/.config/dwm/script/init.sh
 - restart
 
 ### TODO
-- 状态栏时间更新
+[x] 状态栏时间更新
+[] 状态栏有窗口的显示不同背景色
