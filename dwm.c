@@ -89,7 +89,7 @@ static FILE *logfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked}; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked, SchemeTiled}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -582,6 +582,28 @@ getmaxtags(){
 		if (c->tags > maxtags)
 			maxtags = c->tags;
 	return maxtags;
+}
+
+unsigned int
+getmaxtagstiled(){
+	// 将没有rule的client放到最后一个空闲tag
+	Client *c;
+	unsigned int maxtags = 0;
+	for(c = selmon->clients; c; c = c->next)
+		if (c->tags > maxtags && !c->isfloating)
+			maxtags = c->tags;
+	return maxtags;
+}
+
+unsigned int
+getmintagstiled(){
+	// 将没有rule的client放到最后一个空闲tag
+	Client *c;
+	unsigned int mintags = 1 << LENGTH(tags);
+	for(c = selmon->clients; c; c = c->next)
+		if (c->tags < mintags && !c->isfloating)
+			mintags = c->tags;
+	return mintags;
 }
 
 void
@@ -1291,7 +1313,7 @@ drawbar(Monitor *m)
 	int x, w, tw = 0, stw = 0, mw, ew = 0;
 	int boxs = drw->fonts->h / 9;
 	int boxw = drw->fonts->h / 6 + 2;
-	unsigned int i, occ = 0, urg = 0, n = 0;
+	unsigned int i, occ = 0, urg = 0, n = 0, occt = 0;
 	Client *c;
 
 	if (!m->showbar)
@@ -1327,6 +1349,7 @@ drawbar(Monitor *m)
 		if (ISVISIBLE(c))
 			n++;
 		occ |= c->tags;
+		if(!c->isfloating) occt |= c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
 	}
@@ -1336,7 +1359,11 @@ drawbar(Monitor *m)
 		if(!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
 			continue;
 		w = TEXTW(tags[i]);
-		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
+		int colorindex = SchemeNorm;
+		if (occt & 1 << i) {
+			colorindex = SchemeTiled;
+		}
+		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel :colorindex]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		x += w;
 	}
@@ -2216,6 +2243,15 @@ int counttag(Client *clients, int tags){
 	Client *tmp;
 	for (tmp = clients; tmp; tmp = tmp->next)
 		if ((tmp->tags & tags) > 0)
+			i ++;
+	return i;
+}
+
+int counttagtiled(Client *clients, int tags){
+	int i = 0;
+	Client *tmp;
+	for (tmp = clients; tmp; tmp = tmp->next)
+		if ((tmp->tags & tags) > 0 && !tmp->isfloating)
 			i ++;
 	return i;
 }
@@ -5324,7 +5360,8 @@ smartview(const Arg *arg){
 void
 relview(const Arg *arg)
 {
-	unsigned int maxtags = getmaxtags();
+	unsigned int maxtags =getmaxtagstiled();
+	unsigned int mintags =getmintagstiled();
 	unsigned int nexttags = 0;
 	if (arg->i > 0)
 	{
@@ -5332,11 +5369,11 @@ relview(const Arg *arg)
 			nexttags = 1;
 		else 
 			nexttags = selmon->tagset[selmon->seltags] << arg->i;
-		while (counttag(selmon->clients, nexttags) == 0)
+		while (counttagtiled(selmon->clients, nexttags) == 0)
 		{
 			if (nexttags > maxtags)
 			{
-				nexttags = 1;
+				nexttags = mintags ;
 				break;
 			}else {
 				nexttags = nexttags << 1;
@@ -5349,7 +5386,7 @@ relview(const Arg *arg)
 			nexttags = maxtags;
 		else 
 			nexttags = selmon->tagset[selmon->seltags] >> -arg->i;
-		while (counttag(selmon->clients, nexttags) == 0)
+		while (counttagtiled(selmon->clients, nexttags) == 0)
 		{
 			if (!nexttags)
 			{

@@ -32,6 +32,7 @@ static const char *colors[][3] = {
 	[SchemeInvalidNormal] = {col_gray2, col_gray1, col_gray2},
 	[SchemeInvalidSel] = {col_gray2, col_cyan, "#00BFFF"},
 	[SchemeDoublePageMarked] = {col_gray2, col_cyan, "#ff9300"},
+	[SchemeTiled] = {"#ff9300",col_gray1, col_gray2},
 };
 
 /* tagging */
