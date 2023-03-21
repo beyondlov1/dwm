@@ -1661,8 +1661,10 @@ expose(XEvent *e)
 void
 focus(Client *c)
 {
-	if (!c || !ISVISIBLE(c))
-		for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+	if (!c || !ISVISIBLE(c)){
+		for (c = selmon->stack; c && !c->isfloating; c = c->snext);
+		if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+	}
 	if (selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, 0);
 	if (c && c->win) {
@@ -4623,6 +4625,7 @@ unfocus(Client *c, int setfocus)
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	c->isfocused = False;
+	selmon->sel = NULL;
 	updateborder(c);
 }
 
