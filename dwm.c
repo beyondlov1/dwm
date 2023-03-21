@@ -3869,6 +3869,14 @@ tile(Monitor *m)
 			if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 				ty += HEIGHT(c) + m->gap->gappx;
 		}
+
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		updateborder(c);
+	}
 }
 
 
