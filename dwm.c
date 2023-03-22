@@ -2484,6 +2484,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	LOG_FORMAT("manage 3");
 	if(!manageppidstick(c) && !isnextscratch && !isnexttemp) managestub(c);
+	if((selmon->tagset[selmon->seltags] & TAGMASK == TAGMASK) && (c->tags & TAGMASK) == TAGMASK) c->tags = 1; 
 	LOG_FORMAT("manage 4");
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
