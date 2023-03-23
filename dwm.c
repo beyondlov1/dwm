@@ -2789,6 +2789,26 @@ motionnotify(XEvent *e)
 		if (i < LENGTH(tags) && 1 << i != selmon->tagset[selmon->seltags]) {
 			const Arg arg = {.ui = 1 << i};
 			view(&arg);
+		}else{
+			x += blw;
+
+			for(i = 0; i < LENGTH(launchers); i++) {
+				x += TEXTW(launchers[i].name);
+			}
+
+			if(ev->x > x ){
+				char offsetx[5];
+				char offsety[5];
+				if (ev->x - x > 300) {
+					sprintf(offsetx, "%d", ev->x - 300);
+				}else{
+					sprintf(offsetx, "%d", x);
+				}
+				sprintf(offsety, "%d", ev->y - 250);
+				char *rofi[] = {"rofi","-theme-str","window {width:600px;height:250px;}","-location","1","-xoffset",offsetx,"-yoffset",offsety,"-me-select-entry","","-me-accept-entry","MousePrimary", "-show","window",NULL};
+				Arg arg = {.v = rofi};
+				spawn(&arg);
+			}
 		}
 	}
 }
