@@ -2796,7 +2796,14 @@ motionnotify(XEvent *e)
 				x += TEXTW(launchers[i].name);
 			}
 
-			if(ev->x > x ){
+			Client *vc;
+			for (vc = selmon->clients; vc; vc = vc->next) {
+				if (ISVISIBLE(vc)) {
+					x += vc->titlew;
+				}
+			}
+
+			if(ev->x > x && ev->x < selmon->ww - statusw - getsystraywidth()){
 				char offsetx[5];
 				char offsety[5];
 				if (ev->x - x > 300) {
