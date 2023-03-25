@@ -36,7 +36,7 @@ static const char *colors[][3] = {
 };
 
 /* tagging */
-static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-datasource", "6-learn", "7", "8", "9" };
+static const char *tags[] = { "1-term", "2-browser", "3-dev1", "4-dev2", "5-datasource", "6-learn", " 7 ", " 8 ", " 9 " };
 
 /* launcher commands (They must be NULL terminated) */
 static const char* chrome[]      = { "google-chrome-stable", NULL, NULL };

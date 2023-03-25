@@ -1364,7 +1364,24 @@ drawbar(Monitor *m)
 			colorindex = SchemeTiled;
 		}
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel :colorindex]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+
+		// update tag title
+		int tagnamelen = strlen(tags[i])+1;
+		char tagname[tagnamelen];
+		Client *c;
+		for(c = selmon->stack;c;c = c->snext){
+			if (!c->isfloating && (c->tags & (1 << i))) {
+				break;
+			}
+		}
+		if (c) {
+			/*LOG_FORMAT("%d",tagnamelen);*/
+			snprintf(tagname, tagnamelen,"%s",c->name);
+		}else {
+			memcpy(tagname, tags[i],tagnamelen);
+		}
+
+		drw_text(drw, x, 0, w, bh, lrpad / 2, tagname, urg & 1 << i);
 		x += w;
 	}
 	w = blw = TEXTW(m->ltsymbol);
