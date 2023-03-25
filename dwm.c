@@ -43,6 +43,7 @@
 #include <X11/Xft/Xft.h>
 #include <math.h>
 #include <time.h>
+#include <dirent.h>
 
 
 #include "drw.h"
@@ -382,6 +383,7 @@ static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
 static void sspawn(const Arg *arg);
+static void stsspawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
@@ -3806,6 +3808,55 @@ void tsspawn(const Arg *arg)
 	lastnexttemptime = getcurrusec();
 	spawn(arg);
 	lastspawntime = lastnexttemptime;
+}
+
+char *
+getcwd_by_pid(pid_t pid) {
+	char buf[32];
+	snprintf(buf, sizeof buf, "/proc/%d/cwd", pid);
+	return realpath(buf, NULL);
+}
+
+void getstworkingdir(char *workingdir, pid_t currpid){
+	DIR *dirp;
+	struct dirent *direntp;
+	unsigned long childpid = 0L;
+ 
+ 	dirp=opendir("/proc");
+	while((direntp=readdir(dirp))!=NULL) 
+	{
+		if (direntp->d_type == DT_DIR) {
+			char dirbuf[512]; 
+			memset(dirbuf,0,sizeof(dirbuf)); 
+			strcpy(dirbuf,"/proc"); 
+			strcat(dirbuf,"/"); 
+			strcat(dirbuf,direntp->d_name); 
+			pid_t pid;
+			int r = sscanf(direntp->d_name, "%d",&pid);
+			if (r) {
+				if(currpid == getppidof(pid))
+					childpid = pid;
+			}
+		}
+	}
+	if (childpid) {
+		char *cwd = getcwd_by_pid(childpid);
+		strcpy(workingdir, cwd);
+	}
+	closedir(dirp);
+}
+
+void stsspawn(const Arg *arg){
+	char workingdir[128] = "";
+	if (selmon->sel) {
+		pid_t currpid = selmon->sel->pid;
+		if (currpid) {
+			getstworkingdir(workingdir, currpid);
+		}
+	}
+	char *cmd[] = {"terminator","-d",workingdir,NULL};
+	const Arg a = {.v = cmd};
+	sspawn(&a);
 }
 
 void reltag(const Arg *arg)
