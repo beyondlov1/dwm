@@ -141,7 +141,7 @@ static const char scratchpadname[] = "scratchpad";
 static const char *scratchpadcmd[] = {"jumpapp", "chrome", NULL };
 //static const char *roficmd[] = {"rofi","-auto-select","-show","window",NULL};
 static const char *roficmd[] = {"rofi","-auto-select","-show","fb","-modes ","fb:~/software/bin/rofi-script/switchwin.sh" ,"-matching","prefix",NULL};
-static const char *firefoxcmd[] = {"jumpapp","firefox",NULL};
+static const char *firefoxcmd[] = {"/usr/bin/firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
@@ -151,10 +151,25 @@ static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://yo
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 
+static const TaskGroup taskgroup1 = {
+	2,
+	{
+		{
+			"^St$","^dwm$",&((char *[]){"st",NULL}),1<<5,NULL,NULL,NULL,
+		},
+		{
+			"^St$","^.*rofi.*$",&((char *[]){"st",NULL}),1<<5,NULL,NULL,NULL
+		},
+	}
+};
+
+static const char *taskgrouppath = "/home/beyond/software/bin/dwm-taskgroup/1.csv";
+
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{ MODKEY,                       XK_b, assemble,          { .v = &taskgroup1 } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },

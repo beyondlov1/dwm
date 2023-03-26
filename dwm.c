@@ -44,6 +44,7 @@
 #include <math.h>
 #include <time.h>
 #include <dirent.h>
+#include<regex.h>
 
 
 #include "drw.h"
@@ -275,6 +276,27 @@ struct TagStat
 	int validjumpcnt;
 };
 
+typedef struct TaskGroupItem TaskGroupItem;
+struct TaskGroupItem
+{
+	char classpattern[20];
+	char titlepattern[20];
+	char **cmd;
+	unsigned int tag;
+
+	char cmdbuf[20];
+	regex_t *classregx;
+	regex_t *titleregx;
+	Client *c;
+};
+
+typedef struct TaskGroup TaskGroup ;
+struct TaskGroup
+{
+	int n;
+	TaskGroupItem items[20];
+};
+
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -284,6 +306,7 @@ static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachstack(Client *c);
 static void addtoscratchgroup(const Arg *arg);
+static void assemble(const Arg *arg);
 static ScratchItem* addtoscratchgroupc(Client *c);
 static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
@@ -305,6 +328,7 @@ static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
 static void doublepage(Monitor *m);
 static void doublepagemark(const Arg *arg);
+static void dismiss(const Arg *arg);
 static void cleardoublepage(int view);
 static void toggleswitchers(const Arg *arg);
 static void enqueue(Client *c);
@@ -5741,6 +5765,155 @@ switcherview(const Arg *arg)
 	view(&varg);
 	const Arg tsarg = {0};
 	toggleswitchers(&tsarg);
+}
+
+int 
+matchstr(char *pattern, char *target, regex_t **regptr)
+{
+	LOG_FORMAT("matchstr 1");
+	int status ,i;
+	int cflags = REG_EXTENDED;
+	regmatch_t pmatch[1];
+	
+	regex_t *reg;
+	if (*regptr) {
+		// 本来想做缓存, 不过貌似没什么必要
+		reg = *regptr;
+	}else{
+		regex_t regt;
+		memset(&regt, 0, sizeof(regex_t));
+		regcomp(&regt,pattern,cflags);//编译正则模式
+		reg = &regt;
+	}
+	status = regexec(reg, target,1,pmatch,0);
+	if (status == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+int
+match(Client *c,TaskGroupItem *item)
+{
+	XClassHint ch = { NULL, NULL };
+
+	XGetClassHint(dpy, c->win, &ch);
+	char *class    = ch.res_class ? ch.res_class : broken;
+	char *instance = ch.res_name  ? ch.res_name  : broken;
+	
+	if (matchstr(item->classpattern, class, &item->classregx)) {
+		if (matchstr(item->titlepattern, c->name, &item->titleregx)) {
+			return 1;
+		}
+	}
+
+	if (ch.res_class)
+		XFree(ch.res_class);
+	if (ch.res_name)
+		XFree(ch.res_name);
+
+	return 0;
+}
+
+int readtaskgroup(char *path,TaskGroup *taskgroup)
+{
+    FILE *fp = fopen(path, "r");
+    if (fp == NULL) {
+        LOG_FORMAT("fopen() failed.\n");
+	return 1;
+    }
+
+    char row[80];
+    char *token;
+
+    int i=0;
+    while (fgets(row, 80, fp) != NULL) {
+        printf("Row: %s", row);
+        token = strtok(row, "	"); 
+	int j = 0;
+        while (token != NULL) {
+		if(j == 0) strcpy(taskgroup->items[i].classpattern,token);
+		if(j == 1) strcpy(taskgroup->items[i].titlepattern,token);
+		if(j == 2) strcpy(taskgroup->items[i].cmdbuf,token);
+		if(j == 3) taskgroup->items[i].tag = 1 << atoi(token);
+	    LOG_FORMAT("Token: %s", token);
+	    token = strtok(NULL, "	");
+	    j++;
+        }
+	i++;
+    }
+	LOG_FORMAT("Token: %p %s ", taskgroup, taskgroup->items[0].titlepattern);
+
+    taskgroup->n = i;
+    fclose(fp);
+    return 0;
+}
+
+void
+assemble(const Arg *arg)
+{
+	if (!arg->v) {
+		return;
+	}
+	TaskGroup *taskgrouparg = arg->v;
+	int n = taskgrouparg->n;
+
+	TaskGroup taskgroupv;
+	memset(&taskgroupv, 0, sizeof(TaskGroup));
+	int i;
+	for(i = 0;i<n;i++){
+		/*taskgroupv.items[i].classpattern = taskgrouparg->items[i].classpattern;*/
+		/*taskgroupv.items[i].titlepattern = taskgrouparg->items[i].titlepattern;*/
+		/*taskgroupv.items[i].cmd = taskgrouparg->items[i].cmd;*/
+		/*taskgroupv.items[i].tag = taskgrouparg->items[i].tag;*/
+	}
+	taskgroupv.n = n;
+	
+	readtaskgroup("/home/beyond/software/bin/dwm-taskgroup/1.csv", &taskgroupv);
+	for(i = 0;i<taskgroupv.n;i++)
+	{
+		taskgroupv.items[i].cmd = ((char *[]){taskgroupv.items[i].cmdbuf,NULL});
+	}
+	LOG_FORMAT("taskgroup from csv %s %s", taskgroupv.items[0].classpattern, taskgroupv.items[0].titlepattern);
+
+	TaskGroupItem *item;
+	Client *c;
+	for(c = selmon->clients; c; c = c->next)
+	{
+		for(i = 0;i<taskgroupv.n;i++)
+		{
+			item = &(taskgroupv.items[i]);
+			if (match(c,item)) {
+				item->c = c;
+				break;
+			}
+		}
+	}
+	for(i = 0;i<taskgroupv.n;i++)
+	{
+		item = &(taskgroupv.items[i]);
+		if (item->c) {
+			item->c->tags = item->tag;
+			/*LOG_FORMAT("item %s %d", item->c->name, item->tag);*/
+		}else{
+			if (item->tag) {
+				Arg argview = {.i = item->tag};
+				view(&argview);
+			}
+			if (item->cmd) {
+				Arg argspawn = {.v = item->cmd};
+				spawn(&argspawn);
+			}
+		}
+	}
+	focus(NULL);
+	arrange(selmon);
+}
+
+void
+dismiss(const Arg *arg)
+{
+	
 }
  
 int

@@ -67,8 +67,55 @@ void sort(void *clist[], size_t n, int (*cmp)(const void *, const void *))
     }
 }
 
+int readstruct2()
+{
+        
+	FILE *fp = fopen("tmp.csv", "r");
+	if (fp == NULL) {
+		fprintf(stderr, "fopen() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+	while(!feof(fp))
+	{
+		char a1[30];
+		char a2[30];
+		char a3[30];
+		char a4[30];
+		char a5[30];
+	    fscanf(fp, "%s	%s	%s	%s	%s", a1,a2,a3,a4,a5);
+	    printf("%s-%s-%s-%s-%s", a1, a2,a3,a4,a5);
+	}
+	fclose(fp);
+	return 0;
+}
+
+int readstruct()
+{
+    FILE *fp = fopen("tmp.csv", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "fopen() failed.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char row[80];
+    char *token;
+
+    while (fgets(row, 80, fp) != NULL) {
+        printf("Row: %s", row);
+        token = strtok(row, "	"); 
+        while (token != NULL) {
+            printf("Token: %s\n", token);
+            token = strtok(NULL, "	");
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 int main(int argc, char const *argv[])
 {
+	readstruct2();
 
     int aaa[5] = {1,2,3,4,5,6};
     printf("%p", aaa[2]);
