@@ -3821,6 +3821,8 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 	DIR *dirp;
 	struct dirent *direntp;
 	unsigned long childpid = 0L;
+	char buf[32];
+	char appname[32];
  
  	dirp=opendir("/proc");
 	while((direntp=readdir(dirp))!=NULL) 
@@ -3834,13 +3836,20 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 			pid_t pid;
 			int r = sscanf(direntp->d_name, "%d",&pid);
 			if (r) {
-				if(currpid == getppidof(pid))
+				if(currpid == getppidof(pid)){
 					childpid = pid;
+					snprintf(buf, sizeof buf, "/proc/%d/stat", pid);
+					sscanf(buf, "%*d (%s) %*s", appname);
+					break;
+				}
 			}
 		}
 	}
-	if (childpid) {
+	if (childpid && strcmp(appname, "bash")) {
 		char *cwd = getcwd_by_pid(childpid);
+		strcpy(workingdir, cwd);
+	}else{
+		char *cwd = getcwd_by_pid(currpid);
 		strcpy(workingdir, cwd);
 	}
 	closedir(dirp);
