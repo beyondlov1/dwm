@@ -279,12 +279,12 @@ struct TagStat
 typedef struct TaskGroupItem TaskGroupItem;
 struct TaskGroupItem
 {
-	char classpattern[20];
-	char titlepattern[20];
+	char classpattern[256];
+	char titlepattern[256];
 	char **cmd;
 	unsigned int tag;
 
-	char cmdbuf[20];
+	char cmdbuf[256];
 	regex_t *classregx;
 	regex_t *titleregx;
 	Client *c;
@@ -307,6 +307,7 @@ static void attach(Client *c);
 static void attachstack(Client *c);
 static void addtoscratchgroup(const Arg *arg);
 static void assemble(const Arg *arg);
+static void assemblecsv(const Arg *arg);
 static ScratchItem* addtoscratchgroupc(Client *c);
 static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
@@ -5823,12 +5824,12 @@ int readtaskgroup(char *path,TaskGroup *taskgroup)
 	return 1;
     }
 
-    char row[80];
+    char row[256];
     char *token;
 
     int i=0;
-    while (fgets(row, 80, fp) != NULL) {
-        printf("Row: %s", row);
+    while (fgets(row, 256, fp) != NULL) {
+        LOG_FORMAT("Row: %s", row);
         token = strtok(row, "	"); 
 	int j = 0;
         while (token != NULL) {
@@ -5862,19 +5863,14 @@ assemble(const Arg *arg)
 	memset(&taskgroupv, 0, sizeof(TaskGroup));
 	int i;
 	for(i = 0;i<n;i++){
-		/*taskgroupv.items[i].classpattern = taskgrouparg->items[i].classpattern;*/
-		/*taskgroupv.items[i].titlepattern = taskgrouparg->items[i].titlepattern;*/
-		/*taskgroupv.items[i].cmd = taskgrouparg->items[i].cmd;*/
-		/*taskgroupv.items[i].tag = taskgrouparg->items[i].tag;*/
+		strcpy(taskgroupv.items[i].classpattern , taskgrouparg->items[i].classpattern);
+		strcpy(taskgroupv.items[i].titlepattern , taskgrouparg->items[i].titlepattern);
+		taskgroupv.items[i].cmd = taskgrouparg->items[i].cmd;
+		taskgroupv.items[i].tag = taskgrouparg->items[i].tag;
+		memcpy(taskgroupv.items[i].cmdbuf , taskgrouparg->items[i].cmdbuf, sizeof(taskgrouparg->items[i].cmdbuf));
 	}
 	taskgroupv.n = n;
 	
-	readtaskgroup("/home/beyond/software/bin/dwm-taskgroup/1.csv", &taskgroupv);
-	for(i = 0;i<taskgroupv.n;i++)
-	{
-		taskgroupv.items[i].cmd = ((char *[]){taskgroupv.items[i].cmdbuf,NULL});
-	}
-	LOG_FORMAT("taskgroup from csv %s %s", taskgroupv.items[0].classpattern, taskgroupv.items[0].titlepattern);
 
 	TaskGroupItem *item;
 	Client *c;
@@ -5894,20 +5890,43 @@ assemble(const Arg *arg)
 		item = &(taskgroupv.items[i]);
 		if (item->c) {
 			item->c->tags = item->tag;
-			/*LOG_FORMAT("item %s %d", item->c->name, item->tag);*/
+			if (item->tag) {
+				Arg argview = {.i = item->tag};
+				view(&argview);
+			}
 		}else{
 			if (item->tag) {
 				Arg argview = {.i = item->tag};
 				view(&argview);
 			}
+			if (item->cmdbuf) {
+				Arg argspawn = SHCMD(item->cmdbuf);
+				spawn(&argspawn);
+			}
 			if (item->cmd) {
-				Arg argspawn = {.v = item->cmd};
+				Arg argspawn ={.v=item->cmd};
 				spawn(&argspawn);
 			}
 		}
 	}
 	focus(NULL);
 	arrange(selmon);
+}
+
+void 
+assemblecsv(const Arg *arg){
+
+	if (!arg->v) {
+		return;
+	}
+
+	TaskGroup taskgroupv;
+	memset(&taskgroupv, 0, sizeof(TaskGroup));
+	readtaskgroup(*(char ***)arg->v, &taskgroupv);
+	/*readtaskgroup("/home/beyond/software/bin/dwm-taskgroup/1.csv", &taskgroupv);*/
+	LOG_FORMAT("taskgroup from csv %s %s", taskgroupv.items[0].classpattern, taskgroupv.items[0].titlepattern);
+	Arg a = {.v=&taskgroupv};
+	assemble(&a);
 }
 
 void
