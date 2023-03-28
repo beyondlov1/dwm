@@ -1572,7 +1572,7 @@ drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 			XGetClassHint(dpy, tc->client->win, &ch);
 			char *class    = ch.res_class ? ch.res_class : broken;
 			char *instance = ch.res_name  ? ch.res_name  : broken;
-			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, instance, 0);
+			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, tc->client->name, 0);
 			y = y + bh;
 		}
 	}
@@ -1598,7 +1598,7 @@ drawswitcher(Monitor *m)
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
 		.background_pixmap = ParentRelative,
-		.event_mask = ButtonPressMask|ExposureMask|KeyPressMask
+		.event_mask = ButtonPressMask|ExposureMask|KeyPressMask|PointerMotionMask
 	};
 	
 	XClassHint ch = {"dwm", "dwm"};
@@ -2810,6 +2810,27 @@ motionnotify(XEvent *e)
 	static Monitor *mon = NULL;
 	Monitor *m;
 	XMotionEvent *ev = &e->xmotion;
+
+	if (ev->window == selmon->switcher) {
+		//todo
+		int rx = ev->x;
+		int ry = ev->y;
+		int iw = selmon->ww / 6;
+		int ih = selmon->wh / 6;
+		int col = rx/iw;
+		int row = ry/ih;
+		int tagindex = col+row*3;
+		unsigned int tags = 1 << tagindex;
+		if (selmon->tagset[selmon->seltags] != tags) {
+			const Arg arg = {.ui = tags};
+			view(&arg);
+			/*destroyswitcher(selmon);*/
+			drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, tagindex);
+			XMapWindow(dpy, selmon->switcher);
+			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+		}
+		return;
+	}
 
 	if (ev->window != root)
 		return;

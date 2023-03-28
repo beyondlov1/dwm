@@ -222,7 +222,8 @@ static Key keys[] = {
 	// { MODKEY,                       XK_d,    relview,           {.i=1} },
 	// { MODKEY,                       XK_q,      relview,          {.i = -1 } },
 	// { MODKEY,                       XK_w,      relview,          {.i = 1 } },
-	{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
+	//{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
+	{ MODKEY,                       XK_grave,      toggleswitchers,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
@@ -307,6 +308,8 @@ static Key switcherkeys[] = {
 	{MODKEY, XK_Return, switcherview, {0}},
 	{MODKEY, XK_Tab, toggleswitchers, {0}},
 	{0, XK_Escape, toggleswitchers, {0}},
+
+	{MODKEY, XK_grave, toggleswitchers, {0}},
 };
 
 /* button definitions */
