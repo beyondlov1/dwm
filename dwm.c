@@ -3888,7 +3888,7 @@ void stsspawn(const Arg *arg){
 			getstworkingdir(workingdir, currpid);
 		}
 	}
-	char *cmd[] = {"terminator","-d",workingdir,NULL};
+	char *cmd[] = {"st","-d",workingdir,NULL};
 	const Arg a = {.v = cmd};
 	sspawn(&a);
 }
