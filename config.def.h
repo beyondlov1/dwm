@@ -288,14 +288,14 @@ static Key keys[] = {
 };
 
 static Key switcherkeys[] = {
-	{0, XK_Left, switchermove, {.i = -1}},
-	{0, XK_Right, switchermove, {.i = 1}},
-	{0, XK_Up, switchermove, {.i = 2}},
-	{0, XK_Down, switchermove, {.i = -2}},
-	{0, XK_h, switchermove, {.i = -1}},
-	{0, XK_l, switchermove, {.i = 1}},
-	{0, XK_k, switchermove, {.i = 2}},
-	{0, XK_j, switchermove, {.i = -2}},
+	{0, XK_Left, switchermove2, {.i = -1}},
+	{0, XK_Right, switchermove2, {.i = 1}},
+	{0, XK_Up, switchermove2, {.i = 2}},
+	{0, XK_Down, switchermove2, {.i = -2}},
+	{0, XK_h, switchermove2, {.i = -1}},
+	{0, XK_l, switchermove2, {.i = 1}},
+	{0, XK_k, switchermove2, {.i = 2}},
+	{0, XK_j, switchermove2, {.i = -2}},
 	{0, XK_Return, switcherview, {0}},
 	{MODKEY, XK_Left, switchermove, {.i = -1}},
 	{MODKEY, XK_Right, switchermove, {.i = 1}},

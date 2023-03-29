@@ -413,6 +413,7 @@ static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
 static void switchermove(const Arg *arg);
+static void switchermove2(const Arg *arg);
 static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -5759,7 +5760,207 @@ void updatecurrentdesktop(void){
 	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
+#define ARRAY(arr,i,j) *((int*)arr + row*i + j); 
 
+void 
+left(int **arr, int row ,int col, int x, int y, int result[2])
+{
+	if (y == 0) {
+		return;
+	}
+	int j;
+	for(j = y - 1;j >= 0;j--)
+	{
+		int step;
+		int i;
+		for(step = 0; step < row; step ++)
+		{
+			i = x + step;
+			int m = ARRAY(arr, i, j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			i = x - step;
+			m = ARRAY(arr, i, j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+		}
+	}
+}
+
+void 
+right(int **arr, int row ,int col, int x, int y, int result[2])
+{
+	if (y == col - 1) {
+		return;
+	}
+	int j;
+	for(j = y + 1;j <col;j++)
+	{
+		int step;
+		int i;
+		for(step = 0; step < row; step ++)
+		{
+			i = x + step;
+			int m = ARRAY(arr, i, j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			i = x - step;
+			m = ARRAY(arr, i, j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+		}
+	}
+}
+void 
+down(int **arr, int row ,int col, int x, int y, int result[2])
+{
+	if (x == row - 1) {
+		return;
+	}
+	int i;
+	for(i = x + 1;i <row;i++)
+	{
+		int step;
+		int j;
+		for(step = 0; step < row; step ++)
+		{
+			j = y + step;
+			int m = ARRAY(arr, i, j);
+			if (j >= 0 && j < col) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			j = y - step;
+			m = ARRAY(arr, i, j);
+			if (j >= 0 && j < col) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+		}
+	}
+}
+void 
+up(int **arr, int row ,int col, int x, int y, int result[2])
+{
+	if (x == 0) {
+		return;
+	}
+	int i;
+	for(i = x - 1;i >= 0;i--)
+	{
+		int step;
+		int j;
+		for(step = 0; step < row; step ++)
+		{
+			j = y + step;
+			int m = ARRAY(arr, i, j);
+			if (j >= 0 && j < col) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			j = y - step;
+			m = ARRAY(arr, i, j);
+			if (j >= 0 && j < col) {
+				if(m == 1)
+				{
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+		}
+	}
+}
+
+
+void
+switchermove2(const Arg *arg)
+{
+	int occ;
+	Client *c;
+	for(c = selmon->clients;c;c = c->next) occ |= c->tags;
+	int selcurtagindex = switchercurtagindex;
+	int row = 3;
+	int col = 3;
+	int arr[row][col];
+	int i;
+	int j;
+	for(i=0;i<row;i++)
+	{
+		for(j=0;j<col;j++){
+			arr[i][j] = (occ & (1<<(i*row+j)))?1:0;
+		}
+	}
+	int x = selcurtagindex/row;
+	int y = selcurtagindex%row;
+	int result[2];
+	result[0] = x;
+	result[1] = y;
+	if (arg->i == 1) {
+		right(arr, row, col, x, y, result);
+		selcurtagindex = result[0] * row + result[1];
+	}
+	if (arg->i == -1) {
+		left(arr, row, col, x, y, result);
+		selcurtagindex = result[0] * row + result[1];
+	}
+	if (arg->i == 2) {
+		up(arr, row, col, x, y, result);
+		selcurtagindex = result[0] * row + result[1];
+	}
+	if (arg->i == -2) {
+		down(arr, row, col, x, y, result);
+		selcurtagindex = result[0] * row + result[1];
+	}
+	/*if(arg->i == -1) selcurtagindex -= 1;*/
+	/*if(arg->i == 1) selcurtagindex += 1;*/
+	/*if(arg->i == -2) selcurtagindex += 3;*/
+	/*if(arg->i == 2) selcurtagindex -= 3;*/
+	if(selcurtagindex < 0) selcurtagindex = 0;
+	if(selcurtagindex >= LENGTH(tags)) selcurtagindex = LENGTH(tags) - 1;
+	unsigned int tags = 1 << selcurtagindex;
+	const Arg varg = {.ui = tags};
+	view(&varg);
+	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
 
 void
 switchermove(const Arg *arg)

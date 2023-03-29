@@ -113,8 +113,74 @@ int readstruct()
     return 0;
 }
 
+void 
+right(int **arr, int row ,int col, int x, int y, int result[2])
+{
+	if (y == col - 1) {
+		return;
+	}
+	int j;
+	for(j = y + 1;j <col;j++)
+	{
+		int step;
+		int i;
+		for(step = 1; step < row; step ++)
+		{
+			i = x + step;
+			int m = *((int*)arr + row*i + j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					printf("%d %d\n", i, j);
+					fflush(stdout);
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			i = x - step;
+			m = *((int*)arr + row*i + j);
+			if (i >= 0 && i < row) {
+				if(m == 1)
+				{
+					printf("%d %d\n", i, j);
+					fflush(stdout);
+					result[0] = i;
+					result[1] = j;
+					return;
+				}
+			}
+			printf("%d %d\n", i, j);
+			fflush(stdout);
+		}
+	}
+}
+
+void test()
+{
+	fflush(stdout);
+	int selcurtagindex = 3;
+	const int row = 3;
+	const int col = 3;
+	int arr[3][3] ={{0,1,1},{1,0,0},{1,0,0}};
+	int i;
+	int j;
+	int x = selcurtagindex/row;
+	int y = selcurtagindex%row;
+	int result[2];
+	result[0] = x;
+	result[1] = y;
+
+	right(arr, row, col, x, y, result);
+	selcurtagindex = result[0] * row + result[1];
+	
+	printf("%d %d", result[0], result[1]);
+	fflush(stdout);
+}
+
 int main(int argc, char const *argv[])
 {
+	test();
 	readstruct2();
 
     int aaa[5] = {1,2,3,4,5,6};
