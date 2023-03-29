@@ -4008,6 +4008,8 @@ tile(Monitor *m)
 		return;
 
 	if (n > m->nmaster)
+		/*mw = m->nmaster ? m->ww * m->pertag->mfacts[gettagindex(m->tagset[m->seltags]) + 1] : 0;*/
+		// 每次arrange之前都会把m->mfact 设置成当前tag的mfact, 所以这里这样写也没问题. see view(const Arg *arg)
 		mw = m->nmaster ? m->ww * m->mfact : 0;
 	else
 		mw = m->ww - m->gap->gappx;
