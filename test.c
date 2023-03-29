@@ -124,7 +124,7 @@ right(int **arr, int row ,int col, int x, int y, int result[2])
 	{
 		int step;
 		int i;
-		for(step = 1; step < row; step ++)
+		for(step = 0; step < row; step ++)
 		{
 			i = x + step;
 			int m = *((int*)arr + row*i + j);
@@ -159,10 +159,13 @@ right(int **arr, int row ,int col, int x, int y, int result[2])
 void test()
 {
 	fflush(stdout);
-	int selcurtagindex = 3;
+	int selcurtagindex = 0;
 	const int row = 3;
 	const int col = 3;
-	int arr[3][3] ={{0,1,1},{1,0,0},{1,0,0}};
+	int arr[3][3] ={
+		{1,0,0},
+		{1,1,0},
+		{0,0,0}};
 	int i;
 	int j;
 	int x = selcurtagindex/row;

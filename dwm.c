@@ -5846,7 +5846,7 @@ down(int **arr, int row ,int col, int x, int y, int result[2])
 	{
 		int step;
 		int j;
-		for(step = 0; step < row; step ++)
+		for(step = 0; step < col; step ++)
 		{
 			j = y + step;
 			int m = ARRAY(arr, i, j);
@@ -5882,7 +5882,7 @@ up(int **arr, int row ,int col, int x, int y, int result[2])
 	{
 		int step;
 		int j;
-		for(step = 0; step < row; step ++)
+		for(step = 0; step < col; step ++)
 		{
 			j = y + step;
 			int m = ARRAY(arr, i, j);
@@ -5912,7 +5912,7 @@ up(int **arr, int row ,int col, int x, int y, int result[2])
 void
 switchermove2(const Arg *arg)
 {
-	int occ;
+	int occ = 0;
 	Client *c;
 	for(c = selmon->clients;c;c = c->next) occ |= c->tags;
 	int selcurtagindex = switchercurtagindex;
@@ -5925,6 +5925,7 @@ switchermove2(const Arg *arg)
 	{
 		for(j=0;j<col;j++){
 			arr[i][j] = (occ & (1<<(i*row+j)))?1:0;
+			LOG_FORMAT("switchermove2 %d", arr[i][j]);
 		}
 	}
 	int x = selcurtagindex/row;
