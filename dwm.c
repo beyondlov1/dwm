@@ -2826,6 +2826,8 @@ motionnotify(XEvent *e)
 			const Arg arg = {.ui = tags};
 			view(&arg);
 			/*destroyswitcher(selmon);*/
+			const Arg layoutarg = {.v = &layouts[0]};
+    			setlayout(&layoutarg);
 			drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, tagindex);
 			XMapWindow(dpy, selmon->switcher);
 			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
@@ -5960,6 +5962,8 @@ switchermove2(const Arg *arg)
 	unsigned int tags = 1 << selcurtagindex;
 	const Arg varg = {.ui = tags};
 	view(&varg);
+	const Arg layoutarg = {.v = &layouts[0]};
+    	setlayout(&layoutarg);
 	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
 	XMapWindow(dpy, selmon->switcher);
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
@@ -5978,6 +5982,8 @@ switchermove(const Arg *arg)
 	unsigned int tags = 1 << selcurtagindex;
 	const Arg varg = {.ui = tags};
 	view(&varg);
+	const Arg layoutarg = {.v = &layouts[0]};
+    	setlayout(&layoutarg);
 	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
 	XMapWindow(dpy, selmon->switcher);
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
