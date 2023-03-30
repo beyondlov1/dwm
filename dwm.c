@@ -5997,7 +5997,12 @@ void
 switchermove2cycle(const Arg *arg)
 {
 	int selcurtagindex = switchercurtagindex;
-	selcurtagindex += 1;
+	int occ = 0;
+	Client *c;
+	for(c=selmon->clients;c;c=c->next) occ|=c->tags;
+	do{
+		selcurtagindex ++;
+	}while (!(occ & (1<<selcurtagindex)) && selcurtagindex < LENGTH(tags));
 	
 	unsigned int maxtags =getmaxtagstiled();
 	unsigned int mintags =getmintagstiled();
