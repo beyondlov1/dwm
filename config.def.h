@@ -290,6 +290,7 @@ static Key keys[] = {
 };
 
 static Key switcherkeys[] = {
+	{0, XK_grave, switchermove2cycle, {0}},
 	{0, XK_Left, switchermove2, {.i = -1}},
 	{0, XK_Right, switchermove2, {.i = 1}},
 	{0, XK_Up, switchermove2, {.i = 2}},

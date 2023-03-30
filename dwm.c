@@ -414,6 +414,7 @@ static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
 static void switchermove(const Arg *arg);
 static void switchermove2(const Arg *arg);
+static void switchermove2cycle(const Arg *arg);
 static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -5982,6 +5983,29 @@ switchermove(const Arg *arg)
 	if(arg->i == 2) selcurtagindex -= 3;
 	if(selcurtagindex < 0) selcurtagindex = 0;
 	if(selcurtagindex >= LENGTH(tags)) selcurtagindex = LENGTH(tags) - 1;
+	unsigned int tags = 1 << selcurtagindex;
+	const Arg varg = {.ui = tags};
+	view(&varg);
+	const Arg layoutarg = {.v = &layouts[0]};
+    	setlayout(&layoutarg);
+	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
+
+void 
+switchermove2cycle(const Arg *arg)
+{
+	int selcurtagindex = switchercurtagindex;
+	selcurtagindex += 1;
+	
+	unsigned int maxtags =getmaxtagstiled();
+	unsigned int mintags =getmintagstiled();
+
+	if ((1<<selcurtagindex) > maxtags) {
+		selcurtagindex = gettagindex(mintags);
+	}
+
 	unsigned int tags = 1 << selcurtagindex;
 	const Arg varg = {.ui = tags};
 	view(&varg);
