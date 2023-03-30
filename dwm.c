@@ -1595,6 +1595,9 @@ void
 drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
+	
+	const Arg layoutarg = {.v = &layouts[0]};
+    	setlayout(&layoutarg);
 
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
