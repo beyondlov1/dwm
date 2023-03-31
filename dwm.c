@@ -3874,8 +3874,8 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 	DIR *dirp;
 	struct dirent *direntp;
 	unsigned long childpid = 0L;
-	char buf[32];
-	char appname[32];
+	char buf[512];
+	char appname[512];
  
  	dirp=opendir("/proc");
 	while((direntp=readdir(dirp))!=NULL) 
