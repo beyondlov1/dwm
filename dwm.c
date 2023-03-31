@@ -3900,10 +3900,16 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 	}
 	if (childpid && strcmp(appname, "bash")) {
 		char *cwd = getcwd_by_pid(childpid);
-		strcpy(workingdir, cwd);
+		if (cwd) {
+			strcpy(workingdir, cwd);
+			free(cwd);
+		}
 	}else{
 		char *cwd = getcwd_by_pid(currpid);
-		strcpy(workingdir, cwd);
+		if (cwd) {
+			strcpy(workingdir, cwd);
+			free(cwd);
+		}
 	}
 	closedir(dirp);
 }
