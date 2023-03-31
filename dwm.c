@@ -3093,15 +3093,15 @@ movex(const Arg *arg)
 	int delta = arg->i;
 	if (selmon->sel)
 	{
-		if (!selmon->sel->isfloating)
-		{
-			Client *c;
-			for (c = selmon->clients; c; c = c->next)
-				if (ISVISIBLE(c) && c->isfloating)
-					break;
-			if (c)
-				focus(c);
-		}
+		/*if (!selmon->sel->isfloating)*/
+		/*{*/
+			/*Client *c;*/
+			/*for (c = selmon->clients; c; c = c->next)*/
+				/*if (ISVISIBLE(c) && c->isfloating)*/
+					/*break;*/
+			/*if (c)*/
+				/*focus(c);*/
+		/*}*/
 		if (selmon->sel->isfloating)
 		{
 			resize(selmon->sel, selmon->sel->x + delta, selmon->sel->y, selmon->sel->w, selmon->sel->h, 0);
@@ -3115,14 +3115,14 @@ movey(const Arg *arg)
 	int delta = arg->i;
 	if (selmon->sel)
 	{
-		if (!selmon->sel->isfloating)
-		{
-			Client *c;
-			for(c = selmon->clients; c; c=c->next)
-				if (ISVISIBLE(c) && c->isfloating)
-					break;
-			if(c) focus(c);
-		}
+		/*if (!selmon->sel->isfloating)*/
+		/*{*/
+			/*Client *c;*/
+			/*for(c = selmon->clients; c; c=c->next)*/
+				/*if (ISVISIBLE(c) && c->isfloating)*/
+					/*break;*/
+			/*if(c) focus(c);*/
+		/*}*/
 		if (selmon->sel->isfloating)
 		{
 			resize(selmon->sel, selmon->sel->x, selmon->sel->y + delta, selmon->sel->w, selmon->sel->h, 0);

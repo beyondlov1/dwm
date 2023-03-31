@@ -39,7 +39,7 @@ https://packages.ubuntu.com/search?mode=exactfilename&suite=focal&section=all&ar
 查询
 ```
 - sudo make clean install
-  sudo cp dwm.desktop /usr/share/xsession
+  sudo cp dwm.desktop /usr/share/xsessions
 - mkdir -p ~/.config/dwm/script && echo 'compton 
 ibus-daemon -r -d -x
 while true; do
