@@ -3557,6 +3557,10 @@ setmfact(const Arg *arg)
 	float f;
 	unsigned int i;
 
+	if (selmon->sel && selmon->sel->isfloating) {
+		return;
+	}
+
 	if (!arg || !selmon->lt[selmon->sellt]->arrange)
 		return;
 	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
