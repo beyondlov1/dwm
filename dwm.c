@@ -2877,19 +2877,20 @@ motionnotify(XEvent *e)
 				}
 			}
 
-			if(ev->x > x && ev->x < selmon->ww - statusw - getsystraywidth()){
-				char offsetx[5];
-				char offsety[5];
-				if (ev->x - x > 300) {
-					sprintf(offsetx, "%d", ev->x - 300);
-				}else{
-					sprintf(offsetx, "%d", x);
-				}
-				sprintf(offsety, "%d", ev->y - 250);
-				char *rofi[] = {"rofi","-theme-str","window {width:600px;height:250px;}","-location","1","-xoffset",offsetx,"-yoffset",offsety,"-me-select-entry","","-me-accept-entry","MousePrimary", "-show","window",NULL};
-				Arg arg = {.v = rofi};
-				spawn(&arg);
-			}
+			// 鼠标移动到标题栏空白处, 出现rofi
+			/*if(ev->x > x && ev->x < selmon->ww - statusw - getsystraywidth()){*/
+				/*char offsetx[5];*/
+				/*char offsety[5];*/
+				/*if (ev->x - x > 300) {*/
+					/*sprintf(offsetx, "%d", ev->x - 300);*/
+				/*}else{*/
+					/*sprintf(offsetx, "%d", x);*/
+				/*}*/
+				/*sprintf(offsety, "%d", ev->y - 250);*/
+				/*char *rofi[] = {"rofi","-theme-str","window {width:600px;height:250px;}","-location","1","-xoffset",offsetx,"-yoffset",offsety,"-me-select-entry","","-me-accept-entry","MousePrimary", "-show","window",NULL};*/
+				/*Arg arg = {.v = rofi};*/
+				/*spawn(&arg);*/
+			/*}*/
 		}
 	}
 }
