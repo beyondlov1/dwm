@@ -142,6 +142,7 @@ struct Client {
 	int nstub;
 	unsigned long pid;
 	int isscratched;
+	float factx, facty;
 };
 
 typedef struct {
@@ -397,6 +398,7 @@ static void setgaps(const Arg *arg);
 static void setlayoutv(const Arg *arg, int isarrange);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
+static void setfacty(const Arg *arg);
 static void setnumdesktops(void);
 static void setup(void);
 static void setviewport(void);
@@ -2519,6 +2521,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	c->factx = factx;
+	c->facty = facty;
 
 	updatetitle(c);
 
@@ -3581,6 +3585,30 @@ setmfact(const Arg *arg)
 	arrange(selmon);
 }
 
+
+void
+setfacty(const Arg *arg)
+{
+	float f;
+	unsigned int i;
+
+	if (selmon->sel && selmon->sel->isfloating) {
+		return;
+	}
+	
+	if (selmon->sel->facty != facty) {
+		f = facty;
+	}else{
+		f = facty * 3;
+	}
+
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) c->facty = facty;
+	
+	selmon->sel->facty = f;
+	arrange(selmon);
+}
+
 void
 setup(void)
 {
@@ -4030,6 +4058,20 @@ tile(Monitor *m)
 		mw = m->nmaster ? m->ww * m->mfact : 0;
 	else
 		mw = m->ww - m->gap->gappx;
+	
+	float stotalfacty = 0.0;
+	i = 0;
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		if (c->facty == 0.0) {
+			c->facty = facty;
+		}
+		if (i >= m->nmaster) {
+			stotalfacty += c->facty;
+		}
+		i ++;
+	}
+
+	float tfacty = 0.0;
 	for (i = 0, my = ty = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		if (i < m->nmaster) {
 			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
@@ -4037,10 +4079,12 @@ tile(Monitor *m)
 			if (my + HEIGHT(c) + m->gap->gappx < m->wh)
 				my += HEIGHT(c) + m->gap->gappx;
 		} else {
-			h = (m->wh - ty) / (n - i) - m->gap->gappx;
+			/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+			h = (int)((m->wh - ty - m->gap->gappx) * c->facty / (stotalfacty-tfacty));
 			resize(c, m->wx + mw + m->gap->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gap->gappx, h - (2*c->bw), 0);
 			if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 				ty += HEIGHT(c) + m->gap->gappx;
+			tfacty += c->facty;
 		}
 
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
