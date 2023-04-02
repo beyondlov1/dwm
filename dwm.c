@@ -965,12 +965,18 @@ buttonpress(XEvent *e)
 		{
 			click = ClkWinTitle;
 			Client *c;
-			for(c = selmon->clients; c; c = c->next){
+			int i;
+			for(c = selmon->clients,i=0; c; c = c->next){
+				if (ISVISIBLE(c)) {
+					i ++;
+				}
 				if ( ISVISIBLE(c) && ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
 				{
 					if(ev->button == Button1)
 					{
-						focus(c);
+						/*focus(c);*/
+						Arg zoomiarg = {.i = i};
+						zoomi(&zoomiarg);
 					}
 					if (ev->button == Button3)
 					{
