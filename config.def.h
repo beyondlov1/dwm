@@ -152,6 +152,7 @@ static const char *querybrowsercmd[] = {"/home/beyond/software/browserclip.sh", 
 static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
+static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
@@ -175,6 +176,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
+	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
