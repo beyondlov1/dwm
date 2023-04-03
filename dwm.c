@@ -967,9 +967,6 @@ buttonpress(XEvent *e)
 			Client *c;
 			int i;
 			for(c = selmon->clients,i=0; c; c = c->next){
-				if (ISVISIBLE(c)) {
-					i ++;
-				}
 				if ( ISVISIBLE(c) && ev->x > c->titlex && ev->x < (c->titlex+c->titlew))
 				{
 					if(ev->button == Button1)
@@ -983,6 +980,9 @@ buttonpress(XEvent *e)
 						killclientc(c);
 					}
 					break;
+				}
+				if (ISVISIBLE(c)) {
+					i ++;
 				}
 			}
 		}
