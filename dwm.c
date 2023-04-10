@@ -4255,6 +4255,8 @@ tile3(Monitor *m)
 				my += HEIGHT(c) + m->gap->gappx;
 		}
 
+	float soverflowfact = 0.2;
+	int soverflow = soverflowfact * m->ww;
 	int sn0 = (n-m->nmaster)/2 + (1-m->nmaster%2);
 	int sn1 = n-m->nmaster - sn0;
 	int ti;
@@ -4263,9 +4265,15 @@ tile3(Monitor *m)
 		if (i < m->nmaster) continue;
 		if( i%2 != 0) continue;
 		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sx = m->wx + m->gap->gappx;
 		int sw = mx - 2*m->gap->gappx;
+		sw += soverflow;
+		sx -= soverflow;
+		if (c->isfocused) {
+			sx += soverflow;
+		}
 		h = (int)((m->wh - ty - m->gap->gappx) / (sn0-ti));
-		resize(c, m->wx + m->gap->gappx, m->wy + ty, sw, h - (2*c->bw), 0);
+		resize(c,sx , m->wy + ty, sw, h - (2*c->bw), 0);
 		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 			ty += HEIGHT(c) + m->gap->gappx;
 		ti ++;
@@ -4276,9 +4284,14 @@ tile3(Monitor *m)
 		if (i < m->nmaster) continue;
 		if( i%2 != 1) continue;
 		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sx = mx + mw; 
 		int sw = m->ww - mx - mw - m->gap->gappx;
+		sw += soverflow;
+		if (c->isfocused) {
+			sx -= soverflow;
+		}
 		h = (int)((m->wh - ty - m->gap->gappx) / (sn1-ti));
-		resize(c, mx + mw, m->wy + ty, sw, h - (2*c->bw), 0);
+		resize(c, sx, m->wy + ty, sw, h - (2*c->bw), 0);
 		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 			ty += HEIGHT(c) + m->gap->gappx;
 		ti ++;
