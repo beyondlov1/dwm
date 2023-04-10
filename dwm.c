@@ -422,6 +422,7 @@ static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
 static void tile2(Monitor *);
+static void tile3(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -4212,6 +4213,84 @@ tile2(Monitor *m)
 	}
 
 	LOG_FORMAT("tile2 5");
+}
+
+void
+tile3(Monitor *m)
+{
+	unsigned int i, n, h, mw,mx, my, ty;
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster)
+		/*mw = m->nmaster ? m->ww * m->pertag->mfacts[gettagindex(m->tagset[m->seltags]) + 1] : 0;*/
+		// 每次arrange之前都会把m->mfact 设置成当前tag的mfact, 所以这里这样写也没问题. see view(const Arg *arg)
+		mw = m->nmaster ? (m->ww - m->gap->gappx) * m->mfact : 0;
+	else
+		mw = m->ww - m->gap->gappx;
+	
+	if (n > m->nmaster + 1)
+	{
+		mx = (m->ww - m->gap->gappx) * ((1-m->mfact)/2) + m->gap->gappx;
+	}
+	else if (n > m->nmaster)
+	{
+		mx = m->wx + m->gap->gappx;
+		/*mx = (m->ww - m->gap->gappx) * (1-m->mfact) + m->gap->gappx;*/
+	}
+	else
+	{
+		mx = m->wx + m->gap->gappx;
+	}
+
+	
+	for (i = 0, my = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		if (i < m->nmaster) {
+			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
+			resize(c, mx, m->wy + my, mw - (2*c->bw) - m->gap->gappx, h - (2*c->bw), 0);
+			if (my + HEIGHT(c) + m->gap->gappx < m->wh)
+				my += HEIGHT(c) + m->gap->gappx;
+		}
+
+	int sn0 = (n-m->nmaster)/2 + (1-m->nmaster%2);
+	int sn1 = n-m->nmaster - sn0;
+	int ti;
+	for (ti = 0,i = 0, ty = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		if (i < m->nmaster) continue;
+		if( i%2 != 0) continue;
+		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sw = mx - 2*m->gap->gappx;
+		h = (int)((m->wh - ty - m->gap->gappx) / (sn0-ti));
+		resize(c, m->wx + m->gap->gappx, m->wy + ty, sw, h - (2*c->bw), 0);
+		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
+			ty += HEIGHT(c) + m->gap->gappx;
+		ti ++;
+	}
+
+	for (ti = 0, i = 0, ty = m->gap->gappx, c = nexttiled(m->clients); c ; c = nexttiled(c->next), i++)
+	{
+		if (i < m->nmaster) continue;
+		if( i%2 != 1) continue;
+		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sw = m->ww - mx - mw - m->gap->gappx;
+		h = (int)((m->wh - ty - m->gap->gappx) / (sn1-ti));
+		resize(c, mx + mw, m->wy + ty, sw, h - (2*c->bw), 0);
+		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
+			ty += HEIGHT(c) + m->gap->gappx;
+		ti ++;
+	}
+
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		updateborder(c);
+	}
 }
 
 void
