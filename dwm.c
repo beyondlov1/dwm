@@ -1724,7 +1724,8 @@ focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c)){
 		for (c = selmon->stack; c && !c->isfloating; c = c->snext);
-		if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+		/*if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);*/
+		if (!c) for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);
 	}
 	if (selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, 0);
@@ -4417,7 +4418,7 @@ tile4(Monitor *m)
 		sx -= soverflow;
 		sx += woffsetx;
 		h = (int)((m->wh - ty - m->gap->gappx) / (sn0-ti));
-		resize(c,sx , m->wy + ty, sw, h - (2*c->bw), 0);
+		resizeclient(c,sx , m->wy + ty, sw, h - (2*c->bw));
 		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 			ty += HEIGHT(c) + m->gap->gappx;
 		ti ++;
@@ -4433,7 +4434,7 @@ tile4(Monitor *m)
 		sw += soverflow;
 		sx += woffsetx;
 		h = (int)((m->wh - ty - m->gap->gappx) / (sn1-ti));
-		resize(c, sx, m->wy + ty, sw, h - (2*c->bw), 0);
+		resizeclient(c, sx, m->wy + ty, sw, h - (2*c->bw));
 		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
 			ty += HEIGHT(c) + m->gap->gappx;
 		ti ++;
