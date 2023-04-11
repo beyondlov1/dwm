@@ -111,7 +111,7 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 #include "gapgridsortedneat.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",      tile3 },    /* first entry is default */
+	{ "[]=",      tile4 },    /* first entry is default */
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "HHH",      gapgridsortedneat },

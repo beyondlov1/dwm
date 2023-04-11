@@ -423,6 +423,7 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *);
 static void tile2(Monitor *);
 static void tile3(Monitor *);
+static void tile4(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -1866,6 +1867,29 @@ avgx(Client *c)
 	return c->x + c->w / 2;
 }
 
+int
+avgy(Client *c)
+{
+	return c->y + c->h / 2;
+}
+
+int 
+distance(Client *t1, Client *t2)
+{
+	return pow(pow(avgx(t1) - avgx(t2),2) + pow((avgy(t1) - avgy(t2)),2),0.5);
+}
+
+Client *
+closestclient(Client *t, Client *c1, Client *c2)
+{
+	if(t == c1) return c2;
+	if(t == c2) return c1;
+	if (distance(t, c1) > distance(t, c2))
+		return c2;
+	else
+		return c1;
+}
+
 Client *
 closestxgravityclient(Client *t, Client *c1, Client *c2)
 {
@@ -1972,13 +1996,18 @@ focusgrid(const Arg *arg)
 		{
 			if (cc&& c != cc && c->y < cc->y && ISVISIBLE(c))
 			{
-				if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))
-				{
-					min = abs(cc->y - c->y);
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
 					closest = c;
+					min = dist;
 				}
-				else if (abs(cc->y - c->y) == min)
-					closest = closestxgravityclient(cc, c, closest);
+				/*if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))*/
+				/*{*/
+					/*min = abs(cc->y - c->y);*/
+					/*closest = c;*/
+				/*}*/
+				/*else if (abs(cc->y - c->y) == min)*/
+					/*closest = closestxgravityclient(cc, c, closest);*/
 			}
 		}
 		c = closest;
@@ -1991,13 +2020,18 @@ focusgrid(const Arg *arg)
 		{
 			if (cc && c != cc&& c->y > cc->y && ISVISIBLE(c))
 			{
-				if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))
-				{
-					min = abs(cc->y - c->y);
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
 					closest = c;
+					min = dist;
 				}
-				else if (abs(cc->y - c->y) == min)
-					closest = closestxgravityclient(cc, c, closest);
+				/*if (abs(cc->y - c->y) < min && (cc->x - c->x <= cc->bw + c->bw || cc->x + cc->w - (c->x + c->w) <= cc->bw + c->bw))*/
+				/*{*/
+					/*min = abs(cc->y - c->y);*/
+					/*closest = c;*/
+				/*}*/
+				/*else if (abs(cc->y - c->y) == min)*/
+					/*closest = closestxgravityclient(cc, c, closest);*/
 			}
 		}
 		c = closest;
@@ -4290,6 +4324,114 @@ tile3(Monitor *m)
 		if (c->isfocused) {
 			sx -= soverflow;
 		}
+		h = (int)((m->wh - ty - m->gap->gappx) / (sn1-ti));
+		resize(c, sx, m->wy + ty, sw, h - (2*c->bw), 0);
+		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
+			ty += HEIGHT(c) + m->gap->gappx;
+		ti ++;
+	}
+
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		updateborder(c);
+	}
+}
+
+
+void
+tile4(Monitor *m)
+{
+	unsigned int i, n, h, mw,mx, my, ty;
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	float soverflowfact = 0.2;
+	int soverflow = soverflowfact * m->ww;
+	int woffsetx = 0;
+	int focuspos = 0;
+	
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		if (i < m->nmaster) continue;
+		if (i%2 == 0 && c->isfocused) {
+			focuspos = -1;
+		}
+		if (i%2 == 1 && c->isfocused) {
+			focuspos = 1;
+		}
+	}
+	if (focuspos == -1) {
+		woffsetx = soverflow;
+	}
+	if (focuspos == 1) {
+		woffsetx = -soverflow;
+	}
+
+	if (n > m->nmaster)
+		/*mw = m->nmaster ? m->ww * m->pertag->mfacts[gettagindex(m->tagset[m->seltags]) + 1] : 0;*/
+		// 每次arrange之前都会把m->mfact 设置成当前tag的mfact, 所以这里这样写也没问题. see view(const Arg *arg)
+		mw = m->nmaster ? (m->ww - m->gap->gappx) * m->mfact : 0;
+	else
+		mw = m->ww - m->gap->gappx;
+	
+	if (n > m->nmaster + 1)
+	{
+		mx = (m->ww - m->gap->gappx) * ((1-m->mfact)/2) + m->gap->gappx;
+	}
+	else if (n > m->nmaster)
+	{
+		mx = m->wx + m->gap->gappx;
+		/*mx = (m->ww - m->gap->gappx) * (1-m->mfact) + m->gap->gappx;*/
+	}
+	else
+	{
+		mx = m->wx + m->gap->gappx;
+	}
+
+	
+	for (i = 0, my = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		if (i < m->nmaster) {
+			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gap->gappx;
+			resize(c, mx + woffsetx, m->wy + my, mw - (2*c->bw) - m->gap->gappx, h - (2*c->bw), 0);
+			if (my + HEIGHT(c) + m->gap->gappx < m->wh)
+				my += HEIGHT(c) + m->gap->gappx;
+		}
+
+	int sn0 = (n-m->nmaster)/2 + (1-m->nmaster%2);
+	int sn1 = n-m->nmaster - sn0;
+	int ti;
+	for (ti = 0,i = 0, ty = m->gap->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		if (i < m->nmaster) continue;
+		if( i%2 != 0) continue;
+		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sx = m->wx + m->gap->gappx;
+		int sw = mx - 2*m->gap->gappx;
+		sw += soverflow;
+		sx -= soverflow;
+		sx += woffsetx;
+		h = (int)((m->wh - ty - m->gap->gappx) / (sn0-ti));
+		resize(c,sx , m->wy + ty, sw, h - (2*c->bw), 0);
+		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
+			ty += HEIGHT(c) + m->gap->gappx;
+		ti ++;
+	}
+
+	for (ti = 0, i = 0, ty = m->gap->gappx, c = nexttiled(m->clients); c ; c = nexttiled(c->next), i++)
+	{
+		if (i < m->nmaster) continue;
+		if( i%2 != 1) continue;
+		/*h = (m->wh - ty) / (n - i) - m->gap->gappx;*/
+		int sx = mx + mw; 
+		int sw = m->ww - mx - mw - m->gap->gappx;
+		sw += soverflow;
+		sx += woffsetx;
 		h = (int)((m->wh - ty - m->gap->gappx) / (sn1-ti));
 		resize(c, sx, m->wy + ty, sw, h - (2*c->bw), 0);
 		if (ty + HEIGHT(c) + m->gap->gappx < m->wh)
