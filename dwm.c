@@ -1416,7 +1416,7 @@ drawbar(Monitor *m)
 			int tagnamelen = strlen(tags[i]);
 			do {
 				tagnamelen ++;
-				snprintf(tagname, tagnamelen,"%s",c->name);
+				snprintf(tagname, tagnamelen,"%d-%s",i + 1, c->name);
 			}while (TEXTW(tagname) < TEXTW(tags[i]) && tagnamelen < 20);
 			drw_text(drw, x, 0, w, bh, lrpad / 2,tagname, urg & 1 << i);
 		}else {
