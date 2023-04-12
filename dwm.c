@@ -1406,7 +1406,7 @@ drawbar(Monitor *m)
 
 		// update tag title
 		Client *c;
-		for(c = selmon->stack;c;c = c->snext){
+		for(c = m->stack;c;c = c->snext){
 			if (!c->isfloating && (c->tags & (1 << i))) {
 				break;
 			}
