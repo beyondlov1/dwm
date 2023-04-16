@@ -128,7 +128,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -410,6 +410,7 @@ static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
 static void sspawn(const Arg *arg);
+static void stspawn(const Arg *arg);
 static void stsspawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
@@ -424,6 +425,7 @@ static void tile(Monitor *);
 static void tile2(Monitor *);
 static void tile3(Monitor *);
 static void tile4(Monitor *);
+static void tile5(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -3004,6 +3006,13 @@ movemouse(const Arg *arg)
 }
 
 Client *
+snexttiled(Client *c)
+{
+	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->snext);
+	return c;
+}
+
+Client *
 nexttiled(Client *c)
 {
 	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->next);
@@ -3989,6 +3998,18 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 	closedir(dirp);
 }
 
+void stspawn(const Arg *arg){
+	char workingdir[128] = "";
+	if (selmon->sel) {
+		pid_t currpid = selmon->sel->pid;
+		if (currpid) {
+			getstworkingdir(workingdir, currpid);
+		}
+	}
+	char *cmd[] = {"st","-d",workingdir,NULL};
+	const Arg a = {.v = cmd};
+	spawn(&a);
+}
 void stsspawn(const Arg *arg){
 	char workingdir[128] = "";
 	if (selmon->sel) {
@@ -4441,6 +4462,90 @@ tile4(Monitor *m)
 	}
 
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		updateborder(c);
+	}
+}
+
+void
+tile5(Monitor *m)
+{
+	unsigned int i, n, h, mw,mx, my, ty;
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	Client *tiledcs[n];
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		tiledcs[n-i-1] = c;
+	}
+	int tsn = n;
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	sc.x = 1;
+	sc.y = 1;
+	sc.w = selmon->ww - 1;
+	sc.h = selmon->wh - 1;
+	/*for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)*/
+	for(i = 0;i<n;i++)
+	{
+		c = tiledcs[i];
+		int neww = selmon->ww * 0.45;
+		int newh = selmon->wh * 0.45;
+		// int neww = selmon->ww * 0.3;
+		// int newh = selmon->wh * 0.3;
+		
+		rect_t r;
+		int radiostepn = 1;
+		double maxintersectradiostep[] = {0.0};
+		int ok = 0;
+		int radioi;
+		for(radioi = 0;radioi<radiostepn;radioi++){
+			ok = fill2x(sc, neww, newh, 9, ts, i, &r, maxintersectradiostep[radioi]);
+			if(ok) break;
+		}
+		if(!ok)
+		{
+			r.x = selmon->ww / 2 - neww / 2;
+			r.y = selmon->wh / 2 - newh / 2;
+			r.w = neww;
+			r.h = newh;
+		}
+
+		if(!c->placed) {
+			c->x = r.x;
+			c->y = r.y;
+			c->w = r.w;
+			c->h = r.h;
+		}
+
+		ts[i].x = c->x;
+		ts[i].y = c->y;
+		ts[i].w = c->w;
+		ts[i].h = c->h;
+
+		i++;
+	}
+
+	// move the axis
+	int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+	int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		resizeclient(c,c->x+offsetx,c->y+offsety, c->w, c->h);
+		/*c->placed = 1;*/
+	}
+
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		LOG_FORMAT("tile5 c->x,y,name %d, %d, %s",c->x, c->y, c->name);
 		c->bw = borderpx;
 		XWindowChanges wc;
 		wc.border_width = c->bw;
@@ -4945,6 +5050,73 @@ int
 calcy(rect_t sc, int j, int steph, int h)
 {
 	return sc.y + j*steph ;
+}
+
+/**
+ * @brief 把sc-(w*h)分为(n-1)*(n-1)块, 从中心开始尝试放入, 向外扩散转圈, 直到有一个满足与其他窗口(ts)交叉比例(maxintersectradio), 得到的结果放入r
+ * 
+ * @param sc 
+ * @param w 
+ * @param h 
+ * @param n 
+ * @param ts 
+ * @param tsn 
+ * @param r 
+ * @param maxintersectradio 
+ * @return int 
+ */
+int
+fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+{
+	// todo: center iterator
+	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
+	int stepw = (sc.w - w) /(n-1);
+	int steph = (sc.h - h) /(n-1);
+	int centeri = n/2;
+	int centerj = n/2;
+	int k;
+	for(k = 0;;k++)
+	{
+		int i;
+		int j;
+		if(k == 0)
+			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+
+		i = centeri - k;
+		for(j=centerj - k;j<centerj+k;j++)
+		{
+			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		}
+
+		j = centerj + k;
+		for(i=centeri - k;i<centeri+k;i++)
+		{
+			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		}
+
+		i = centeri + k;
+		for(j=centerj + k;j>centerj-k;j--)
+		{
+			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		}
+		
+		j = centerj - k;
+		for(i=centeri + k;i>centeri-k;i--)
+		{
+			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		}
+	}
+	
+	return 0;
 }
 
 /**

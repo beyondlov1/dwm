@@ -111,7 +111,7 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 #include "gapgridsortedneat.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",      tile4 },    /* first entry is default */
+	{ "[]=",      tile4 },
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "HHH",      gapgridsortedneat },
@@ -120,7 +120,7 @@ static const Layout layouts[] = {
 	{ "HHH",      gapgrid },
 	{ "HHH",      gaplessgrid },
 	{ "[]=",      tile3 },    /* first entry is default */
-
+	{ "[]=",      tile5 }, 
 };
 
 /* key definitions */
@@ -173,7 +173,8 @@ static const char *taskgrouppath = "/home/beyond/software/bin/dwm-taskgroup/1.cs
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
-	{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{ MODKEY,                       XK_Return, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
@@ -238,6 +239,7 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	// { MODKEY,                       XK_d,      setlayoutt,      {.v = &layouts[4]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
+	{ MODKEY,                       XK_e,      setlayout,      {.v = &layouts[9]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_m,      setlayout,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
