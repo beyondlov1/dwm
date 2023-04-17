@@ -21,6 +21,7 @@
  * To understand everything else, start reading main().
  */
 #include <errno.h>
+#include <limits.h>
 #include <locale.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -342,6 +343,7 @@ static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static void focusgrid(const Arg *arg);
+static void focusgrid5(const Arg *arg);
 static void free_si(ScratchItem *si);
 static ScratchItem *findscratchitem(Client *c, ScratchGroup *sg);
 static void gap_copy(Gap *to, const Gap *from);
@@ -380,6 +382,8 @@ static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizebarwin(Monitor *m);
 static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
+static void resizex(const Arg *arg);
+static void resizey(const Arg *arg);
 static void resizerequest(XEvent *e);
 static void restack(Monitor *m);
 static void rerule(const Arg *arg);
@@ -2070,6 +2074,109 @@ focusgrid(const Arg *arg)
 
 }
 
+void
+focusgrid5(const Arg *arg)
+{
+	Client *c = NULL;
+	Client *cc = selmon->sel;
+
+	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return;
+	if (arg->i == FOCUS_LEFT) {
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if (cc && c != cc && c->x < cc->x && ISVISIBLE(c))
+			{
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
+					closest = c;
+					min = dist;
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_RIGHT) {
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if (cc && c != cc&& c->x > cc->x && ISVISIBLE(c))
+			{
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
+					closest = c;
+					min = dist;
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if (cc&& c != cc && c->y < cc->y && ISVISIBLE(c))
+			{
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
+					closest = c;
+					min = dist;
+				}
+			}
+		}
+		c = closest;
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		Client *closest = NULL;
+		int min = INT_MAX;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if (cc && c != cc&& c->y > cc->y && ISVISIBLE(c))
+			{
+				int dist = distance(cc, c);
+				if (min > distance(cc, c)) {
+					closest = c;
+					min = dist;
+				}
+			}
+		}
+		c = closest;
+	}
+	if(cc && selmon->lt[selmon->sellt] == &layouts[1] && !scratchgroupptr->isfloating){
+		if(arg->i == FOCUS_LEFT) {
+			Client *i;
+			for(i = selmon->clients;i;i=i->next){
+				if (!ISVISIBLE(i)) continue;
+				if(i->next == cc) break;
+			}
+			if (!i)
+			{
+				for(i = selmon->clients;i && ISVISIBLE(i) && i->next;i=i->next);
+			}
+			c = i;
+		}
+		if(arg->i == FOCUS_RIGHT) {
+			c = cc->next;
+			if (!c)
+			{
+				Client *i;
+				for(i = selmon->clients;i && !ISVISIBLE(i);i=i->next);
+				c = i;
+			}
+		}
+	}
+	if (c) {
+		focus(c);
+		restack(selmon);
+		arrange(selmon);
+	}
+
+}
 Atom
 getwinatomprop(Window win, Atom prop)
 {
@@ -3207,6 +3314,22 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
+}
+
+void
+resizex(const Arg *arg)
+{
+	Client *c = selmon->sel;
+	resizeclient(c, c->x, c->y, c->w + arg->f * c->mon->ww, c->h);
+	c->placed = 1;
+}
+
+void
+resizey(const Arg *arg)
+{
+	Client *c = selmon->sel;
+	resizeclient(c,c->x,c->y, c->w, c->h + arg->f * c->mon->wh);
+	c->placed = 1;
 }
 
 void
@@ -4480,11 +4603,10 @@ tile5(Monitor *m)
 	if (n == 0)
 		return;
 
+	// reverse
 	Client *tiledcs[n];
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-	{
 		tiledcs[n-i-1] = c;
-	}
 	int tsn = n;
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
@@ -4497,18 +4619,23 @@ tile5(Monitor *m)
 	for(i = 0;i<n;i++)
 	{
 		c = tiledcs[i];
-		int neww = selmon->ww * 0.45;
-		int newh = selmon->wh * 0.45;
+		int neww = selmon->ww * 0.75;
+		int newh = selmon->wh * 0.75;
 		// int neww = selmon->ww * 0.3;
 		// int newh = selmon->wh * 0.3;
-		
+
+		if(c->placed) 
+		{
+			neww = c->w;
+			newh = c->h;
+		}
 		rect_t r;
 		int radiostepn = 1;
 		double maxintersectradiostep[] = {0.0};
 		int ok = 0;
 		int radioi;
 		for(radioi = 0;radioi<radiostepn;radioi++){
-			ok = fill2x(sc, neww, newh, 9, ts, i, &r, maxintersectradiostep[radioi]);
+			ok = fill2x(sc, neww, newh, 13, ts, i, &r, maxintersectradiostep[radioi]);
 			if(ok) break;
 		}
 		if(!ok)
@@ -4519,9 +4646,9 @@ tile5(Monitor *m)
 			r.h = newh;
 		}
 
+		c->x = r.x;
+		c->y = r.y;
 		if(!c->placed) {
-			c->x = r.x;
-			c->y = r.y;
 			c->w = r.w;
 			c->h = r.h;
 		}
@@ -4531,7 +4658,8 @@ tile5(Monitor *m)
 		ts[i].w = c->w;
 		ts[i].h = c->h;
 
-		i++;
+		/*LOG_FORMAT("tile5 c->x,y,name %d %d %d %d, %s",c->x, c->y,c->w,c->h, c->name);*/
+
 	}
 
 	// move the axis
@@ -4545,7 +4673,6 @@ tile5(Monitor *m)
 	}
 
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
-		LOG_FORMAT("tile5 c->x,y,name %d, %d, %s",c->x, c->y, c->name);
 		c->bw = borderpx;
 		XWindowChanges wc;
 		wc.border_width = c->bw;
@@ -4932,33 +5059,83 @@ isintersectone(rect_t g, rect_t t)
 	return 0;
 }
 
+#define INIT_XY -1061109568
+
 #define SETINPOINT(x,y,t, tx,ty)  if(ispointin(x,y,t)){tx=x;ty=y;}
 
-#define RETURNINTERSECT(i,j,x1,y1,x2,y2, g,t) if(x1[i]>-1 && y1[i]>-1 && x2[j]>-1 && y2[j]>-1) return 1.0*(abs(x2[j]-x1[i])*abs(y2[j]-y1[i]))/MIN((abs(g.w)*abs(g.h)),(abs(t.w)*abs(t.h)));
+#define RETURNINTERSECT(i,j,x1,y1,x2,y2, g,t) if(x1[i]>INIT_XY && y1[i]>INIT_XY && x2[j]>INIT_XY && y2[j]>INIT_XY) return 1.0*(abs(x2[j]-x1[i])*abs(y2[j]-y1[i]))/MIN((abs(g.w)*abs(g.h)),(abs(t.w)*abs(t.h)));
 
+#define MAXX(g,t) mmax(4,g.x, g.x+g.w, t.x, t.x+t.w);
+#define MAXY(g,t) mmax(4,g.y, g.y+g.h, t.y, t.y+t.h);
+#define MINX(g,t) mmin(4,g.x, g.x+g.w, t.x, t.x+t.w);
+#define MINY(g,t) mmin(4,g.y, g.y+g.h, t.y, t.y+t.h);
+
+int 
+mmin(int num, ...)
+{
+	va_list ap;
+	va_start(ap,num);
+	int result = INT_MAX;
+	int temp = 0;
+	int i;
+	for (i = 0; i < num; i++) {
+		temp = va_arg(ap, int); 
+		result = MIN(result, temp);
+	}
+	va_end(ap);
+	return result;
+}
+int 
+mmax(int num, ...)
+{
+	va_list ap;
+	va_start(ap,num);
+	int result = INT_MIN;
+	int temp = 0;
+	int i;
+	for (i = 0; i < num; i++) {
+		temp = va_arg(ap, int); 
+		result = MAX(result, temp);
+	}
+	va_end(ap);
+	return result;
+}
 
 double
 intersectpercent(rect_t g, rect_t t)
 {
-	int x1[4] = {-1,-1,-1,-1};
-	int y1[4] = {-1,-1,-1,-1};
-	int x2[4] = {-1,-1,-1,-1};
-	int y2[4] = {-1,-1,-1,-1};
+	// rect 顺时针坐标
+	/*int x1[4] = {INIT_XY,INIT_XY,INIT_XY,INIT_XY};*/
+	/*int y1[4] = {INIT_XY,INIT_XY,INIT_XY,INIT_XY};*/
+	/*int x2[4] = {INIT_XY,INIT_XY,INIT_XY,INIT_XY};*/
+	/*int y2[4] = {INIT_XY,INIT_XY,INIT_XY,INIT_XY};*/
 
-	SETINPOINT(g.x, g.y, t, x1[0], y1[0])
-	SETINPOINT(g.x+g.w,g.y, t, x1[1], y1[1])
-	SETINPOINT(g.x+g.w,g.y+g.h, t ,x1[2], y1[2])
-	SETINPOINT(g.x, g.y+g.h, t ,x1[3], y1[3])
+	/*SETINPOINT(g.x, g.y, t, x1[0], y1[0])*/
+	/*SETINPOINT(g.x+g.w,g.y, t, x1[1], y1[1])*/
+	/*SETINPOINT(g.x+g.w,g.y+g.h, t ,x1[2], y1[2])*/
+	/*SETINPOINT(g.x, g.y+g.h, t ,x1[3], y1[3])*/
 	
-	SETINPOINT(t.x,t.y,g,x2[0],y2[0]) 
-	SETINPOINT(t.x+t.w,t.y, g,x2[1],y2[1]) 
-	SETINPOINT(t.x+t.w,t.y+t.h, g,x2[2],y2[2]) 
-	SETINPOINT(t.x, t.y+t.h, g,x2[3],y2[3]) 
+	/*SETINPOINT(t.x,t.y,g,x2[0],y2[0]) */
+	/*SETINPOINT(t.x+t.w,t.y, g,x2[1],y2[1]) */
+	/*SETINPOINT(t.x+t.w,t.y+t.h, g,x2[2],y2[2]) */
+	/*SETINPOINT(t.x, t.y+t.h, g,x2[3],y2[3]) */
 	
-	RETURNINTERSECT(0,2,x1, y1, x2,y2,g,t)
-	RETURNINTERSECT(2,0,x1, y1, x2,y2,g,t)
-	RETURNINTERSECT(1,3,x1, y1, x2,y2,g,t)
-	RETURNINTERSECT(3,1,x1, y1, x2,y2,g,t)
+	/*RETURNINTERSECT(0,2,x1, y1, x2,y2,g,t)*/
+	/*RETURNINTERSECT(2,0,x1, y1, x2,y2,g,t)*/
+	/*RETURNINTERSECT(1,3,x1, y1, x2,y2,g,t)*/
+	/*RETURNINTERSECT(3,1,x1, y1, x2,y2,g,t)*/
+	/*if(g.x <= t.x && (g.x + g.w) >= (t.x+t.w) && g.y >= t.y &&(g.y + g.h) <= (t.y + t.h)) return 1.0;*/
+	/*if(t.x <= g.x && (t.x + t.w) >= (g.x+g.w) && t.y >= g.y &&(t.y + t.h) <= (g.y + g.h)) return 1.0;*/
+
+	int maxx = MAXX(g, t);
+	int minx = MINX(g, t);
+	int maxy = MAXY(g, t);
+	int miny = MINY(g, t);
+	int interw = (g.w + t.w - (maxx - minx));
+	int interh = (g.h + t.h - (maxy - miny));
+	if (interw > 0 && interh > 0) {
+		return (1.0*interw*interh) / MIN((abs(g.w)*abs(g.h)),(abs(t.w)*abs(t.h)));
+	}
 	return 0;
 }
 
@@ -4969,7 +5146,7 @@ isintersect(rect_t g, rect_t ts[], int tsn)
 	for(i = 0; i<tsn; i++)
 	{
 		rect_t t = ts[i];
-		if(intersectpercent(g,t) > 0) return 1;
+		if(intersectpercent(g,t) > 0.0) return 1;
 	}
 	return 0;
 }

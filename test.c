@@ -4,6 +4,7 @@
 #include <math.h>
 #include <sys/timeb.h>
 #include <time.h>
+#include <stdarg.h>
 
 #define LENGTH(X) (sizeof X / sizeof X[0])
 
@@ -181,12 +182,31 @@ void test()
 	fflush(stdout);
 }
 
+
+int 
+mmax(int num, ...)
+{
+	va_list ap;
+	va_start(ap,num);
+	int result = 0;
+	int temp = 0;
+	int i;
+	for (i = 0; i < num; i++) {
+		temp = va_arg(ap, int); 
+		result = result > temp ? result:temp;
+	}
+	va_end(ap);
+	return result;
+}
+
 int main(int argc, char const *argv[])
 {
+	int g = mmax(4,1,2,3,4);
+	printf("aaaa: %d\n", g);
 	test();
 	readstruct2();
 
-    int aaa[5] = {1,2,3,4,5,6};
+    int aaa[6] = {1,2,3,4,5,6};
     printf("%p", aaa[2]);
     printf("%p", aaa[3]);
     printf("%p", aaa[4]);
