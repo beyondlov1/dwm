@@ -5269,38 +5269,39 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 
 		/*float interactradiox = {0.7,0.3,0.0};*/
 		/*float interactradioy = {0.7,0.3,0.0};*/
-		
+
 		i = centeri - k;
-		for(j=centerj - k;j<centerj+k;j++)
+		for(j=centerj;j<centerj+k;j++)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		j = centerj + k;
-		for(i=centeri - k;i<centeri+k;i++)
+		for(i=centeri;i<centeri+k;i++)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
+
 		i = centeri + k;
-		for(j=centerj + k;j>centerj-k;j--)
+		for(j=centerj;j>centerj-k;j--)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
-		
+
 		j = centerj - k;
-		for(i=centeri + k;i>centeri-k;i--)
+		for(i=centeri;i>centeri-k;i--)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 		
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 	}
 	
