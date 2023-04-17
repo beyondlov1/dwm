@@ -4619,8 +4619,9 @@ tile5(Monitor *m)
 	for(i = 0;i<n;i++)
 	{
 		c = tiledcs[i];
-		int neww = selmon->ww * 0.75;
-		int newh = selmon->wh * 0.75;
+		int fillblockn = 5;
+		int neww = sc.w * ((1.0*fillblockn*2/3+1)/ fillblockn);
+		int newh = sc.h * ((1.0*fillblockn*2/3+1)/ fillblockn);
 		// int neww = selmon->ww * 0.3;
 		// int newh = selmon->wh * 0.3;
 
@@ -4635,7 +4636,7 @@ tile5(Monitor *m)
 		int ok = 0;
 		int radioi;
 		for(radioi = 0;radioi<radiostepn;radioi++){
-			ok = fill2x(sc, neww, newh, 13, ts, i, &r, maxintersectradiostep[radioi]);
+			ok = fill2x(sc, neww, newh, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
 			if(ok) break;
 		}
 		if(!ok)
@@ -5101,6 +5102,12 @@ mmax(int num, ...)
 	return result;
 }
 
+double 
+interlinepercent(int x1, int w1, int x2, int w2)
+{
+	return (w1 + w2 - (MAX(x1, x2) - MIN(x1, x2)))/MIN(w1, w2);
+}
+
 double
 intersectpercent(rect_t g, rect_t t)
 {
@@ -5247,6 +5254,7 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 {
 	// todo: center iterator
 	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
+	int radioi;
 	int stepw = (sc.w - w) /(n-1);
 	int steph = (sc.h - h) /(n-1);
 	int centeri = n/2;
@@ -5259,11 +5267,9 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 		if(k == 0)
 			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-
+		/*float interactradiox = {0.7,0.3,0.0};*/
+		/*float interactradioy = {0.7,0.3,0.0};*/
+		
 		i = centeri - k;
 		for(j=centerj - k;j<centerj+k;j++)
 		{
@@ -5291,6 +5297,11 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
+		
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 	}
 	
 	return 0;
