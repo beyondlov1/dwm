@@ -4597,6 +4597,10 @@ tile4(Monitor *m)
 void
 tile5(Monitor *m)
 {
+	if (selmon->sel->isfloating) {
+		return;
+	}
+
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
 
@@ -4668,9 +4672,6 @@ tile5(Monitor *m)
 	// move the axis
 	int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
 	int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
-	if (selmon->sel->isfloating) {
-		offsetx = offsety = 0;
-	}
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 	{
