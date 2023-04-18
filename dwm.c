@@ -4622,11 +4622,15 @@ tile5(Monitor *m)
 	{
 		c = tiledcs[i];
 		int fillblockn = 5;
-		int initblock = (fillblockn - 1) * 4/5;
-		int neww = sc.w * initblock / (fillblockn-1);
-		int newh = sc.h * initblock / (fillblockn-1);
-		// int neww = selmon->ww * 0.3;
-		// int newh = selmon->wh * 0.3;
+		float radio = 1.0*5;
+		// 由下面5个公式推到出neww, newh
+		/*int initblock = (fillblockn - 1) *4/5;*/
+		/*int stepw = (sc.w - w) /(fillblockn-1);*/
+		/*int steph = (sc.h - h) /(fillblockn-1);*/
+		/*int neww = stepw * initblock;*/
+		/*int newh = steph * initblock;*/
+		int neww = sc.w * radio /(1+radio);
+		int newh = sc.h * radio /(1+radio);
 
 		if(c->placed) 
 		{
@@ -4671,7 +4675,7 @@ tile5(Monitor *m)
 		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
 		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
 
-		int gapx = 8;
+		int gapx = 9;
 		int gapy = 5;
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
