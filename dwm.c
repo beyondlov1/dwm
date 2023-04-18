@@ -3323,6 +3323,7 @@ resizex(const Arg *arg)
 	Client *c = selmon->sel;
 	resizeclient(c, c->x, c->y, c->w + arg->f * c->mon->ww, c->h);
 	c->placed = 1;
+	arrange(selmon);
 }
 
 void
@@ -3331,6 +3332,7 @@ resizey(const Arg *arg)
 	Client *c = selmon->sel;
 	resizeclient(c,c->x,c->y, c->w, c->h + arg->f * c->mon->wh);
 	c->placed = 1;
+	arrange(selmon);
 }
 
 void
@@ -4600,6 +4602,8 @@ tile5(Monitor *m)
 
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
+	int gapx = 9;
+	int gapy = 5;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -4625,25 +4629,26 @@ tile5(Monitor *m)
 		float radio = 1.0*5;
 		// 由下面5个公式推到出neww, newh
 		/*int initblock = (fillblockn - 1) *4/5;*/
-		/*int stepw = (sc.w - w) /(fillblockn-1);*/
-		/*int steph = (sc.h - h) /(fillblockn-1);*/
 		/*int neww = stepw * initblock;*/
 		/*int newh = steph * initblock;*/
 		int neww = sc.w * radio /(1+radio);
 		int newh = sc.h * radio /(1+radio);
+		int stepw = (sc.w - neww) /(fillblockn-1);
+		int steph = (sc.h - newh) /(fillblockn-1);
 
 		if(c->placed) 
 		{
-			neww = c->w;
-			newh = c->h;
+			neww = c->w + 2*gapx;
+			newh = c->h + 2*gapy;
 		}
+
 		rect_t r;
 		int radiostepn = 1;
 		double maxintersectradiostep[] = {0.0};
 		int ok = 0;
 		int radioi;
 		for(radioi = 0;radioi<radiostepn;radioi++){
-			ok = fill2x(sc, neww, newh, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
+			ok = fill2x(sc, neww, newh, stepw, steph, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
 			if(ok) break;
 		}
 		if(!ok)
@@ -4656,10 +4661,8 @@ tile5(Monitor *m)
 
 		c->x = r.x;
 		c->y = r.y;
-		if(!c->placed) {
-			c->w = r.w;
-			c->h = r.h;
-		}
+		c->w = r.w;
+		c->h = r.h;
 
 		ts[i].x = c->x;
 		ts[i].y = c->y;
@@ -4675,8 +4678,6 @@ tile5(Monitor *m)
 		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
 		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
 
-		int gapx = 9;
-		int gapy = 5;
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
 			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
@@ -5261,13 +5262,13 @@ calcy(rect_t sc, int j, int steph, int h)
  * @return int 
  */
 int
-fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+fill2x(rect_t sc, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
 	// todo: center iterator
 	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
 	int radioi;
-	int stepw = (sc.w - w) /(n-1);
-	int steph = (sc.h - h) /(n-1);
+	/*int stepw = (sc.w - w) /(n-1);*/
+	/*int steph = (sc.h - h) /(n-1);*/
 	int centeri = n/2;
 	int centerj = n/2;
 	int k;
