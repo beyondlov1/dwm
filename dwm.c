@@ -4620,8 +4620,9 @@ tile5(Monitor *m)
 	{
 		c = tiledcs[i];
 		int fillblockn = 5;
-		int neww = sc.w * ((1.0*fillblockn*2/3+1)/ fillblockn);
-		int newh = sc.h * ((1.0*fillblockn*2/3+1)/ fillblockn);
+		int initblock = (fillblockn-1) * 4 / 5 ;
+		int neww = sc.w * initblock / (fillblockn-1);
+		int newh = sc.h * initblock / (fillblockn-1);
 		// int neww = selmon->ww * 0.3;
 		// int newh = selmon->wh * 0.3;
 
@@ -4641,8 +4642,8 @@ tile5(Monitor *m)
 		}
 		if(!ok)
 		{
-			r.x = selmon->ww / 2 - neww / 2;
-			r.y = selmon->wh / 2 - newh / 2;
+			r.x = (selmon->ww - neww) / 2;
+			r.y = (selmon->wh - newh) / 2;
 			r.w = neww;
 			r.h = newh;
 		}
