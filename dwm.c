@@ -1730,8 +1730,9 @@ focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c)){
 		for (c = selmon->stack; c && !c->isfloating; c = c->snext);
-		/*if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);*/
-		if (!c) for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);
+		if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+		// NULL then focus master
+		/*if (!c) for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);*/
 	}
 	if (selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, 0);
@@ -4620,7 +4621,7 @@ tile5(Monitor *m)
 	{
 		c = tiledcs[i];
 		int fillblockn = 5;
-		int initblock = (fillblockn-1) * 4 / 5 ;
+		int initblock = (fillblockn - 1) * 4/5;
 		int neww = sc.w * initblock / (fillblockn-1);
 		int newh = sc.h * initblock / (fillblockn-1);
 		// int neww = selmon->ww * 0.3;
@@ -5286,6 +5287,13 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 		}
 
 
+		j = centerj - k;
+		for(i=centeri;i>centeri-k;i--)
+		{
+			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
+			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		}
+
 		i = centeri + k;
 		for(j=centerj;j>centerj-k;j--)
 		{
@@ -5293,12 +5301,6 @@ fill2x(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double m
 			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
-		j = centerj - k;
-		for(i=centeri;i>centeri-k;i--)
-		{
-			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		}
 		
 		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
