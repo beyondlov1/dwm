@@ -4668,6 +4668,9 @@ tile5(Monitor *m)
 	// move the axis
 	int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
 	int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+	if (selmon->sel->isfloating) {
+		offsetx = offsety = 0;
+	}
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 	{
