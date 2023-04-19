@@ -4602,8 +4602,8 @@ tile5(Monitor *m)
 
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
-	int gapx = 9;
-	int gapy = 5;
+	int gapx = 7;
+	int gapy = 7;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -4626,15 +4626,17 @@ tile5(Monitor *m)
 	{
 		c = tiledcs[i];
 		int fillblockn = 5;
-		float radio = 1.0*5;
-		// 由下面5个公式推到出neww, newh
-		/*int initblock = (fillblockn - 1) *4/5;*/
-		/*int neww = stepw * initblock;*/
-		/*int newh = steph * initblock;*/
-		int neww = sc.w * radio /(1+radio);
-		int newh = sc.h * radio /(1+radio);
-		int stepw = (sc.w - neww) /(fillblockn-1);
-		int steph = (sc.h - newh) /(fillblockn-1);
+		float radio = 0.8;
+		// 下面三个式子联合先求出initblock, 然后算出其他
+		/*neww = stepw * initblock;*/
+		/*stepw = (sc.w - neww) / (n-1)*/
+		/*radio = initblock * stepw / sc.w*/
+	        
+		int initblock = (radio * (fillblockn-1)) / (1-radio);
+		int stepw = sc.w  / (fillblockn-1 + initblock);
+		int steph = sc.h  / (fillblockn-1 + initblock);
+		int neww = initblock*stepw;
+		int newh = initblock*steph;
 
 		if(c->placed) 
 		{
