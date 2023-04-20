@@ -416,6 +416,7 @@ static void spawn(const Arg *arg);
 static void sspawn(const Arg *arg);
 static void stspawn(const Arg *arg);
 static void stsspawn(const Arg *arg);
+static void swap(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
@@ -2075,8 +2076,8 @@ focusgrid(const Arg *arg)
 
 }
 
-void
-focusgrid5(const Arg *arg)
+Client *
+nextclosestc(const Arg *arg)
 {
 	Client *c = NULL;
 	Client *cc = selmon->sel;
@@ -2171,13 +2172,79 @@ focusgrid5(const Arg *arg)
 			}
 		}
 	}
+	return c;
+}
+
+void
+focusgrid5(const Arg *arg)
+{
+	Client *c = nextclosestc(arg);
 	if (c) {
 		focus(c);
 		restack(selmon);
 		arrange(selmon);
 	}
-
 }
+
+void 
+swapclient(Client *c1, Client *c2, Monitor *m)
+{
+	if(!c1 || !c2) return;
+
+	Client *c;
+	Client head;
+	head.next = m->clients;
+
+	// 排序, fc为第一个, sc为第二个
+	Client *fc;
+	Client *sc;
+	for(c = m->clients; c; c = c->next){
+		if(c == c1){
+			fc = c1;
+			sc = c2;
+			break;
+		}
+		if(c == c2){
+			fc = c2;
+			sc = c1;
+			break;
+		}
+	}
+
+	Client *fcp = &head;
+	Client *scp = &head;
+	for(c = m->clients; c; c = c->next){
+		if(c->next == fc){
+			fcp = c;
+		}
+		if(c->next == sc){
+			scp = c;
+		}
+	}
+
+	Client *tmp;
+	tmp = fcp->next;
+	fcp->next = scp->next;
+	scp->next = tmp;
+
+	tmp = fc->next;
+	fc->next = sc->next;
+	sc->next = tmp;
+
+	m->clients = head.next;
+}
+
+void
+swap(const Arg *arg)
+{
+	Client *cnext;
+	do {
+		cnext = nextclosestc(arg);
+	}while (cnext && cnext->isfloating);
+	swapclient(selmon->sel, cnext, selmon);
+	arrange(selmon);
+}
+
 Atom
 getwinatomprop(Window win, Atom prop)
 {
