@@ -2670,6 +2670,7 @@ manageppidstick(Client *c){
 
 void 
 managestub(Client *c){
+	if(!managestubon) return;
 	LOG_FORMAT("managestub 1");
 	// 每个tag不能超过 n 个client, 超过则移动到下一个tag
 	int curisfloating = 0;

@@ -14,6 +14,7 @@ static const int showsystray        = 1;        /* 0 means no systray */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 0;        /* 0 means bottom bar */
 static const Bool viewontag         = True;     /* Switch view on tag switch */
+static const Bool managestubon         = False;     /* if total stub > screen stub(default 3); move new window to new tag */
 static const char *fonts[]          = { 
     "JetBrainsMono Nerd Font Mono:size=16",
     "JoyPixels:size=14:antialias=true:autohint=true" };
