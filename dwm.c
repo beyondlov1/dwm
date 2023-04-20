@@ -2082,7 +2082,7 @@ nextclosestc(const Arg *arg)
 	Client *c = NULL;
 	Client *cc = selmon->sel;
 
-	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return;
+	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen)) return NULL;
 	if (arg->i == FOCUS_LEFT) {
 		Client *closest = NULL;
 		int min = INT_MAX;
