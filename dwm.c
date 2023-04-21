@@ -1721,26 +1721,6 @@ enternotify(XEvent *e)
 	int cursorx = c->x + c->w/2;
 	int cursory = c->y + c->h/2;
 	XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);
-	/*if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,*/
-		/*None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)*/
-		/*return;*/
-	/*if (!getrootptr(&x, &y))*/
-		/*return;*/
-	/*do {*/
-		/*XMaskEvent(dpy, PointerMotionMask, &ev);*/
-		/*switch(ev.type) {*/
-		/*case ConfigureRequest:*/
-		/*case Expose:*/
-		/*case MapRequest:*/
-			/*handler[ev.type](&ev);*/
-			/*break;*/
-		/*case MotionNotify:*/
-
-			/*LOG("movemouse.motionNotify", c->name);*/
-			/*break;*/
-		/*}*/
-	/*} while (ev.type != ButtonRelease);*/
-	/*XUngrabPointer(dpy, CurrentTime);*/
 
 }
 
