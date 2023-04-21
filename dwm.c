@@ -1708,9 +1708,40 @@ enternotify(XEvent *e)
 		selmon = m;
 	} else if (!c || c == selmon->sel)
 		return;
+	
+	int oldx = c->x;
+	int oldy = c->y;
 	focus(c);
 	LOG("enternotify", c->name);
+	/*LOG_FORMAT("enternotify 2 %d %d", ev->x_root, ev->y_root);*/
 	arrange(m);
+
+	/*int cursorx = ev->x_root + c->x - oldx;*/
+	/*int cursory = ev->y_root + c->y - oldy;*/
+	int cursorx = c->x + c->w/2;
+	int cursory = c->y + c->h/2;
+	XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);
+	/*if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,*/
+		/*None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)*/
+		/*return;*/
+	/*if (!getrootptr(&x, &y))*/
+		/*return;*/
+	/*do {*/
+		/*XMaskEvent(dpy, PointerMotionMask, &ev);*/
+		/*switch(ev.type) {*/
+		/*case ConfigureRequest:*/
+		/*case Expose:*/
+		/*case MapRequest:*/
+			/*handler[ev.type](&ev);*/
+			/*break;*/
+		/*case MotionNotify:*/
+
+			/*LOG("movemouse.motionNotify", c->name);*/
+			/*break;*/
+		/*}*/
+	/*} while (ev.type != ButtonRelease);*/
+	/*XUngrabPointer(dpy, CurrentTime);*/
+
 }
 
 void
