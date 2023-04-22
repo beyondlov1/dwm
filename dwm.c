@@ -89,6 +89,7 @@
 
 
 static FILE *logfile;
+static FILE *actionlogfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -560,8 +561,8 @@ LOG_FORMAT(char *format, ...){
 
 	time_t tnow;
 	tnow=time(0); 
-    struct tm *sttm;  
-    sttm=localtime(&tnow);
+	struct tm *sttm;  
+	sttm=localtime(&tnow);
 	fprintf(logfile, "%04u-%02u-%02u %02u:%02u:%02u.%03u: ", sttm->tm_year + 1900, sttm->tm_mon + 1,
 			sttm->tm_mday, sttm->tm_hour, sttm->tm_min, sttm->tm_sec, us.tv_usec/1000);
 	va_list ap;
@@ -573,6 +574,23 @@ LOG_FORMAT(char *format, ...){
 }
 
 /* function implementations */
+void actionlog(char *action, Client *c)
+{
+	XClassHint ch = { NULL, NULL };
+	XGetClassHint(dpy, c->win, &ch);
+	char *class = ch.res_class ? ch.res_class : broken;
+
+	struct timeval us;
+	gettimeofday(&us,NULL);
+	fprintf(actionlogfile,"%ld\t%s\t%s\t%s\n", us.tv_sec*1000 + us.tv_usec/1000, action, class, c->name);
+	fflush(actionlogfile);
+	
+	if (ch.res_class)
+		XFree(ch.res_class);
+	if (ch.res_name)
+		XFree(ch.res_name);
+}
+
 void
 applyrules(Client *c)
 {
@@ -1695,9 +1713,18 @@ enternotify(XEvent *e)
 	Monitor *m;
 	XCrossingEvent *ev = &e->xcrossing;
 
-	// if(selmon->sel && selmon->sel->istemp) {
-	// 	killclientc(selmon->sel);
-	// }
+	/*if (selmon->sel && ev->window != selmon->sel->win) */
+	/*{*/
+		/*int cx = ev->x_root;*/
+		/*int cy = ev->y_root;*/
+		/*int offset = 10;*/
+		/*if(ev->x_root < selmon->sel->x + selmon->sel->bw) cx = selmon->sel->x + offset;*/
+		/*if(ev->x_root > selmon->sel->x + selmon->sel->w - selmon->sel->bw) cx = selmon->sel->x + selmon->sel->w - offset;*/
+		/*if(ev->y_root < selmon->sel->y + selmon->sel->bw) cy = selmon->sel->y + offset;*/
+		/*if(ev->y_root > selmon->sel->y + selmon->sel->h - selmon->sel->bw) cy = selmon->sel->y + selmon->sel->h - offset;*/
+		/*XWarpPointer(dpy, None, root, 0, 0, 0, 0, cx, cy);*/
+		/*return;*/
+	/*}*/
 
 	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
 		return;
@@ -1761,6 +1788,8 @@ focus(Client *c)
 		selmon->sel = c;
 		updateborder(c);
 		LOG_FORMAT("focus: after setfocus");
+
+		actionlog("focus", c);
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -2883,6 +2912,7 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
+	actionlog("manage", c);
 }
 
 void
@@ -6954,6 +6984,7 @@ main(int argc, char *argv[])
 {
 	close(2);
 	logfile = fopen("/home/beyond/m.log", "a");
+	actionlogfile = fopen("/home/beyond/action.log", "a");
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("dwm-"VERSION);
 	else if (argc != 1)
