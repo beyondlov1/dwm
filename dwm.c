@@ -1768,7 +1768,8 @@ void
 focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c)){
-		for (c = selmon->stack; c && !c->isfloating; c = c->snext);
+		for (c = selmon->stack; c; c = c->snext)
+			if (c->isfloating && ISVISIBLE(c)) break;
 		if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
 		// NULL then focus master
 		/*if (!c) for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);*/
@@ -1783,7 +1784,7 @@ focus(Client *c)
 		detachstack(c);
 		attachstack(c);
 		grabbuttons(c, 1);
-		LOG_FORMAT("focus: before setfocus");
+		LOG_FORMAT("focus: before setfocus, c->name:%s", c->name);
 		setfocus(c);
 		selmon->sel = c;
 		updateborder(c);
