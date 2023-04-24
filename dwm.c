@@ -3008,15 +3008,16 @@ void doublepage(Monitor *m)
 int doubled = 0;
 void doublepagemark(const Arg *arg){
 	if(doubled) {
-		cleardoublepage(1);
+		cleardoublepage(2);
 		return;
 	}
 	if (!topcs[0])
 	{
-		if((selmon->tagset[selmon->seltags] & TAGMASK) != TAGMASK){
-			Arg viewarg1 = {.ui = ~0};
-			view(&viewarg1);
-		}
+		// overview
+		/*if((selmon->tagset[selmon->seltags] & TAGMASK) != TAGMASK){*/
+			/*Arg viewarg1 = {.ui = ~0};*/
+			/*view(&viewarg1);*/
+		/*}*/
 		topcs[0] = selmon->sel;
 		Client *c = selmon->sel;
 		c->bw = borderpx;
@@ -3064,8 +3065,13 @@ void cleardoublepage(int v){
 		topcs[1]->isdoublepagemarked = 0;
 		topcs[0]->isdoubled = 0;
 		topcs[1]->isdoubled = 0;
-		if(v){
-			Arg viewarg = {.ui = ~0};
+		// overview
+		/*if (v == 1){*/
+			/*Arg viewarg = {.ui = ~0};*/
+			/*view(&viewarg);*/
+		/*}*/
+		if (v == 2) {
+			Arg viewarg = {.ui =selmon->pertag->prevtag};
 			view(&viewarg);
 		}
 	}
