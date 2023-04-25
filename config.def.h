@@ -156,6 +156,7 @@ static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://yo
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
+static const char *copyqcmd[] = {"copyq", "toggle", NULL };
 
 static const TaskGroup taskgroup1 = {
 	2,
@@ -178,6 +179,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Return, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
+	{ ControlMask,                  XK_space, spawn,          {.v = copyqcmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
 	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
