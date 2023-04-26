@@ -1736,6 +1736,7 @@ enternotify(XEvent *e)
 	} else if (!c || c == selmon->sel)
 		return;
 	
+	Client *oldc = selmon->sel;
 	int oldx = c->x;
 	int oldy = c->y;
 	focus(c);
@@ -1745,6 +1746,9 @@ enternotify(XEvent *e)
 
 	/*int cursorx = ev->x_root + c->x - oldx;*/
 	/*int cursory = ev->y_root + c->y - oldy;*/
+	if ((oldc && oldc->isfloating) || (c && c->isfloating)) {
+		return;
+	}
 	int cursorx = c->x + c->w/2;
 	int cursory = c->y + c->h/2;
 	XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);
