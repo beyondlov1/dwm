@@ -46,7 +46,7 @@
 #include <time.h>
 #include <dirent.h>
 #include<regex.h>
-
+#include <python3.8/Python.h>
 
 #include "drw.h"
 #include "util.h"
@@ -432,6 +432,7 @@ static void tile2(Monitor *);
 static void tile3(Monitor *);
 static void tile4(Monitor *);
 static void tile5(Monitor *);
+static void tile6(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -4811,6 +4812,151 @@ tile5(Monitor *m)
 		updateborder(c);
 	}
 }
+
+typedef struct XY XY ;
+struct XY
+{
+	int row;
+	int col;
+};
+
+static XY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
+
+int 
+fillspiral(rect_t sc, int w, int h, int i, rect_t ts[], int tsn, rect_t *r)
+{
+	if(!w || !h) return 0;
+	XY matcoor = spiral_index[i];
+	r->w = w;
+	r->h = h;
+	r->x = matcoor.col * w - w / 2;
+	r->y = matcoor.row * h - h / 2;
+	return 1;
+}
+
+int
+pyresort(Client *cs[], int csn, int resorted[])
+{
+	Py_Initialize();
+	PyRun_SimpleString("import sys");
+	PyRun_SimpleString("sys.path.append('./')");
+	PyObject *pmodule = PyImport_ImportModule("smartwin");
+	PyObject *pfunc = PyObject_GetAttrString(pmodule, "resort");
+	PyObject* pyParams = PyList_New(0);
+	Client *c;
+	int j;
+	for(j = 0; j<csn; j++)
+	{
+		c = cs[j];
+		PyList_Append(pyParams, Py_BuildValue("s", c->name));
+	}
+	PyObject* args = PyTuple_New(1);
+	PyTuple_SetItem(args, 0, pyParams);
+	PyObject *pValue =   PyEval_CallObject(pfunc, args);
+	if (PyList_Check(pValue)) {
+		int SizeOfList = PyList_Size(pValue);
+		for (int i = 0; i < SizeOfList; i++) {
+			PyObject *Item = PyList_GetItem(pValue, i);
+			int result;
+			PyArg_Parse(Item, "i", &result);
+			printf("%d\n", result);
+			resorted[i] = result;
+			Py_DECREF(Item);
+		}
+	}
+
+	Py_Finalize();
+}
+
+void
+tile6(Monitor *m)
+{
+
+	unsigned int i, n, h, mw,mx, my, ty;
+	Client *c;
+	int gapx = 7;
+	int gapy = 7;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	// reverse
+	Client *tiledcs[n];
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		tiledcs[n-i-1] = c;
+	int tsn = n;
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	sc.x = 1;
+	sc.y = 1;
+	sc.w = selmon->ww - 1;
+	sc.h = selmon->wh - 1;
+	/*int resorted[100];*/
+	/*pyresort(tiledcs,n,resorted);*/
+	/*for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)*/
+	for(i = 0;i<n;i++)
+	{
+		/*int resortedindex = resorted[i];*/
+		/*if(resortedindex < 0) continue;*/
+		/*c = tiledcs[resortedindex];*/
+		c = tiledcs[i];
+		int neww = sc.w * 0.8;
+		int newh = sc.h * 0.8;
+
+		if(c->placed) 
+		{
+			neww = c->w + 2*gapx;
+			newh = c->h + 2*gapy;
+		}
+
+		rect_t r;
+		int ok = 0;
+		ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+		if(!ok)
+		{
+			r.x = (selmon->ww - neww) / 2;
+			r.y = (selmon->wh - newh) / 2;
+			r.w = neww;
+			r.h = newh;
+		}
+
+		c->x = r.x;
+		c->y = r.y;
+		c->w = r.w;
+		c->h = r.h;
+
+		ts[i].x = c->x;
+		ts[i].y = c->y;
+		ts[i].w = c->w;
+		ts[i].h = c->h;
+
+		/*LOG_FORMAT("tile5 c->x,y,name %d %d %d %d, %s",c->x, c->y,c->w,c->h, c->name);*/
+
+	}
+
+	// move the axis
+	if (!selmon->sel->isfloating) {
+		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+
+		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		{
+			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
+			/*c->placed = 1;*/
+		}
+	}
+
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		updateborder(c);
+	}
+}
+
 
 void
 togglebar(const Arg *arg)
