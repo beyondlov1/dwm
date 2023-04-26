@@ -46,7 +46,6 @@
 #include <time.h>
 #include <dirent.h>
 #include<regex.h>
-#include <python3.8/Python.h>
 
 #include "drw.h"
 #include "util.h"
@@ -4834,48 +4833,6 @@ fillspiral(rect_t sc, int w, int h, int i, rect_t ts[], int tsn, rect_t *r)
 	return 1;
 }
 
-static int inited = 0;
-
-int
-pyresort(Client *cs[], int csn, int resorted[])
-{
-	if(!inited)
-	{
-		Py_Initialize();
-	}
-	PyRun_SimpleString("import sys");
-	/*PyRun_SimpleString("sys.path.append('./')");*/
-	/*PyRun_SimpleString("sys.path.append('/home/beyond/Documents/GithubProject/dwm/')");*/
-	PyRun_SimpleString("sys.path.append('/media/beyond/70f23ead-fa6d-4628-acf7-c82133c03245/home/beyond/Documents/GitHubProject/dwm')");
-	PyObject *pmodule = PyImport_ImportModule("smartwin");
-	PyObject *pfunc = PyObject_GetAttrString(pmodule, "resort");
-	PyObject* pyParams = PyList_New(0);
-	/*PyList_Append(pyParams, Py_BuildValue("s", "winaction\n"));*/
-	Client *c;
-	int j;
-	for(j = 0; j<csn; j++)
-	{
-		c = cs[j];
-		PyList_Append(pyParams, Py_BuildValue("s", c->name));
-	}
-	PyObject* args = PyTuple_New(1);
-	PyTuple_SetItem(args, 0, pyParams);
-	PyObject *pValue =   PyEval_CallObject(pfunc, args);
-	if (PyList_Check(pValue)) {
-		int SizeOfList = PyList_Size(pValue);
-		for (int i = 0; i < SizeOfList; i++) {
-			PyObject *Item = PyList_GetItem(pValue, i);
-			int result;
-			PyArg_Parse(Item, "i", &result);
-			printf("%d\n", result);
-			resorted[i] = result;
-			Py_DECREF(Item);
-		}
-	}
-
-	/*Py_Finalize();*/
-}
-
 void
 tile6(Monitor *m)
 {
@@ -4901,17 +4858,9 @@ tile6(Monitor *m)
 	sc.y = 1;
 	sc.w = selmon->ww - 1;
 	sc.h = selmon->wh - 1;
-	int resorted[100];
-	memset(resorted, 0, sizeof(resorted));
-	pyresort(tiledcs,n,resorted);
-	/*LOG_FORMAT("%d", resorted[0]);*/
-	/*for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)*/
 	for(i = 0;i<n;i++)
 	{
-		int resortedindex = resorted[i];
-		if(resortedindex < 0) continue;
-		c = tiledcs[resortedindex];
-		/*c = tiledcs[i];*/
+		c = tiledcs[i];
 		int neww = sc.w * 0.8;
 		int newh = sc.h * 0.8;
 
