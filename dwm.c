@@ -4946,10 +4946,10 @@ tile6(Monitor *m)
 			c->w = r.w;
 			c->h = r.h;
 
-			ts[i].x = c->x;
-			ts[i].y = c->y;
-			ts[i].w = c->w;
-			ts[i].h = c->h;
+			ts[resorteindex].x = c->x;
+			ts[resorteindex].y = c->y;
+			ts[resorteindex].w = c->w;
+			ts[resorteindex].h = c->h;
 
 		}
 	}
