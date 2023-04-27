@@ -20,7 +20,7 @@ def load_raw_dataset():
             time = int(items[0])
             action = items[1]
             winclass = items[2]
-            winname = items[3]
+            winname = items[3].strip()
             plines.append((time, action, winclass, winname))
 
         plines = [line for line in plines if line[1] == "focus"]
@@ -148,3 +148,5 @@ def train():
     # print(model.predict_output_word(["winaction\n"], topn=3))
     # print(model.wv.most_similar("winaction\n", topn=3))
     return model
+
+# print(load_raw_dataset())
