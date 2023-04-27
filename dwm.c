@@ -45,8 +45,9 @@
 #include <math.h>
 #include <time.h>
 #include <dirent.h>
-#include<regex.h>
+#include <regex.h>
 
+#include "http.c"
 #include "drw.h"
 #include "util.h"
 #include "list.h"
@@ -4837,6 +4838,50 @@ fillspiral(rect_t sc, int w, int h, int i, rect_t ts[], int tsn, rect_t *r)
 	return 1;
 }
 
+int
+pyresort(Client *cs[], int n, int resorted[])
+{
+	if(n==0) return 0;
+	int i;
+	Client *c;
+	char *names[n];
+	for(i=0;i<n;i++)
+	{
+		c = cs[i];
+		names[i] = c->name;
+	}
+	char *url = "http://localhost:8666";
+	char params[3000];
+	memset(params, 0, sizeof(params));
+	strcat(params, "clients=");
+
+	for(i=0;i<n;i++)
+	{
+		strcat(params, names[i]);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+	LOG_FORMAT("%s", url);
+	struct HttpResponse resp;
+	resp.content = malloc(1);
+	resp.size = 0;
+	resp.code = CURLE_OK;
+	int ok = httppost(url,params, &resp);
+	if (!ok) return 0;
+
+	int j = 0;
+	char *temp = strtok(resp.content,",");
+	while(temp)
+	{
+		LOG_FORMAT("pyresort %s", temp);
+		sscanf(temp,"%d",&resorted[j]);
+		j++;
+		temp = strtok(NULL,",");
+	}
+	free(resp.content);
+	return 1;
+}
+
 void
 tile6(Monitor *m)
 {
@@ -4862,41 +4907,87 @@ tile6(Monitor *m)
 	sc.y = 1;
 	sc.w = selmon->ww - 1;
 	sc.h = selmon->wh - 1;
-	for(i = 0;i<n;i++)
+	int initn = 30;
+	int resorted[initn];
+	memset(resorted, -1, sizeof(resorted));
+	int resortok = pyresort(tiledcs, n, resorted);
+	/*LOG_FORMAT("%d %d", resorted[0], resorted[1]);*/
+	/*for(i = 0;i<n;i++)*/
+	if(resortok)
 	{
-		c = tiledcs[i];
-		int neww = sc.w * 0.8;
-		int newh = sc.h * 0.8;
-
-		if(c->placed) 
+		for(i = 0;i<initn;i++)
 		{
-			neww = c->w + 2*gapx;
-			newh = c->h + 2*gapy;
-		}
+			int resorteindex = resorted[i];
+			if(resorteindex < 0 || resorteindex >= initn) continue;
+			c = tiledcs[resorteindex];
+			/*c = tiledcs[i];*/
+			int neww = sc.w * 0.8;
+			int newh = sc.h * 0.8;
 
-		rect_t r;
-		int ok = 0;
-		ok = fillspiral(sc, neww, newh, i, ts, i, &r);
-		if(!ok)
+			if(c->placed) 
+			{
+				neww = c->w + 2*gapx;
+				newh = c->h + 2*gapy;
+			}
+
+			rect_t r;
+			int ok = 0;
+			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			if(!ok)
+			{
+				r.x = (selmon->ww - neww) / 2;
+				r.y = (selmon->wh - newh) / 2;
+				r.w = neww;
+				r.h = newh;
+			}
+
+			c->x = r.x;
+			c->y = r.y;
+			c->w = r.w;
+			c->h = r.h;
+
+			ts[i].x = c->x;
+			ts[i].y = c->y;
+			ts[i].w = c->w;
+			ts[i].h = c->h;
+
+		}
+	}
+	else 
+	{
+		for(i = 0;i<n;i++)
 		{
-			r.x = (selmon->ww - neww) / 2;
-			r.y = (selmon->wh - newh) / 2;
-			r.w = neww;
-			r.h = newh;
+			c = tiledcs[i];
+			int neww = sc.w * 0.8;
+			int newh = sc.h * 0.8;
+
+			if(c->placed) 
+			{
+				neww = c->w + 2*gapx;
+				newh = c->h + 2*gapy;
+			}
+
+			rect_t r;
+			int ok = 0;
+			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			if(!ok)
+			{
+				r.x = (selmon->ww - neww) / 2;
+				r.y = (selmon->wh - newh) / 2;
+				r.w = neww;
+				r.h = newh;
+			}
+
+			c->x = r.x;
+			c->y = r.y;
+			c->w = r.w;
+			c->h = r.h;
+
+			ts[i].x = c->x;
+			ts[i].y = c->y;
+			ts[i].w = c->w;
+			ts[i].h = c->h;
 		}
-
-		c->x = r.x;
-		c->y = r.y;
-		c->w = r.w;
-		c->h = r.h;
-
-		ts[i].x = c->x;
-		ts[i].y = c->y;
-		ts[i].w = c->w;
-		ts[i].h = c->h;
-
-		/*LOG_FORMAT("tile5 c->x,y,name %d %d %d %d, %s",c->x, c->y,c->w,c->h, c->name);*/
-
 	}
 
 	// move the axis

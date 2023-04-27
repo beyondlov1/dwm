@@ -46,8 +46,7 @@ def create_adjacent_matrix_from(sentences, model):
     return mat
 
 
-def resort(sentences):
-    model = word2vecmain.train()
+def resort(model, sentences):
     mat = create_adjacent_matrix_from(sentences,model)
     # print(mat)
     k,_ = mat.shape
@@ -114,5 +113,9 @@ def resort(sentences):
         arrindexlist.append(int(posmat[x,y]))
     print(arrindexlist)
     return arrindexlist
+
+def train():
+    model = word2vecmain.train()
+    return model
 
 # resort(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"])
