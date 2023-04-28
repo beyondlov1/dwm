@@ -4949,7 +4949,7 @@ tile6(Monitor *m)
 	sc.y = 1;
 	sc.w = selmon->ww - 1;
 	sc.h = selmon->wh - 1;
-	int initn = 30;
+	int initn = 121;
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
 	int resortok = pyresort(tiledcs, n, resorted);
