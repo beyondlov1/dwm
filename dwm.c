@@ -20,6 +20,7 @@
  *
  * To understand everything else, start reading main().
  */
+#include <X11/X.h>
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
@@ -462,6 +463,7 @@ static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
 static void reltagd(const Arg *arg);
 static void removefromscratchgroup(const Arg *arg);
+static void replacechar(char *buf, char old, char new);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static Client *wintosystrayicon(Window w);
@@ -574,6 +576,22 @@ LOG_FORMAT(char *format, ...){
 	fflush(logfile);
 }
 
+void 
+getclass(Window w, char c[])
+{
+
+	XClassHint ch = { NULL, NULL };
+	XGetClassHint(dpy, w, &ch);
+	char *class = ch.res_class ? ch.res_class : broken;
+
+	strcpy(c, class);
+	
+	if (ch.res_class)
+		XFree(ch.res_class);
+	if (ch.res_name)
+		XFree(ch.res_name);
+}
+
 /* function implementations */
 void actionlog(char *action, Client *c)
 {
@@ -583,7 +601,10 @@ void actionlog(char *action, Client *c)
 
 	struct timeval us;
 	gettimeofday(&us,NULL);
-	fprintf(actionlogfile,"%ld\t%s\t%s\t%s\n", us.tv_sec*1000 + us.tv_usec/1000, action, class, c->name);
+	char name[256];
+	strcpy(name, c->name);
+	replacechar(name, ',',' ');
+	fprintf(actionlogfile,"%ld\t%s\t%s\t%s\n", us.tv_sec*1000 + us.tv_usec/1000, action, class, name);
 	fflush(actionlogfile);
 	
 	if (ch.res_class)
@@ -4838,30 +4859,51 @@ fillspiral(rect_t sc, int w, int h, int i, rect_t ts[], int tsn, rect_t *r)
 	return 1;
 }
 
+void
+replacechar(char *buf, char old, char new)
+{
+	int i = 0;
+ 	while(buf[i] != '\0')
+	{
+		if(buf[i] == old)
+		{
+		    buf[i] = new;
+		}
+		i++;
+	}
+}
+
 int
 pyresort(Client *cs[], int n, int resorted[])
 {
 	if(n==0) return 0;
 	int i;
-	Client *c;
-	char *names[n];
-	for(i=0;i<n;i++)
-	{
-		c = cs[i];
-		names[i] = c->name;
-	}
 	char *url = "http://localhost:8666";
 	char params[3000];
 	memset(params, 0, sizeof(params));
-	strcat(params, "clients=");
-
+	strcat(params, "names=");
 	for(i=0;i<n;i++)
 	{
-		strcat(params, names[i]);
+		char name[256];
+		strcpy(name, cs[i]->name);
+		replacechar(name, ',',' ');
+		strcat(params, name);
 		if(i!=n-1)
 			strcat(params, ",");
 	}
-	LOG_FORMAT("%s", url);
+	
+	strcat(params, "&");
+	strcat(params, "classes=");
+	for(i=0;i<n;i++)
+	{
+		char class[20];
+		getclass(cs[i]->win, class);
+		replacechar(class, ',',' ');
+		strcat(params, class);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
 	struct HttpResponse resp;
 	resp.content = malloc(1);
 	resp.size = 0;

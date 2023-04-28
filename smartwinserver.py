@@ -19,11 +19,14 @@ class Resquest(BaseHTTPRequestHandler):
         query = parse_qs(self.rfile.read(int(self.headers['content-length'])).decode("utf-8"))
         print(query)
         # 获取参数值
-        clients = query.get("clients")
-        clients = clients[0].split(",")
+        names = query.get("names")
+        names = names[0].split(",")
+        classes = query.get("classes")
+        classes = classes[0].split(",")
         # clients = self.headers.get_params()
         # print(clients)
-        resorted = smartwin.resort(model, clients)
+        print(names,classes)
+        resorted = smartwin.resort(model, (names, classes))
         buf = ",".join(list(map(str,resorted)))
 
         self.wfile.write(buf.encode())  #里面需要传入二进制数据，用encode()函数转换为二进制数据   #设置响应body，即前端页面要展示的数据

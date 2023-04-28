@@ -31,23 +31,34 @@ def has_decimal_part(fval):
     else:
         return 0
 
-def create_adjacent_matrix_from(sentences, model):
-    m = len(sentences)
-    mat = np.zeros((m,m))
-    for i in range(len(sentences)):
-        for j in range(len(sentences)):
-            if i == j:
-                mat[i,j] = 0
-                continue
-            if sentences[i] in model.wv and sentences[j] in model.wv:
-                mat[i,j] = 1/(model.wv.similarity(sentences[i], sentences[j])+1)
-            else:
-                mat[i,j] = 100
-    return mat
+def create_adjacent_matrix_from(sentences_tuple, models):
+    m = len(sentences_tuple[0])
+    mats = []
+    for k in range(len(models)):
+        model = models[k]
+        sentences = sentences_tuple[k]
+        m = len(sentences)
+        mat = np.zeros((m,m))
+        for i in range(len(sentences)):
+            for j in range(len(sentences)):
+                if i == j:
+                    mat[i,j] = 0
+                    continue
+                if sentences[i] in model.wv and sentences[j] in model.wv:
+                    mat[i,j] = 1/(model.wv.similarity(sentences[i], sentences[j])+1)
+                else:
+                    mat[i,j] = 100
+        mats.append(mat)
+    
+    print(mats)
+    resultmat = np.ones((m,m))
+    for mat in mats:
+        resultmat = np.multiply(resultmat, mat)
+    return resultmat
 
 
-def resort(model, sentences):
-    mat = create_adjacent_matrix_from(sentences,model)
+def resort(models, sentences_tuple):
+    mat = create_adjacent_matrix_from(sentences_tuple,models)
     # print(mat)
     k,_ = mat.shape
 
@@ -115,7 +126,6 @@ def resort(model, sentences):
     return arrindexlist
 
 def train():
-    model = word2vecmain.train()
-    return model
+    return word2vecmain.train()
 
-# resort(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"])
+# resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))

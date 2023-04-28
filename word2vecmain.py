@@ -50,7 +50,7 @@ def skip(validplines, skipwindow):
     data = filter(lambda x:x[0]!=x[1],data)
     return list(data)
 
-def create_dataset(skippeddata):
+def create_raw_dataset(skippeddata):
     X = []
     y = []
     ccount = {}
@@ -76,13 +76,19 @@ def create_dataset(skippeddata):
         # X.append([skippeddata[i][0][2]])
         # y.append(yw2i[skippeddata[i][1][2]])
     y = np.array(y)
+    return np.mat(X), y, yw2i, ywordlist
 
-    X = [[x[0]+" "+x[1]] for x in X]
-    # X = [[x[0]] for x in X]
+def create_name_dataset(X, y, yw2i, ywordlist):
+    X = [[x[1]] for x in X]
     X = np.mat(X)
     X_enc, xw2i, wordlist = onehot(X, 0)
     return X_enc,y, xw2i, wordlist, yw2i, ywordlist
 
+def create_class_dataset(X, y, yw2i, ywordlist):
+    X = [[x[0]] for x in X]
+    X = np.mat(X)
+    X_enc, xw2i, wordlist = onehot(X, 0)
+    return X_enc,y, xw2i, wordlist, yw2i, ywordlist
 
 def cutstr(s):
     return list(jb.cut(s, cut_all=False))
@@ -138,15 +144,17 @@ def tostring(x, wordlist):
 
 def train():
     skippeddata = skip(load_raw_dataset(), 2)
-    sentences = list(map(lambda x: [x[0][3], x[1][3]] , skippeddata))
+    class_sentences = list(map(lambda x: [x[0][2], x[1][2]] , skippeddata))
+    name_sentences = list(map(lambda x: [x[0][3], x[1][3]] , skippeddata))
     # print(sentences)
-    model = gensim.models.Word2Vec(sentences, min_count=3, window=2)
+    name_model = gensim.models.Word2Vec(name_sentences, min_count=3, window=2)
+    class_model = gensim.models.Word2Vec(class_sentences, min_count=3, window=2)
     # print(model)
     # print(model.raw_vocab)
     # print(model.wv.key_to_index)
     # print(model.wv["winaction\n"])
     # print(model.predict_output_word(["winaction\n"], topn=3))
     # print(model.wv.most_similar("winaction\n", topn=3))
-    return model
+    return name_model, class_model 
 
 # print(load_raw_dataset())
