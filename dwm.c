@@ -595,10 +595,10 @@ getclass(Window w, char c[])
 /* function implementations */
 void actionlog(char *action, Client *c)
 {
-	XClassHint ch = { NULL, NULL };
-	XGetClassHint(dpy, c->win, &ch);
-	char *class = ch.res_class ? ch.res_class : broken;
+	if (strstr(c->name,"Private")) return;
 
+	char class[64];
+	getclass(c->win, class);
 	struct timeval us;
 	gettimeofday(&us,NULL);
 	char name[256];
@@ -606,11 +606,6 @@ void actionlog(char *action, Client *c)
 	replacechar(name, ',',' ');
 	fprintf(actionlogfile,"%ld\t%s\t%s\t%s\n", us.tv_sec*1000 + us.tv_usec/1000, action, class, name);
 	fflush(actionlogfile);
-	
-	if (ch.res_class)
-		XFree(ch.res_class);
-	if (ch.res_name)
-		XFree(ch.res_name);
 }
 
 void
@@ -4274,9 +4269,15 @@ void stspawn(const Arg *arg){
 			getstworkingdir(workingdir, currpid);
 		}
 	}
-	char *cmd[] = {"st","-d",workingdir,NULL};
-	const Arg a = {.v = cmd};
-	spawn(&a);
+	if (workingdir) {
+		char *cmd[] = {"st","-d",workingdir,NULL};
+		const Arg a = {.v = cmd};
+		spawn(&a);
+	}else{
+		char *cmd[] = {"st",NULL};
+		const Arg a = {.v = cmd};
+		spawn(&a);
+	}
 }
 void stsspawn(const Arg *arg){
 	char workingdir[128] = "";
@@ -4896,7 +4897,7 @@ pyresort(Client *cs[], int n, int resorted[])
 	strcat(params, "classes=");
 	for(i=0;i<n;i++)
 	{
-		char class[20];
+		char class[64];
 		getclass(cs[i]->win, class);
 		replacechar(class, ',',' ');
 		strcat(params, class);
