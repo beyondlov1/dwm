@@ -4878,6 +4878,8 @@ int
 pyresort(Client *cs[], int n, int resorted[])
 {
 	if(n==0) return 0;
+	// diable for now
+	return 0;
 	int i;
 	char *url = "http://localhost:8666";
 	char params[3000];
