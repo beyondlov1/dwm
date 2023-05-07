@@ -344,6 +344,8 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void focusstackarrange(const Arg *arg);
+static void focuslast(const Arg *arg);
 static void focusgrid(const Arg *arg);
 static void focusgrid5(const Arg *arg);
 static void free_si(ScratchItem *si);
@@ -374,6 +376,8 @@ static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static void movex(const Arg *arg);
 static void movey(const Arg *arg);
+static int mmax(int num,...);
+static int mmin(int num,...);
 static Client *nexttiled(Client *c);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
@@ -426,6 +430,7 @@ static void switchermove(const Arg *arg);
 static void switchermove2(const Arg *arg);
 static void switchermove2cycle(const Arg *arg);
 static void switcherview(const Arg *arg);
+static void clientswitchermove(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -941,6 +946,22 @@ attachstack(Client *c)
 }
 
 void
+switcherbuttonpress(XButtonPressedEvent *ev)
+{
+	int rx = ev->x;
+	int ry = ev->y;
+	int iw = selmon->ww / 6;
+	int ih = selmon->wh / 6;
+	int col = rx/iw;
+	int row = ry/ih;
+	int tagindex = col+row*3;
+	unsigned int tags = 1 << tagindex;
+	const Arg arg = {.ui = tags};
+	view(&arg);
+	destroyswitcher(selmon);
+}
+
+void
 buttonpress(XEvent *e)
 {
 	unsigned int i, x, click;
@@ -1031,16 +1052,7 @@ buttonpress(XEvent *e)
 			}
 		}
 	}else if(ev->window == selmon->switcher){
-		int rx = ev->x;
-		int ry = ev->y;
-		int iw = selmon->ww / 6;
-		int ih = selmon->wh / 6;
-		int col = rx/iw;
-		int row = ry/ih;
-		int tagindex = col+row*3;
-		unsigned int tags = 1 << tagindex;
-		const Arg arg = {.ui = tags};
-		view(&arg);
+		clientswitcheraction(ev->x, ev->y);
 		destroyswitcher(selmon);
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -1643,6 +1655,48 @@ drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 	}
 }
 
+void
+drawclientswitcherwin(Window win, int ww, int wh)
+{
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	int i;
+	Client *c;
+	int maxx = INT_MIN;
+	int maxw = 0;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = 1.0*ww/(maxx-minx+maxw);
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = factor * c->x + offsetx;
+		y = factor * c->y + offsety;
+		w = factor * c->w;
+		h = factor * c->h;
+		if (c == selmon->sel) {
+			drw_setscheme(drw, scheme[SchemeSel]);
+		}else {
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+		drw_rect(drw, x, y, w, h, 1, 1);
+		drw_text(drw, x, y, w, h, 30, c->name, 0);
+	}
+
+	drw_map(drw,win, 0, 0, ww, wh);
+}
 
 void
 drawswitcher(Monitor *m)
@@ -1668,7 +1722,8 @@ drawswitcher(Monitor *m)
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcher);
-	drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));
+	/*drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));*/
+	drawclientswitcherwin(m->switcher, ww, wh);
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
@@ -1881,6 +1936,22 @@ focusstack(const Arg *arg)
 	}
 }
 
+void
+focusstackarrange(const Arg *arg)
+{
+	focusstack(arg);
+	arrange(selmon);
+}
+
+void
+focuslast(const Arg *arg)
+{
+	Client *lastfocused = selmon->sel->lastfocus;
+	if (lastfocused && lastfocused->win) {
+		focus(lastfocused);
+		arrange(selmon);
+	}
+}
 
 void 
 lru(Client *c)
@@ -3102,6 +3173,73 @@ void cleardoublepage(int v){
 	topcs[1] = NULL;
 }
 
+void 
+switchermotionnotify(XMotionEvent *ev)
+{
+	//todo
+	int rx = ev->x;
+	int ry = ev->y;
+	int iw = selmon->ww / 6;
+	int ih = selmon->wh / 6;
+	int col = rx/iw;
+	int row = ry/ih;
+	int tagindex = col+row*3;
+	unsigned int tags = 1 << tagindex;
+	if (selmon->tagset[selmon->seltags] != tags) {
+		const Arg arg = {.ui = tags};
+		view(&arg);
+		/*destroyswitcher(selmon);*/
+		const Arg layoutarg = {.v = &layouts[0]};
+		setlayout(&layoutarg);
+		drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, tagindex);
+		XMapWindow(dpy, selmon->switcher);
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+	}
+}
+
+void 
+clientswitcheraction(int rx, int ry)
+{
+	Client *c;
+	int ww = selmon->ww/2;
+	int wh = selmon->wh/2;
+	int maxx = INT_MIN;
+	int maxw = 0;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = 1.0*ww/(maxx-minx+maxw);
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x;
+		int w;
+		int y;
+		int h;
+		x = factor * c->x + offsetx;
+		w = factor * c->w;
+		y = factor * c->y + offsety;
+		h = factor * c->h;
+		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+			focus(c);
+			arrange(selmon);
+			drawclientswitcherwin(selmon->switcher, ww, wh);
+			XMapWindow(dpy, selmon->switcher);
+			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+			break;
+		}
+	}
+}
+
 void
 motionnotify(XEvent *e)
 {
@@ -3110,25 +3248,7 @@ motionnotify(XEvent *e)
 	XMotionEvent *ev = &e->xmotion;
 
 	if (ev->window == selmon->switcher) {
-		//todo
-		int rx = ev->x;
-		int ry = ev->y;
-		int iw = selmon->ww / 6;
-		int ih = selmon->wh / 6;
-		int col = rx/iw;
-		int row = ry/ih;
-		int tagindex = col+row*3;
-		unsigned int tags = 1 << tagindex;
-		if (selmon->tagset[selmon->seltags] != tags) {
-			const Arg arg = {.ui = tags};
-			view(&arg);
-			/*destroyswitcher(selmon);*/
-			const Arg layoutarg = {.v = &layouts[0]};
-    			setlayout(&layoutarg);
-			drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, tagindex);
-			XMapWindow(dpy, selmon->switcher);
-			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
-		}
+		clientswitcheraction(ev->x, ev->y);
 		return;
 	}
 
@@ -7050,6 +7170,17 @@ switchermove2cycle(const Arg *arg)
 	const Arg layoutarg = {.v = &layouts[0]};
     	setlayout(&layoutarg);
 	drawswitcherwin(selmon->switcher, selmon->ww/2, selmon->wh/2, selcurtagindex);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
+
+void 
+clientswitchermove(const Arg *arg)
+{
+	focusgrid5(arg);
+	int ww = selmon->ww/2;
+	int wh = selmon->wh/2;
+	drawclientswitcherwin(selmon->switcher, ww, wh);
 	XMapWindow(dpy, selmon->switcher);
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
