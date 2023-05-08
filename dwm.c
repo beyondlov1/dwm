@@ -136,6 +136,7 @@ struct Client {
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
+	Client *launchparent;
 	int focusfreq;
 	int fullscreenfreq;
 	int focusindex;
@@ -2901,6 +2902,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->oldbw = wa->border_width;
 	c->factx = factx;
 	c->facty = facty;
+	c->launchparent = selmon->sel;
 
 	updateicon(c);
 	updateicons(c);
@@ -5080,6 +5082,85 @@ pyresort(Client *cs[], int n, int resorted[])
 	return 1;
 }
 
+
+/*int*/
+/*launchtreeresort(Client *cs[], int n, int resorted[])*/
+/*{*/
+	/*int distmat[n][n];*/
+	/*int i;*/
+	/*int j;*/
+	/*for(i=0;i<n;i++)*/
+	/*{*/
+		/*for(j=0;j<n;j++)*/
+			/*if(cs[i]->launchparent == cs[j])*/
+				/*distmat[i][j] = 0;*/
+			/*else*/
+				/*distmat[i][j] = 1;*/
+	/*}*/
+
+	/*int m;//todo*/
+	/*int posmat[m][m];*/
+	/*int level;*/
+	/*int k,g;*/
+	/*int sign;*/
+	/*int l;*/
+	/*int remainindex[n];*/
+	/*int filled[n];*/
+	/*XY signs[] = {{-1,1},{-1,-1},{1,-1},{1,1}};*/
+	/*for(l=0;l<n;l++)*/
+	/*{*/
+		/*double minscore = INT_MAX;*/
+		/*int minitem = {-1,-1,-1} //(index, i, j)*/
+		/*for(level=0;level<m;i++)*/
+		/*{*/
+			/*for(k=0;k<level+1;k++)*/
+			/*{*/
+				/*for(g=0;g<level+1;g++)*/
+				/*{*/
+					/*for(sign=0;sign<4;sign++)*/
+					/*{*/
+						/*i = sign[0] * k;*/
+						/*j = sign[1] * g;*/
+						/*int mi = i + center;*/
+						/*int mj = j + center;*/
+						
+						/*if (posmat[mi][mj] < 0) {*/
+							/*int a;*/
+							/*for(a=0;a<n;a++)*/
+							/*{*/
+								/*int ri = remainindex[a];*/
+								/*if(ri>=0)*/
+								/*{*/
+									/*double score = 0.0;*/
+									/*int b;*/
+									/*for(b=0;b<l;b++)*/
+									/*{*/
+										/*int findex = filled[b][0];*/
+										/*int fi = filled[b][1];*/
+										/*int fj = filled[b][2];*/
+										/*score += log(pow(mi-fi,2) + pow(mj-fj,2)) * distmat[ri][findex];*/
+									/*}*/
+									/*if(score < minscore)*/
+									/*{*/
+										/*minscore =score;*/
+										/*minitem[0] = ri;*/
+										/*minitem[1] = mi;*/
+										/*minitem[2] = mj;*/
+									/*}*/
+								/*}*/
+							/*}*/
+						/*}*/
+					/*}*/
+				/*}	*/
+			/*}*/
+		/*}*/
+		/*filled[l] = minitem;*/
+		/*remainindex[minitem[0]] = -1;*/
+                /*posmat[minitem[1]][minitem[2]] = minitem[0];*/
+	/*}*/
+	/*return 1;*/
+/*}*/
+
 void
 tile6(Monitor *m)
 {
@@ -5988,6 +6069,11 @@ unfocus(Client *c, int setfocus)
 void
 unmanage(Client *c, int destroyed)
 {
+	Client *tmpc;
+	for(tmpc = selmon->clients;tmpc;tmpc = tmpc->next)
+		if (tmpc->launchparent) 
+			tmpc->launchparent = NULL;
+
 	// Client *debugc;
 	// LOG_FORMAT("unmanage c, name:%s, p:%p", c->name, c);
 	removefromscratchgroupc(c);
