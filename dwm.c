@@ -5083,6 +5083,55 @@ pyresort(Client *cs[], int n, int resorted[])
 }
 
 
+int
+pyresort2(Client *cs[], int n, int resorted[])
+{
+	if(n==0) return 0;
+	int i;
+	char *url = "http://localhost:8666";
+	char params[3000];
+	memset(params, 0, sizeof(params));
+
+	strcat(params, "launchparents=");
+	for(i=0;i<n;i++)
+	{
+		Client *lp = cs[i]->launchparent;
+		char str[3];
+		int foundindex = -1;
+		int j;
+		for(j=0;j<n;j++)
+		{
+			if (lp == cs[j]) {
+				foundindex = j;
+				break;
+			}
+		}
+		sprintf(str, "%d", foundindex);
+		strcat(params, str);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
+	struct HttpResponse resp;
+	resp.content = malloc(1);
+	resp.size = 0;
+	resp.code = CURLE_OK;
+	int ok = httppost(url,params, &resp);
+	if (!ok) return 0;
+
+	int j = 0;
+	char *temp = strtok(resp.content,",");
+	while(temp)
+	{
+		LOG_FORMAT("pyresort2 %s", temp);
+		sscanf(temp,"%d",&resorted[j]);
+		j++;
+		temp = strtok(NULL,",");
+	}
+	free(resp.content);
+	return 1;
+}
+
 /*int*/
 /*launchtreeresort(Client *cs[], int n, int resorted[])*/
 /*{*/
@@ -5189,7 +5238,7 @@ tile6(Monitor *m)
 	int initn = 121;
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
-	int resortok = pyresort(tiledcs, n, resorted);
+	int resortok = pyresort2(tiledcs, n, resorted);
 	/*LOG_FORMAT("%d %d", resorted[0], resorted[1]);*/
 	/*for(i = 0;i<n;i++)*/
 	if(resortok)
