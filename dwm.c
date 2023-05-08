@@ -1692,7 +1692,10 @@ drawclientswitcherwin(Window win, int ww, int wh)
 			drw_setscheme(drw, scheme[SchemeNorm]);
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
-		drw_text(drw, x, y, w, h, 30, c->name, 0);
+		char class[64];
+		getclass(c->win, class);
+		drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
 	}
 
 	drw_map(drw,win, 0, 0, ww, wh);
@@ -2576,6 +2579,12 @@ keypress(XEvent *e)
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
 	if(selmon->switcher)
 	{
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, CurrentTime);
+		XChangeProperty(dpy, root, netatom[NetActiveWindow],
+			XA_WINDOW, 32, PropModeReplace,
+			(unsigned char *) &(selmon->switcher), 1);
+		XSync(dpy, False);
+
 		for (i = 0; i < LENGTH(switcherkeys); i++)
 			if (keysym == switcherkeys[i].keysym
 			&& CLEANMASK(switcherkeys[i].mod) == CLEANMASK(ev->state)
