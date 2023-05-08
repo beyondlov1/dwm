@@ -21,6 +21,7 @@ typedef struct {
 	int screen;
 	Window root;
 	Drawable drawable;
+	Picture picture;
 	GC gc;
 	Clr *scheme;
 	Fnt *fonts;
@@ -55,3 +56,6 @@ int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned in
 
 /* Map functions */
 void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h);
+
+Picture drw_picture_create_resized(Drw *drw, char *src, unsigned int src_w, unsigned int src_h, unsigned int dst_w, unsigned int dst_h);
+void drw_pic(Drw *drw, int x, int y, unsigned int w, unsigned int h, Picture pic);

@@ -47,6 +47,7 @@
 #include <time.h>
 #include <dirent.h>
 #include <regex.h>
+#include <stdint.h>
 
 #include "http.c"
 #include "drw.h"
@@ -95,7 +96,7 @@ static FILE *actionlogfile;
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked, SchemeTiled}; /* color schemes */
-enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
+enum { NetSupported, NetWMName, NetWMIcon, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
 	   NetWmStateSkipTaskbar,
@@ -146,6 +147,8 @@ struct Client {
 	unsigned long pid;
 	int isscratched;
 	float factx, facty;
+	unsigned int icw, ich; Picture icon;
+	unsigned int icws[3], ichs[3]; Picture icons[3];
 };
 
 typedef struct {
@@ -350,6 +353,7 @@ static void focusgrid(const Arg *arg);
 static void focusgrid5(const Arg *arg);
 static void free_si(ScratchItem *si);
 static ScratchItem *findscratchitem(Client *c, ScratchGroup *sg);
+static void freeicon(Client *c);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
 static unsigned int getmaxtags();
@@ -361,6 +365,7 @@ static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
 static long getcurrusec();
+static Picture geticonprop(Window w, unsigned int *icw, unsigned int *ich);
 static void hidescratchgroup(ScratchGroup *sg);
 static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
@@ -463,6 +468,7 @@ static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
+static void updateicon(Client *c);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
@@ -1516,7 +1522,12 @@ drawbar(Monitor *m)
 				drw_setscheme(drw, scheme[m->sel == c ? SchemeSel : SchemeNorm]);
 				if (tw > 0) /* trap special handling of 0 in drw_text */
 				{
-					drw_text(drw, x, 0, tw, bh, lrpad / 2, c->name, 0);
+					if (c->icon) {
+						drw_text(drw, x, 0, tw, bh, lrpad / 2 + c->icw + ICONSPACING, c->name, 0);
+						drw_pic(drw, x + lrpad / 2, (bh - c->ich) / 2, c->icw, c->ich, c->icon);
+					}else{
+						drw_text(drw, x, 0, tw, bh, lrpad / 2, c->name, 0);
+					}
 					c->titlex = x;
 					c->titlew = tw;
 				}
@@ -1694,7 +1705,12 @@ drawclientswitcherwin(Window win, int ww, int wh)
 		drw_rect(drw, x, y, w, h, 1, 1);
 		char class[64];
 		getclass(c->win, class);
-		drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+		int size_level = 1;
+		if(c->icons[size_level]){
+			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
+		}else{
+			drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+		}
 		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
 	}
 
@@ -2886,6 +2902,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->factx = factx;
 	c->facty = facty;
 
+	updateicon(c);
+	updateicons(c);
 	updatetitle(c);
 
 	LOG_FORMAT("manage 1");
@@ -3444,6 +3462,11 @@ propertynotify(XEvent *e)
 		}
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
+			if (c == c->mon->sel)
+				drawbar(c->mon);
+		}
+		else if (ev->atom == netatom[NetWMIcon]) {
+			updateicon(c);
 			if (c == c->mon->sel)
 				drawbar(c->mon);
 		}
@@ -4117,6 +4140,7 @@ setup(void)
 	netatom[NetSystemTrayOrientation] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_ORIENTATION", False);
 	netatom[NetSystemTrayOrientationHorz] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_ORIENTATION_HORZ", False);
     netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
+	netatom[NetWMIcon] = XInternAtom(dpy, "_NET_WM_ICON", False);
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
@@ -5984,6 +6008,8 @@ unmanage(Client *c, int destroyed)
 	// LOG_FORMAT("unmanage 1");
 	detach(c);
 	detachstack(c);
+	freeicon(c);
+	freeicons(c);
 	// LOG_FORMAT("unmanage 2");
 	// for(debugc = selmon->stack; debugc; debugc=debugc->snext){
 	// 	LOG_FORMAT("unmanage 3, name:%s, p:%p", debugc->name, debugc);
@@ -6425,6 +6451,115 @@ getcurrusec(){
 	struct timeval us;
 	gettimeofday(&us,NULL);
 	return us.tv_sec * 1000000 + us.tv_usec;
+}
+
+
+static uint32_t prealpha(uint32_t p) {
+	uint8_t a = p >> 24u;
+	uint32_t rb = (a * (p & 0xFF00FFu)) >> 8u;
+	uint32_t g = (a * (p & 0x00FF00u)) >> 8u;
+	return (rb & 0xFF00FFu) | (g & 0x00FF00u) | (a << 24u);
+}
+
+Picture
+geticonpropv(Window win, unsigned int *picw, unsigned int *pich, int icon_size)
+{
+	int format;
+	unsigned long n, extra, *p = NULL;
+	Atom real;
+
+	if (XGetWindowProperty(dpy, win, netatom[NetWMIcon], 0L, LONG_MAX, False, AnyPropertyType, 
+						   &real, &format, &n, &extra, (unsigned char **)&p) != Success)
+		return None; 
+	if (n == 0 || format != 32) { XFree(p); return None; }
+
+	unsigned long *bstp = NULL;
+	uint32_t w, h, sz;
+	{
+		unsigned long *i; const unsigned long *end = p + n;
+		uint32_t bstd = UINT32_MAX, d, m;
+		for (i = p; i < end - 1; i += sz) {
+			if ((w = *i++) >= 16384 || (h = *i++) >= 16384) { XFree(p); return None; }
+			if ((sz = w * h) > end - i) break;
+			if ((m = w > h ? w : h) >= icon_size && (d = m - icon_size) < bstd) { bstd = d; bstp = i; }
+		}
+		if (!bstp) {
+			for (i = p; i < end - 1; i += sz) {
+				if ((w = *i++) >= 16384 || (h = *i++) >= 16384) { XFree(p); return None; }
+				if ((sz = w * h) > end - i) break;
+				if ((d = icon_size - (w > h ? w : h)) < bstd) { bstd = d; bstp = i; }
+			}
+		}
+		if (!bstp) { XFree(p); return None; }
+	}
+
+	if ((w = *(bstp - 2)) == 0 || (h = *(bstp - 1)) == 0) { XFree(p); return None; }
+
+	uint32_t icw, ich;
+	if (w <= h) {
+		ich = icon_size; icw = w * icon_size / h;
+		if (icw == 0) icw = 1;
+	}
+	else {
+		icw = icon_size; ich = h * icon_size / w;
+		if (ich == 0) ich = 1;
+	}
+	*picw = icw; *pich = ich;
+
+	uint32_t i, *bstp32 = (uint32_t *)bstp;
+	for (sz = w * h, i = 0; i < sz; ++i) bstp32[i] = prealpha(bstp[i]);
+
+	Picture ret = drw_picture_create_resized(drw, (char *)bstp, w, h, icw, ich);
+	XFree(p);
+
+	return ret;
+}
+
+Picture
+geticonprop(Window win, unsigned int *picw, unsigned int *pich)
+{
+	return geticonpropv(win, picw, pich, ICONSIZE);
+}
+
+void
+freeicon(Client *c)
+{
+	if (c->icon) {
+		XRenderFreePicture(dpy, c->icon);
+		c->icon = None;
+	}
+}
+
+void
+freeicons(Client *c)
+{
+	int i;
+	for(i = 0;i<3;i++)
+	{
+		if (c->icons[i]) {
+			XRenderFreePicture(dpy, c->icons[i]);
+			c->icons[i] = None;
+		}
+	}
+}
+
+void
+updateicon(Client *c)
+{
+	freeicon(c);
+	c->icon = geticonprop(c->win, &c->icw, &c->ich);
+}
+
+void
+updateicons(Client *c)
+{
+	freeicons(c);
+	int i;
+	for(i = 0;i<3;i++)
+	{
+		int j = pow(2,i);
+		c->icons[i] = geticonpropv(c->win, &(c->icws[i]), &(c->ichs[i]), j * 32);
+	}
 }
 
 void
