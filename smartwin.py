@@ -17,7 +17,7 @@ def create_adjacent_matrix(k):
     return mat
 
 def distance(v1, v2):
-    return np.log((v1[0] - v2[0])**2 + (v1[1] - v2[1]) **2)
+    return np.sqrt((v1[0] - v2[0])**2 + (v1[1] - v2[1]) **2)
 
 def center_trans(old, center):
     return tuple(map(lambda x:x-center, old))
@@ -127,14 +127,15 @@ def resort(models, sentences_tuple):
 
 def create_adjacent_matrix_from2(launchparents):
     m = len(launchparents)
-    resultmat = np.ones((m,m)) 
+    resultmat = np.zeros((m,m)) + 0.00001
     # for i in range(m):
         # for j in range(m):
             # resultmat[i][j] = abs(i-j)
     for i in range(m):
-        if launchparents[i] < 0: continue;
-        resultmat[i,launchparents[i]] = 0.1;
-        resultmat[launchparents[i],i] = 0.1;
+        if launchparents[i] < 0:
+            continue
+        resultmat[i,launchparents[i]] = 1
+        resultmat[launchparents[i],i] = 1
     print(resultmat)
     return resultmat
 
@@ -143,7 +144,8 @@ def resort2(launchparents):
     # print(mat)
     k,_ = mat.shape
 
-    n = int((np.sqrt(k)-1)/2) + 1 + has_decimal_part((np.sqrt(k)-1)/2)
+    # n = int((np.sqrt(k)-1)/2) + 1 + has_decimal_part((np.sqrt(k)-1)/2)
+    n = 6; # nlevel
     center = n-1
     posmat = np.zeros((2*n-1,2*n-1)) - 1
 
@@ -152,19 +154,29 @@ def resort2(launchparents):
     filled = [] #(index, i, j)
 
     # first
-    firstindex = np.argmin(mat.sum(axis=0), axis=0) 
-    # print(mat)
-    # print(firstindex)
-    # print(posmat)
-    filled.append((firstindex, center, center))
-    remainindex.remove(firstindex)
-    posmat[center,center] = firstindex
+    # firstindex = np.argmin(mat.sum(axis=0), axis=0) 
+    global lastfilledlist
+    if len(lastfilledlist) > 0:
+        for lastfilled in lastfilledlist:
+            if lastfilled[0] in remainindex:
+                filled.append(lastfilled)
+                remainindex.remove(lastfilled[0])
+                posmat[lastfilled[1],lastfilled[2]] = lastfilled[0]
+    else:
+        firstindex = 0
+        filled.append((firstindex, center, center))
+        remainindex.remove(firstindex)
+        posmat[center,center] = firstindex
 
-    for a in range(len(remainindex)):
-        minscore = float("inf")
-        minitem = (-1,-1,-1) #(index, i, j)
+    for index in range(len(remainindex)):
+        # minscore = float("inf")
+        # minitem = (-1,-1,-1) #(index, i, j)
+        maxscore = float("-inf")
+        maxitem = (-1,-1,-1) #(index, i, j)
 
-        for level in range(0, n):
+        filledlen = len(filled)
+        filledn = int((np.sqrt(filledlen)-1)/2) + 1 + has_decimal_part((np.sqrt(filledlen)-1)/2)
+        for level in range(0, filledn+1):
             for k in range(0, level+1):
                 for g in range(0, level+1):
                     for sign in [(-1,1), (-1,-1),(1,1),(1,-1)]:
@@ -180,21 +192,23 @@ def resort2(launchparents):
                                     findex = filleditem[0]
                                     fi = filleditem[1]
                                     fj = filleditem[2]
-                                    score *= distance((mi,mj), (fi, fj)) * mat[ri,findex]
-                                if score < minscore:
-                                    minscore = score
-                                    minitem = (ri,mi,mj)
-            if minscore != float("inf"):
-                break
-        filled.append(minitem)
+                                    score += (1/distance((mi,mj), (fi, fj))) * mat[ri,findex]
+                                if score > maxscore:
+                                    maxscore = score
+                                    maxitem = (ri,mi,mj)
+            # if maxscore != float("-inf"):
+            #     break     
+        filled.append(maxitem)
         # print(minitem)
-        remainindex.remove(minitem[0])
-        posmat[minitem[1], minitem[2]] = minitem[0]
+        remainindex.remove(maxitem[0])
+        posmat[maxitem[1], maxitem[2]] = maxitem[0]
     
+
+    lastfilledlist = filled
 
     # print(filled)
     # print(remainindex)
-    # print(posmat)
+    print(posmat)
     trace= [(0,0),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(1,2),(0,2),(-1,2),(-2,2),(-2,1),(-2,0),(-2,-1),(-2,-2),(-1,-2),(0,-2),(1,-2),(2,-2),(2,-1),(2,0),(2,1),(2,2),(2,3),(1,3),(0,3),(-1,3),(-2,3),(-3,3),(-3,2),(-3,1),(-3,0),(-3,-1),(-3,-2),(-3,-3),(-2,-3),(-1,-3),(0,-3),(1,-3),(2,-3),(3,-3),(3,-2),(3,-1),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4),(1,4),(0,4),(-1,4),(-2,4),(-3,4),(-4,4),(-4,3),(-4,2),(-4,1),(-4,0),(-4,-1),(-4,-2),(-4,-3),(-4,-4),(-3,-4),(-2,-4),(-1,-4),(0,-4),(1,-4),(2,-4),(3,-4),(4,-4),(4,-3),(4,-2),(4,-1),(4,0),(4,1),(4,2),(4,3),(4,4),(4,5),(3,5),(2,5),(1,5),(0,5),(-1,5),(-2,5),(-3,5),(-4,5),(-5,5),(-5,4),(-5,3),(-5,2),(-5,1),(-5,0),(-5,-1),(-5,-2),(-5,-3),(-5,-4),(-5,-5),(-4,-5),(-3,-5),(-2,-5),(-1,-5),(0,-5),(1,-5),(2,-5),(3,-5),(4,-5),(5,-5),(5,-4),(5,-3),(5,-2),(5,-1),(5,0),(5,1),(5,2),(5,3),(5,4),(5,5)]
     arrindexlist = []
     for atrace in trace:
@@ -211,4 +225,5 @@ def train():
     return word2vecmain.train()
 
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))
-resort2([1,0,3,2,3,4,3])
+# resort2([-1,-1,-1,-1,-1,-1,-1,6])
+lastfilledlist = []
