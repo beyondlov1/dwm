@@ -362,6 +362,7 @@ static Key switcherkeys[] = {
 
 	{0, XK_Return, toggleswitchers, {0}},
 	{0, XK_Escape, toggleswitchers, {0}},
+	{MODKEY, XK_Return, toggleswitchers, {0}},
 	{MODKEY, XK_grave, toggleswitchers, {0}},
 };
 
