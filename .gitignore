@@ -7,3 +7,4 @@ dwm.o
 util.o
 log/*
 .vscode/*
+__pycache__/*
