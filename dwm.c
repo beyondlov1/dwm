@@ -336,6 +336,7 @@ static void drawbars(void);
 static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
 static void doublepage(Monitor *m);
+static void doublepagemarkclient(Client *c);
 static void doublepagemark(const Arg *arg);
 static void dismiss(const Arg *arg);
 static void cleardoublepage(int view);
@@ -445,6 +446,8 @@ static void tile3(Monitor *);
 static void tile4(Monitor *);
 static void tile5(Monitor *);
 static void tile6(Monitor *);
+static void tile6zoom(const Arg *arg);
+static void tiledual(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglescratch(const Arg *arg);
@@ -3128,11 +3131,7 @@ void doublepage(Monitor *m)
 }
 
 int doubled = 0;
-void doublepagemark(const Arg *arg){
-	if(doubled) {
-		cleardoublepage(2);
-		return;
-	}
+void doublepagemarkclient(Client *c){
 	if (!topcs[0])
 	{
 		// overview
@@ -3140,8 +3139,7 @@ void doublepagemark(const Arg *arg){
 			/*Arg viewarg1 = {.ui = ~0};*/
 			/*view(&viewarg1);*/
 		/*}*/
-		topcs[0] = selmon->sel;
-		Client *c = selmon->sel;
+		topcs[0] = c;
 		c->bw = borderpx;
 		XWindowChanges wc;
 		wc.border_width = c->bw;
@@ -3150,8 +3148,7 @@ void doublepagemark(const Arg *arg){
 		c->isdoublepagemarked = 1;
 	}else if(!topcs[1])
 	{
-		topcs[1] = selmon->sel;
-		Client *c = selmon->sel;
+		topcs[1] = c;
 		c->bw = borderpx;
 		XWindowChanges wc;
 		wc.border_width = c->bw;
@@ -3175,6 +3172,14 @@ void doublepagemark(const Arg *arg){
 		topcs[0]->isdoubled = 1;
 		topcs[1]->isdoubled = 1;
 	}
+}
+
+void doublepagemark(const Arg *arg){
+	if(doubled) {
+		cleardoublepage(2);
+		return;
+	}
+	doublepagemarkclient(selmon->sel);
 }
 
 void cleardoublepage(int v){
@@ -5132,84 +5137,7 @@ pyresort2(Client *cs[], int n, int resorted[])
 	return 1;
 }
 
-/*int*/
-/*launchtreeresort(Client *cs[], int n, int resorted[])*/
-/*{*/
-	/*int distmat[n][n];*/
-	/*int i;*/
-	/*int j;*/
-	/*for(i=0;i<n;i++)*/
-	/*{*/
-		/*for(j=0;j<n;j++)*/
-			/*if(cs[i]->launchparent == cs[j])*/
-				/*distmat[i][j] = 0;*/
-			/*else*/
-				/*distmat[i][j] = 1;*/
-	/*}*/
-
-	/*int m;//todo*/
-	/*int posmat[m][m];*/
-	/*int level;*/
-	/*int k,g;*/
-	/*int sign;*/
-	/*int l;*/
-	/*int remainindex[n];*/
-	/*int filled[n];*/
-	/*XY signs[] = {{-1,1},{-1,-1},{1,-1},{1,1}};*/
-	/*for(l=0;l<n;l++)*/
-	/*{*/
-		/*double minscore = INT_MAX;*/
-		/*int minitem = {-1,-1,-1} //(index, i, j)*/
-		/*for(level=0;level<m;i++)*/
-		/*{*/
-			/*for(k=0;k<level+1;k++)*/
-			/*{*/
-				/*for(g=0;g<level+1;g++)*/
-				/*{*/
-					/*for(sign=0;sign<4;sign++)*/
-					/*{*/
-						/*i = sign[0] * k;*/
-						/*j = sign[1] * g;*/
-						/*int mi = i + center;*/
-						/*int mj = j + center;*/
-						
-						/*if (posmat[mi][mj] < 0) {*/
-							/*int a;*/
-							/*for(a=0;a<n;a++)*/
-							/*{*/
-								/*int ri = remainindex[a];*/
-								/*if(ri>=0)*/
-								/*{*/
-									/*double score = 0.0;*/
-									/*int b;*/
-									/*for(b=0;b<l;b++)*/
-									/*{*/
-										/*int findex = filled[b][0];*/
-										/*int fi = filled[b][1];*/
-										/*int fj = filled[b][2];*/
-										/*score += log(pow(mi-fi,2) + pow(mj-fj,2)) * distmat[ri][findex];*/
-									/*}*/
-									/*if(score < minscore)*/
-									/*{*/
-										/*minscore =score;*/
-										/*minitem[0] = ri;*/
-										/*minitem[1] = mi;*/
-										/*minitem[2] = mj;*/
-									/*}*/
-								/*}*/
-							/*}*/
-						/*}*/
-					/*}*/
-				/*}	*/
-			/*}*/
-		/*}*/
-		/*filled[l] = minitem;*/
-		/*remainindex[minitem[0]] = -1;*/
-                /*posmat[minitem[1]][minitem[2]] = minitem[0];*/
-	/*}*/
-	/*return 1;*/
-/*}*/
-
+float tile6initwinfactor = 0.8;
 void
 tile6(Monitor *m)
 {
@@ -5249,8 +5177,8 @@ tile6(Monitor *m)
 			if(resorteindex < 0 || resorteindex >= initn) continue;
 			c = tiledcs[resorteindex];
 			/*c = tiledcs[i];*/
-			int neww = sc.w * 0.8;
-			int newh = sc.h * 0.8;
+			int neww = sc.w * tile6initwinfactor;
+			int newh = sc.h * tile6initwinfactor;
 
 			if(c->placed) 
 			{
@@ -5286,8 +5214,8 @@ tile6(Monitor *m)
 		for(i = 0;i<n;i++)
 		{
 			c = tiledcs[i];
-			int neww = sc.w * 0.8;
-			int newh = sc.h * 0.8;
+			int neww = sc.w * tile6initwinfactor;
+			int newh = sc.h * tile6initwinfactor;
 
 			if(c->placed) 
 			{
@@ -5339,6 +5267,33 @@ tile6(Monitor *m)
 	}
 }
 
+void
+tile6zoom(const Arg *arg)
+{
+	tile6initwinfactor += arg->f;
+	arrange(selmon);
+}
+
+void
+tiledualclient(Client *c1,Client *c2)
+{
+	if(doubled) {
+		cleardoublepage(2);
+		return;
+	}
+	doublepagemarkclient(c1);
+	doublepagemarkclient(c2);
+}
+
+void
+tiledual(const Arg *arg)
+{
+	Client *cnext;
+	do {
+		cnext = nextclosestc(arg);
+	}while (cnext && cnext->isfloating);
+	tiledualclient(selmon->sel, cnext);
+}
 
 void
 togglebar(const Arg *arg)

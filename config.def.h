@@ -178,6 +178,8 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
+	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
 	{ MODKEY,                       XK_Return, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
@@ -225,6 +227,11 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,                       XK_k,      swap,       {.i = +2} },
 	{ MODKEY|ShiftMask,                       XK_l,      swap,       {.i = +1} },
 	{ MODKEY|ShiftMask,                       XK_h,      swap,       {.i = -1} },
+
+	{ MODKEY|ControlMask,                       XK_j,      tiledual,       {.i = -2} },
+	{ MODKEY|ControlMask,                       XK_k,      tiledual,       {.i = +2} },
+	{ MODKEY|ControlMask,                       XK_l,      tiledual,       {.i = +1} },
+	{ MODKEY|ControlMask,                       XK_h,      tiledual,       {.i = -1} },
 
 	{ MODKEY|ShiftMask,                       XK_n,      setfacty,       {0} },
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
