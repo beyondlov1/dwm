@@ -126,6 +126,33 @@ def resort(models, sentences_tuple):
     return arrindexlist
 
 def create_adjacent_matrix_from2(launchparents):
+
+    remainindex = [i for i in range(len(launchparents))]
+    chains = []
+    for i in range(len(launchparents)):
+        chain = [i]
+        last = i
+        for _ in range(len(launchparents)):
+            if launchparents[last] in chain or launchparents[last] == -1:
+                break
+            else:
+                chain.append(launchparents[last])
+                last = launchparents[last]
+        chains.append(chain)
+
+    print(chains)
+
+    m = len(launchparents)
+    resultmat = np.zeros((m,m)) + 0.00001
+    for i in range(len(chains)):
+        chain = chains[i]
+        for j in range(1,len(chain)):
+            w = -np.log(j-1+1/np.e)
+            resultmat[chain[0],chain[j]] = np.exp(1-j)
+            resultmat[chain[j],chain[0]] = np.exp(1-j)
+    print(resultmat)
+    return resultmat;
+
     m = len(launchparents)
     resultmat = np.zeros((m,m)) + 0.00001
     # for i in range(m):
@@ -225,5 +252,5 @@ def train():
     return word2vecmain.train()
 
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))
-# resort2([-1,-1,-1,-1,-1,-1,-1,6])
 lastfilledlist = []
+# resort2([-1,-1,-1,-1,-1,-1,-1,6])
