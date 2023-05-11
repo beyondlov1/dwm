@@ -5281,6 +5281,9 @@ tiledualclient(Client *c1,Client *c2)
 		cleardoublepage(2);
 		return;
 	}
+	if (!c1 || !c2) {
+		return;
+	}
 	doublepagemarkclient(c1);
 	doublepagemarkclient(c2);
 }
