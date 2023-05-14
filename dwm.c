@@ -354,6 +354,7 @@ static void enqueue(Client *c);
 static void enqueuestack(Client *c);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
+static void empty(const Arg *arg);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
@@ -381,6 +382,7 @@ static void hidescratchgroup(ScratchGroup *sg);
 static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
+static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
 static void killclientc(Client *c);
 static void manage(Window w, XWindowAttributes *wa);
@@ -524,6 +526,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[Expose] = expose,
 	[FocusIn] = focusin,
 	[KeyPress] = keypress,
+	[KeyRelease] = keyrelease,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
 	[MapNotify] = mapnotify,
@@ -2107,6 +2110,12 @@ expose(XEvent *e)
 }
 
 void
+empty(const Arg *arg)
+{
+
+}
+
+void
 focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c)){
@@ -2834,6 +2843,7 @@ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 void
 keypress(XEvent *e)
 {
+	LOG_FORMAT("keypress");
 	unsigned int i;
 	KeySym keysym;
 	XKeyEvent *ev;
@@ -2869,6 +2879,21 @@ keypress(XEvent *e)
 
 }
 
+void
+keyrelease(XEvent *e)
+{
+	LOG_FORMAT("keyrelease");
+	unsigned int i;
+	KeySym keysym;
+	XKeyEvent *ev;
+
+	ev = &e->xkey;
+	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
+	if(selmon->switcher && keysym == XK_Super_L)
+	{
+		destroyswitcher(selmon);
+	}
+}
 
 void 
 killclientc(Client* c)
