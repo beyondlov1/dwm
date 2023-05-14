@@ -560,7 +560,7 @@ static long lastspawntime;
 
 static int switchercurtagindex;
 
-static float tile6initwinfactor = 0.8;
+static float tile6initwinfactor = 0.9;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
