@@ -128,7 +128,9 @@ right(int **arr, int row ,int col, int x, int y, int result[2])
 		for(step = 0; step < row; step ++)
 		{
 			i = x + step;
-			int m = *((int*)arr + row*i + j);
+			printf("i,j:%d %d",i,j);
+			int m = *((int *)arr + col*i + j);
+			printf("m:%d",m);
 			if (i >= 0 && i < row) {
 				if(m == 1)
 				{
@@ -201,6 +203,24 @@ mmax(int num, ...)
 
 int main(int argc, char const *argv[])
 {
+	/*int arr1[1][7] = {{1,1,1,1,1,1,1}};*/
+	int arr1[1][7];
+	memset(arr1, 0, 7 * sizeof(int));
+	int i;
+	int j;
+	for(i=0;i<7;i++){
+		for(j=0;j<1;j++)
+		{
+			arr1[i][j] = 1;
+		}
+	}
+	printf("arr1 %d", arr1[0][0]);
+	int result[2];
+	/*right(arr1,1, 7, 0, 0, result);*/
+	int m = *((int*)arr1 + 1*0 + 1);
+	printf("m2:%d",m);
+	printf("m3:%d", (int)**(arr1+1));
+	printf("m3:%d", arr1[0][0]);
 	int g = mmax(4,1,2,3,4);
 	printf("aaaa: %d\n", g);
 	test();

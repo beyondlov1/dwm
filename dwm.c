@@ -170,6 +170,13 @@ typedef struct {
 	int gappx;
 } Gap;
 
+typedef struct SwitcherAction SwitcherAction ;
+struct SwitcherAction{
+	void (*drawfunc)(Window win, int ww, int wh);
+	void (*movefunc)(const Arg *);
+	void (*pointerfunc)(int rx, int ry);
+};
+
 typedef struct Pertag Pertag;
 struct Monitor {
 	char ltsymbol[16];
@@ -190,6 +197,8 @@ struct Monitor {
 	Client *stack;
 	Monitor *next;
 	Window barwin,switcher;
+	int switcherww, switcherwh, switcherwx, switcherwy;
+	SwitcherAction switcheraction;
 	const Layout *lt[2];
 	Pertag *pertag;
 };
@@ -379,6 +388,7 @@ static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static void mapnotify(XEvent *e);
 static void monocle(Monitor *m);
+static void monoclespace(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static void movex(const Arg *arg);
@@ -434,10 +444,7 @@ static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
 static void switchermove(const Arg *arg);
-static void switchermove2(const Arg *arg);
-static void switchermove2cycle(const Arg *arg);
 static void switcherview(const Arg *arg);
-static void clientswitchermove(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -488,6 +495,10 @@ static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 static void zoomi(const Arg *arg);
 static void smartzoom(const Arg *arg);
+static void left(int **arr, int row ,int col, int x, int y, int result[2]);
+static void right(int **arr, int row ,int col, int x, int y, int result[2]);
+static void up(int **arr, int row ,int col, int x, int y, int result[2]);
+static void down(int **arr, int row ,int col, int x, int y, int result[2]);
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -545,6 +556,8 @@ static long lastmanagetime;
 static long lastspawntime;
 
 static int switchercurtagindex;
+
+static float tile6initwinfactor = 0.8;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -974,6 +987,7 @@ switcherbuttonpress(XButtonPressedEvent *ev)
 void
 buttonpress(XEvent *e)
 {
+	LOG_FORMAT("buttonpress 1");
 	unsigned int i, x, click;
 	Arg arg = {0};
 	Client *c;
@@ -1062,7 +1076,7 @@ buttonpress(XEvent *e)
 			}
 		}
 	}else if(ev->window == selmon->switcher){
-		clientswitcheraction(ev->x, ev->y);
+		selmon->switcheraction.pointerfunc(ev->x, ev->y);
 		destroyswitcher(selmon);
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -1678,8 +1692,9 @@ drawclientswitcherwin(Window win, int ww, int wh)
 
 	int i;
 	Client *c;
-	int maxx = INT_MIN;
 	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
 	int minx = INT_MAX;
 	int maxy = INT_MIN;
 	int miny = INT_MAX;
@@ -1688,10 +1703,11 @@ drawclientswitcherwin(Window win, int ww, int wh)
 		maxx = MAX(c->x, maxx);
 		if (maxx == c->x) maxw = c->w;
 		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
 		minx = MIN(c->x, minx);
 		miny = MIN(c->y, miny);
 	}
-	float factor = 1.0*ww/(maxx-minx+maxw);
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
 	int offsetx = - factor * minx;
 	int offsety = - factor * miny;
 	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
@@ -1721,13 +1737,241 @@ drawclientswitcherwin(Window win, int ww, int wh)
 	drw_map(drw,win, 0, 0, ww, wh);
 }
 
+void 
+clientswitcheraction(int rx, int ry)
+{
+	Client *c;
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	int maxx = INT_MIN;
+	int maxw = 0;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = 1.0*ww/(maxx-minx+maxw);
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x;
+		int w;
+		int y;
+		int h;
+		x = factor * c->x + offsetx;
+		w = factor * c->w;
+		y = factor * c->y + offsety;
+		h = factor * c->h;
+		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+			focus(c);
+			arrange(selmon);
+			drawclientswitcherwin(selmon->switcher, ww, wh);
+			XMapWindow(dpy, selmon->switcher);
+			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+			break;
+		}
+	}
+}
+
+
+void 
+switchermove(const Arg *arg)
+{
+	selmon->switcheraction.movefunc(arg);
+}
+
+void 
+clientswitchermove(const Arg *arg)
+{
+	focusgrid5(arg);
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	drawclientswitcherwin(selmon->switcher, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
+
+void
+drawclientswitcherwinvertical(Window win, int ww, int wh)
+{
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	int n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+		n++;
+
+	int itemh = wh/n;
+	int itemw = ww;
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = 0;
+		y = itemh * i;
+		w = itemw;
+		h = itemh;
+		if (c == selmon->sel) {
+			drw_setscheme(drw, scheme[SchemeSel]);
+		}else {
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+		drw_rect(drw, x, y, w, h, 1, 1);
+		char class[64];
+		getclass(c->win, class);
+		int size_level = 0;
+		if(c->icons[size_level]){
+			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
+		}else{
+			drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+		}
+		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
+		i++;
+	}
+
+	drw_map(drw,win, 0, 0, ww, wh);
+}
+
+
+void 
+clientswitcheractionvertical(int rx, int ry)
+{
+	int n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+		n++;
+
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	int itemh = wh/n;
+	int itemw = ww;
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = 0;
+		y = itemh * i;
+		w = itemw;
+		h = itemh;
+		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+			focus(c);
+			arrange(selmon);
+			selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+			XMapWindow(dpy, selmon->switcher);
+			/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
+			break;
+		}
+		i++;
+	}
+}
+
+int
+matrixmove(const Arg *arg,int selindex, int row, int col, int result[])
+{
+	int arr[row][col];
+	int i;
+	int j;
+	for(i=0;i<row;i++)
+	{
+		for(j=0;j<col;j++){
+			arr[i][j] = 1;
+		}
+	}
+	int x = selindex/col;
+	int y = selindex%col;
+	result[0] = x;
+	result[1] = y;
+	if (arg->i == 1) {
+		right(arr, row, col, x, y, result);
+		selindex = result[0] * col + result[1];
+	}
+	if (arg->i == -1) {
+		left(arr, row, col, x, y, result);
+		selindex = result[0] * col + result[1];
+	}
+	if (arg->i == 2) {
+		up(arr, row, col, x, y, result);
+		selindex = result[0] * col + result[1];
+	}
+	if (arg->i == -2) {
+		down(arr, row, col, x, y, result);
+		selindex = result[0] * col + result[1];
+	}
+	LOG_FORMAT("maxtrix move %d %d %d", arg->i, result[0], result[1]);
+	return selindex;
+}
+
+void 
+clientswitchermovevertical(const Arg *arg)
+{
+	LOG_FORMAT("clientswitchermovevertical 1");
+	int selindex = 0, n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) n++;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (selmon->sel == c) {
+			break;
+		}
+		selindex++;
+	}
+
+	int row = n;
+	int col = 1;
+	int result[2];
+	selindex = matrixmove(arg, selindex, row, col, result);
+	LOG_FORMAT("clientswitchermovevertical 2 %d", selindex);
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (i == selindex) {
+			focus(c);
+			arrange(selmon);
+			break;
+		}
+		i++;
+	}
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
+	/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
+}
+
 void
 drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
 	
-	const Arg layoutarg = {.v = &layouts[0]};
-    	setlayout(&layoutarg);
+	int ww = m->ww/2;
+	int wh = m->wh/2;
+	int wx = m->ww/2-ww/2;
+	int wy = m->wh/2-wh/2;
+	/*int ww = m->ww * (1- tile6initwinfactor)/2;*/
+	/*int wh = m->wh * (1- tile6initwinfactor)/2;*/
+	/*int wx = m->ww-ww;*/
+	/*int wy = m->wh-wh;*/
+	m->switcheraction.drawfunc = drawclientswitcherwin;
+	m->switcheraction.movefunc = clientswitchermove;
+	m->switcheraction.pointerfunc = clientswitcheraction;
+	/*int ww = (1.0 - tile6initwinfactor)/2 * m->mw;*/
+	/*int wh = m->sel->h;*/
+	/*int wx = 0;*/
+	/*int wy = m->sel->y;*/
+	/*m->switcheraction.drawfunc = drawclientswitcherwinvertical;*/
+	/*m->switcheraction.movefunc = clientswitchermovevertical;*/
+	/*m->switcheraction.pointerfunc = clientswitcheractionvertical;*/
+
+	/*const Arg layoutarg = {.v = &layouts[0]};*/
+            /*setlayout(&layoutarg);*/
 
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
@@ -1736,17 +1980,16 @@ drawswitcher(Monitor *m)
 	};
 	
 	XClassHint ch = {"dwm", "dwm"};
-	int ww = m->ww/2;
-	int wh = m->wh/2;
-	int wx = m->ww/2-ww/2;
-	int wy = m->wh/2-wh/2;
+	m->switcherww = ww;
+	m->switcherwh = wh;
+	m->switcherwx = wx;
+	m->switcherwy = wy;
 	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcher);
-	/*drawswitcherwin(m->switcher, ww, wh, getcurtagindex(m));*/
-	drawclientswitcherwin(m->switcher, ww, wh);
+	m->switcheraction.drawfunc(m->switcher, ww, wh);
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
@@ -3077,6 +3320,31 @@ mapnotify(XEvent *e){
 }
 
 void
+monoclespace(Monitor *m)
+{
+	unsigned int n = 0;
+	Client *c;
+
+	for (c = m->clients; c; c = c->next)
+		if (ISVISIBLE(c))
+			n++;
+	if (n > 0) /* override layout symbol */
+		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+		unsigned int tmpbw = c->bw;
+		c->bw = 0;
+		if (m->switcher) {
+			resize(c, m->wx+m->switcherww, m->wy, m->ww - 2 * c->bw - m->switcherww, m->wh - 2 * c->bw, 0);
+		}else {
+			resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
+		}
+		c->bw = tmpbw;
+	}
+		
+	if(m->sel) m->sel->fullscreenfreq++;
+}
+
+void
 monocle(Monitor *m)
 {
 	unsigned int n = 0;
@@ -3231,48 +3499,6 @@ switchermotionnotify(XMotionEvent *ev)
 	}
 }
 
-void 
-clientswitcheraction(int rx, int ry)
-{
-	Client *c;
-	int ww = selmon->ww/2;
-	int wh = selmon->wh/2;
-	int maxx = INT_MIN;
-	int maxw = 0;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x) maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
-	}
-	float factor = 1.0*ww/(maxx-minx+maxw);
-	int offsetx = - factor * minx;
-	int offsety = - factor * miny;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		int x;
-		int w;
-		int y;
-		int h;
-		x = factor * c->x + offsetx;
-		w = factor * c->w;
-		y = factor * c->y + offsety;
-		h = factor * c->h;
-		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
-			focus(c);
-			arrange(selmon);
-			drawclientswitcherwin(selmon->switcher, ww, wh);
-			XMapWindow(dpy, selmon->switcher);
-			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
-			break;
-		}
-	}
-}
 
 void
 motionnotify(XEvent *e)
@@ -3282,7 +3508,7 @@ motionnotify(XEvent *e)
 	XMotionEvent *ev = &e->xmotion;
 
 	if (ev->window == selmon->switcher) {
-		clientswitcheraction(ev->x, ev->y);
+		selmon->switcheraction.pointerfunc(ev->x, ev->y);
 		return;
 	}
 
@@ -5128,7 +5354,7 @@ pyresort2(Client *cs[], int n, int resorted[])
 	char *temp = strtok(resp.content,",");
 	while(temp)
 	{
-		LOG_FORMAT("pyresort2 %s", temp);
+		/*LOG_FORMAT("pyresort2 %s", temp);*/
 		sscanf(temp,"%d",&resorted[j]);
 		j++;
 		temp = strtok(NULL,",");
@@ -5137,7 +5363,6 @@ pyresort2(Client *cs[], int n, int resorted[])
 	return 1;
 }
 
-float tile6initwinfactor = 0.8;
 void
 tile6(Monitor *m)
 {
@@ -7158,7 +7383,7 @@ void updatecurrentdesktop(void){
 	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
-#define ARRAY(arr,i,j) *((int*)arr + row*i + j); 
+#define ARRAY(arr,i,j) *((int*)arr + col*i + j); 
 
 void 
 left(int **arr, int row ,int col, int x, int y, int result[2])
@@ -7308,7 +7533,7 @@ up(int **arr, int row ,int col, int x, int y, int result[2])
 
 
 void
-switchermove2(const Arg *arg)
+tagswitchermove2(const Arg *arg)
 {
 	int occ = 0;
 	Client *c;
@@ -7322,30 +7547,30 @@ switchermove2(const Arg *arg)
 	for(i=0;i<row;i++)
 	{
 		for(j=0;j<col;j++){
-			arr[i][j] = (occ & (1<<(i*row+j)))?1:0;
+			arr[i][j] = (occ & (1<<(i*col+j)))?1:0;
 			LOG_FORMAT("switchermove2 %d", arr[i][j]);
 		}
 	}
-	int x = selcurtagindex/row;
-	int y = selcurtagindex%row;
+	int x = selcurtagindex/col;
+	int y = selcurtagindex%col;
 	int result[2];
 	result[0] = x;
 	result[1] = y;
 	if (arg->i == 1) {
 		right(arr, row, col, x, y, result);
-		selcurtagindex = result[0] * row + result[1];
+		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == -1) {
 		left(arr, row, col, x, y, result);
-		selcurtagindex = result[0] * row + result[1];
+		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == 2) {
 		up(arr, row, col, x, y, result);
-		selcurtagindex = result[0] * row + result[1];
+		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == -2) {
 		down(arr, row, col, x, y, result);
-		selcurtagindex = result[0] * row + result[1];
+		selcurtagindex = result[0] * col + result[1];
 	}
 	/*if(arg->i == -1) selcurtagindex -= 1;*/
 	/*if(arg->i == 1) selcurtagindex += 1;*/
@@ -7364,7 +7589,7 @@ switchermove2(const Arg *arg)
 }
 
 void
-switchermove(const Arg *arg)
+tagswitchermove(const Arg *arg)
 {
 	int selcurtagindex = switchercurtagindex;
 	if(arg->i == -1) selcurtagindex -= 1;
@@ -7384,7 +7609,7 @@ switchermove(const Arg *arg)
 }
 
 void 
-switchermove2cycle(const Arg *arg)
+tagswitchermove2cycle(const Arg *arg)
 {
 	int selcurtagindex = switchercurtagindex;
 	int occ = 0;
@@ -7411,16 +7636,6 @@ switchermove2cycle(const Arg *arg)
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
 
-void 
-clientswitchermove(const Arg *arg)
-{
-	focusgrid5(arg);
-	int ww = selmon->ww/2;
-	int wh = selmon->wh/2;
-	drawclientswitcherwin(selmon->switcher, ww, wh);
-	XMapWindow(dpy, selmon->switcher);
-	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
-}
 
 void
 switcherview(const Arg *arg)
