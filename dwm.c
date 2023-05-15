@@ -482,6 +482,7 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void updateicon(Client *c);
+static void updateicons(Client *c);
 static void view(const Arg *arg);
 static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
