@@ -1746,8 +1746,9 @@ clientswitcheraction(int rx, int ry)
 	Client *c;
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	int maxx = INT_MIN;
 	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
 	int minx = INT_MAX;
 	int maxy = INT_MIN;
 	int miny = INT_MAX;
@@ -1756,10 +1757,11 @@ clientswitcheraction(int rx, int ry)
 		maxx = MAX(c->x, maxx);
 		if (maxx == c->x) maxw = c->w;
 		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
 		minx = MIN(c->x, minx);
 		miny = MIN(c->y, miny);
 	}
-	float factor = 1.0*ww/(maxx-minx+maxw);
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
 	int offsetx = - factor * minx;
 	int offsety = - factor * miny;
 	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
@@ -3725,6 +3727,7 @@ propertynotify(XEvent *e)
 		}
 		else if (ev->atom == netatom[NetWMIcon]) {
 			updateicon(c);
+			updateicons(c);
 			if (c == c->mon->sel)
 				drawbar(c->mon);
 		}
