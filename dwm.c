@@ -1727,12 +1727,12 @@ drawclientswitcherwin(Window win, int ww, int wh)
 			drw_setscheme(drw, scheme[SchemeNorm]);
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
-		char class[64];
-		getclass(c->win, class);
 		int size_level = 1;
 		if(c->icons[size_level]){
 			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
 		}else{
+			char class[64];
+			getclass(c->win, class);
 			drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
 		}
 		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
@@ -1956,6 +1956,8 @@ void
 drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
+	if(!m->sel) return;
+	if(m->sel->isfloating) return;
 	
 	int ww = m->ww/2;
 	int wh = m->wh/2;
