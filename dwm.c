@@ -629,8 +629,9 @@ void actionlog(char *action, Client *c)
 {
 	if (strstr(c->name,"Private")) return;
 
-	char class[64];
-	getclass(c->win, class);
+	char *class = "NULL";
+	/*char class[64];*/
+	/*getclass(c->win, class);*/
 	struct timeval us;
 	gettimeofday(&us,NULL);
 	char name[256];
