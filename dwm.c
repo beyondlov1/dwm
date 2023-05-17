@@ -126,6 +126,7 @@ typedef struct Monitor Monitor;
 typedef struct Client Client;
 struct Client {
 	char name[256];
+	char class[64];
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
@@ -479,6 +480,7 @@ static void updatesystray(void);
 static void updatesystrayicongeom(Client *i, int w, int h);
 static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static void updatetitle(Client *c);
+static void updateclass(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void updateicon(Client *c);
@@ -1668,10 +1670,6 @@ drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 		list_for_each(head, &tagclientsmap[i]->head)
 		{
 			struct TagClient *tc = list_entry(head, struct TagClient,head);
-			XClassHint ch = { NULL, NULL };
-			XGetClassHint(dpy, tc->client->win, &ch);
-			char *class    = ch.res_class ? ch.res_class : broken;
-			char *instance = ch.res_name  ? ch.res_name  : broken;
 			drw_text(drw, col * ww / 3, y, ww / 3, bh, 30, tc->client->name, 0);
 			y = y + bh;
 		}
@@ -1732,9 +1730,7 @@ drawclientswitcherwin(Window win, int ww, int wh)
 		if(c->icons[size_level]){
 			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
 		}else{
-			char class[64];
-			getclass(c->win, class);
-			drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+			drw_text(drw, x, y+h/2-bh, w, bh, 30, c->class, 0);
 		}
 		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
 	}
@@ -1832,13 +1828,11 @@ drawclientswitcherwinvertical(Window win, int ww, int wh)
 			drw_setscheme(drw, scheme[SchemeNorm]);
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
-		char class[64];
-		getclass(c->win, class);
 		int size_level = 0;
 		if(c->icons[size_level]){
 			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
 		}else{
-			drw_text(drw, x, y+h/2-bh, w, bh, 30, class, 0);
+			drw_text(drw, x, y+h/2-bh, w, bh, 30, c->class, 0);
 		}
 		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
 		i++;
@@ -3184,6 +3178,7 @@ manage(Window w, XWindowAttributes *wa)
 	updateicon(c);
 	updateicons(c);
 	updatetitle(c);
+	updateclass(c);
 
 	LOG_FORMAT("manage 1");
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
@@ -3726,6 +3721,11 @@ propertynotify(XEvent *e)
 		}
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
+			if (c == c->mon->sel)
+				drawbar(c->mon);
+		}
+		if (ev->atom == XA_WM_CLASS) {
+			updateclass(c);
 			if (c == c->mon->sel)
 				drawbar(c->mon);
 		}
@@ -5317,8 +5317,7 @@ pyresort(Client *cs[], int n, int resorted[])
 	strcat(params, "classes=");
 	for(i=0;i<n;i++)
 	{
-		char class[64];
-		getclass(cs[i]->win, class);
+		char *class = cs[i]->class;
 		replacechar(class, ',',' ');
 		strcat(params, class);
 		if(i!=n-1)
@@ -6753,14 +6752,14 @@ updatetitle(Client *c)
 {
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
 		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
-	// char *subname;
-	// for(subname = c->name;*subname != '\0'; subname++);
-	// for(;subname != c->name && *subname != '-'; subname--);
-	// if (subname == c->name ) return;
-	// for (; *subname != '\0' && (*subname == ' ' || *subname == '-'); subname++);
-	// if(subname[0] != '\0' && subname[1] != '\0') strcpy(c->name, subname);
 	if (c->name[0] == '\0') /* hack to mark broken clients */
 		strcpy(c->name, broken);
+}
+
+void
+updateclass(Client *c)
+{
+	getclass(c->win, c->class);
 }
 
 void
