@@ -197,9 +197,10 @@ struct Monitor {
 	Client *sel;
 	Client *stack;
 	Monitor *next;
-	Window barwin,switcher;
+	Window barwin,switcher,switcherbarwin;
 	int switcherww, switcherwh, switcherwx, switcherwy;
-	SwitcherAction switcheraction;
+	int switcherbarww, switcherbarwh, switcherbarwx, switcherbarwy;
+	SwitcherAction switcheraction, switcherbaraction;
 	const Layout *lt[2];
 	Pertag *pertag;
 };
@@ -1688,6 +1689,108 @@ drawswitcherwin(Window win, int ww, int wh, int curtagindex)
 }
 
 void
+drawswitcherbar(Window switcherbarwin, int ww, int wh)
+{
+	int boxs = drw->fonts->h / 9;
+	int boxw = drw->fonts->h / 6 + 2;
+	unsigned int i, occ = 0, urg = 0, occt = 0;
+	Client *c;
+	int n;
+	Monitor *m = selmon;
+
+	/*XMoveResizeWindow(dpy,switcherbarwin, wx,wy, ww, wh);*/
+
+	for (c = m->clients; c; c = c->next) {
+		if (ISVISIBLE(c))
+			n++;
+		occ |= c->tags;
+		if(!c->isfloating) occt |= c->tags;
+		if (c->isurgent)
+			urg |= c->tags;
+	}
+
+	int x = 0,w = 0;
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, x, 0, ww, bh, 1, 1);
+	for (i = 0; i < LENGTH(tags); i++) {
+		/* Do not draw vacant tags */
+		if(!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+			continue;
+		w = TEXTW(tags[i]);
+		int colorindex = SchemeNorm;
+		if (occt & 1 << i) {
+			colorindex = SchemeTiled;
+		}
+		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel :colorindex]);
+
+		// update tag title
+		Client *c;
+		for(c = m->stack;c;c = c->snext){
+			if (!c->isfloating && (c->tags & (1 << i))) {
+				break;
+			}
+		}
+		if (c) {
+			char tagname[20];
+			int tagnamelen = strlen(tags[i]);
+			do {
+				tagnamelen ++;
+				snprintf(tagname, tagnamelen,"%d-%s",i + 1, c->name);
+			}while (TEXTW(tagname) < TEXTW(tags[i]) && tagnamelen < 20);
+			drw_text(drw, x, 0, w, bh, lrpad / 2,tagname, urg & 1 << i);
+		}else {
+			drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+		}
+
+		x += w;
+	}
+	w = blw = TEXTW(m->ltsymbol);
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
+
+
+	drw_map(drw, switcherbarwin, 0, 0, ww, wh);
+}
+
+void 
+switcherbaraction(int rx, int ry)
+{
+	Monitor *m = selmon;
+	if(ry >0 && ry < selmon->switcherbarwh){
+		int x = 0, i = 0;
+		Client *c;
+		unsigned int occ = 0;
+		for(c = m->clients; c; c=c->next)
+			occ |= c->tags;
+		do {
+			/* Do not reserve space for vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
+			x += TEXTW(tags[i]);
+		} while (rx >= x && ++i < LENGTH(tags));
+		if (i < LENGTH(tags) && 1 << i != selmon->tagset[selmon->seltags]) {
+			const Arg arg = {.ui = 1 << i};
+			view(&arg);
+			m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);
+			m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
+		}else{
+			x += blw;
+
+			for(i = 0; i < LENGTH(launchers); i++) {
+				x += TEXTW(launchers[i].name);
+			}
+
+			Client *vc;
+			for (vc = selmon->clients; vc; vc = vc->next) {
+				if (ISVISIBLE(vc)) {
+					x += vc->titlew;
+				}
+			}
+		}
+	}
+}
+
+void
 drawclientswitcherwin(Window win, int ww, int wh)
 {
 	drw_setscheme(drw, scheme[SchemeNorm]);
@@ -1958,23 +2061,6 @@ drawswitcher(Monitor *m)
 	int wh = m->wh/2;
 	int wx = m->ww/2-ww/2;
 	int wy = m->wh/2-wh/2;
-	/*int ww = m->ww * (1- tile6initwinfactor)/2;*/
-	/*int wh = m->wh * (1- tile6initwinfactor)/2;*/
-	/*int wx = m->ww-ww;*/
-	/*int wy = m->wh-wh;*/
-	m->switcheraction.drawfunc = drawclientswitcherwin;
-	m->switcheraction.movefunc = clientswitchermove;
-	m->switcheraction.pointerfunc = clientswitcheraction;
-	/*int ww = (1.0 - tile6initwinfactor)/2 * m->mw;*/
-	/*int wh = m->sel->h;*/
-	/*int wx = 0;*/
-	/*int wy = m->sel->y;*/
-	/*m->switcheraction.drawfunc = drawclientswitcherwinvertical;*/
-	/*m->switcheraction.movefunc = clientswitchermovevertical;*/
-	/*m->switcheraction.pointerfunc = clientswitcheractionvertical;*/
-
-	/*const Arg layoutarg = {.v = &layouts[0]};*/
-            /*setlayout(&layoutarg);*/
 
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
@@ -1983,10 +2069,15 @@ drawswitcher(Monitor *m)
 	};
 	
 	XClassHint ch = {"dwm", "dwm"};
+
+
 	m->switcherww = ww;
 	m->switcherwh = wh;
 	m->switcherwx = wx;
 	m->switcherwy = wy;
+	m->switcheraction.drawfunc = drawclientswitcherwin;
+	m->switcheraction.movefunc = clientswitchermove;
+	m->switcheraction.pointerfunc = clientswitcheraction;
 	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
@@ -1996,6 +2087,22 @@ drawswitcher(Monitor *m)
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
+
+	m->switcherbarww = ww;
+	m->switcherbarwh = bh;
+	m->switcherbarwx = wx;
+	m->switcherbarwy = wy+wh;
+	m->switcherbaraction.drawfunc = drawswitcherbar;
+	m->switcherbaraction.movefunc = NULL;
+	m->switcherbaraction.pointerfunc = switcherbaraction;
+	m->switcherbarwin = XCreateWindow(dpy, root, wx, wy+wh, ww, bh, 0, DefaultDepth(dpy, screen),
+				CopyFromParent, DefaultVisual(dpy, screen),
+				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
+	XMapWindow(dpy, m->switcherbarwin);
+	m->switcherbaraction.drawfunc(m->switcherbarwin, ww, bh);
+	XMapRaised(dpy, m->switcherbarwin);
+	XSetClassHint(dpy, m->switcherbarwin, &ch);
 }
 
 void 
@@ -2009,6 +2116,10 @@ destroyswitcher(Monitor *m)
 	XUnmapWindow(dpy, m->switcher);
 	XDestroyWindow(dpy, m->switcher);
 	selmon->switcher = 0L;	
+
+	XUnmapWindow(dpy, m->switcherbarwin);
+	XDestroyWindow(dpy, m->switcherbarwin);
+	selmon->switcherbarwin = 0L;	
 }
 
 void
@@ -2069,6 +2180,9 @@ enternotify(XEvent *e)
 
 	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
 		return;
+	if (selmon->switcher) {
+		return;
+	}
 	c = wintoclient(ev->window);
 	m = c ? c->mon : wintomon(ev->window);
 	if (m != selmon) {
@@ -3535,6 +3649,10 @@ motionnotify(XEvent *e)
 
 	if (ev->window == selmon->switcher) {
 		selmon->switcheraction.pointerfunc(ev->x, ev->y);
+		return;
+	}
+	if (ev->window == selmon->switcherbarwin) {
+		selmon->switcherbaraction.pointerfunc(ev->x, ev->y);
 		return;
 	}
 
