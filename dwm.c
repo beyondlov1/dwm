@@ -203,6 +203,7 @@ struct Monitor {
 	SwitcherAction switcheraction, switcherbaraction;
 	const Layout *lt[2];
 	Pertag *pertag;
+	int systrayrx, systrayy;
 };
 
 typedef struct {
@@ -2119,6 +2120,7 @@ destroyswitcher(Monitor *m)
 	XUnmapWindow(dpy, m->switcherbarwin);
 	XDestroyWindow(dpy, m->switcherbarwin);
 	selmon->switcherbarwin = 0L;	
+	/*updatesystray();*/
 }
 
 void
@@ -2995,7 +2997,7 @@ keypress(XEvent *e)
 void
 keyrelease(XEvent *e)
 {
-	LOG_FORMAT("keyrelease");
+	/*LOG_FORMAT("keyrelease");*/
 	unsigned int i;
 	KeySym keysym;
 	XKeyEvent *ev;
@@ -6583,6 +6585,7 @@ updatebarpos(Monitor *m)
 		m->wy = m->topbar ? m->wy + bh : m->wy;
 	} else
 		m->by = -bh;
+
 }
 
 void
@@ -6817,11 +6820,24 @@ updatesystrayiconstate(Client *i, XPropertyEvent *ev)
 void
 updatesystray(void)
 {
+
 	XSetWindowAttributes wa;
 	XWindowChanges wc;
 	Client *i;
 	Monitor *m = systraytomon(NULL);
-	unsigned int x = m->mx + m->mw;
+	
+	if (m->switcher) {
+		/*m->systrayrx = m->switcherbarwx + m->switcherbarww;*/
+		/*m->systrayy = m->switcherbarwy;*/
+		m->systrayrx = m->ww;
+		m->systrayy = m->by;
+	}else{
+		m->systrayrx = m->ww;
+		m->systrayy = m->by;
+	}
+
+	unsigned int x = m->systrayrx;
+	unsigned int y = m->systrayy;
 	unsigned int sw = TEXTW(stext) - lrpad + systrayspacing;
 	unsigned int w = 1;
 
@@ -6868,8 +6884,8 @@ updatesystray(void)
 	}
 	w = w ? w + systrayspacing : 1;
 	x -= w;
-	XMoveResizeWindow(dpy, systray->win, x, m->by, w, bh);
-	wc.x = x; wc.y = m->by; wc.width = w; wc.height = bh;
+	XMoveResizeWindow(dpy, systray->win, x, y, w, bh);
+	wc.x = x; wc.y = y; wc.width = w; wc.height = bh;
 	wc.stack_mode = Above; wc.sibling = m->barwin;
 	XConfigureWindow(dpy, systray->win, CWX|CWY|CWWidth|CWHeight|CWSibling|CWStackMode, &wc);
 	XMapWindow(dpy, systray->win);
@@ -6877,6 +6893,8 @@ updatesystray(void)
 	/* redraw background */
 	XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
 	XFillRectangle(dpy, systray->win, drw->gc, 0, 0, w, bh);
+	// my raise
+	XRaiseWindow(dpy, systray->win);
 	XSync(dpy, False);
 }
 
