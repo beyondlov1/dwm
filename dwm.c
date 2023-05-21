@@ -458,6 +458,7 @@ static void tile4(Monitor *);
 static void tile5(Monitor *);
 static void tile6(Monitor *);
 static void tile6zoom(const Arg *arg);
+static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
@@ -564,7 +565,9 @@ static long lastspawntime;
 
 static int switchercurtagindex;
 
-static float tile6initwinfactor = 0.9;
+/*static float tile6initwinfactor = 0.9;*/
+static float tile6initwinfactor = 1;
+static float lasttile6initwinfactor = 0.8;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1744,10 +1747,6 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 
 		x += w;
 	}
-	w = blw = TEXTW(m->ltsymbol);
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
-
 
 	drw_map(drw, switcherbarwin, 0, 0, ww, wh);
 }
@@ -5518,8 +5517,11 @@ tile6(Monitor *m)
 
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
-	int gapx = 7;
-	int gapy = 7;
+	/*int gapx = 7;*/
+	/*int gapy = 7;*/
+
+	int gapx = 0;
+	int gapy = 0;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -5627,24 +5629,37 @@ tile6(Monitor *m)
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
+			c->bw = 0;
 			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
 			/*c->placed = 1;*/
 		}
 	}
 
-	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
-		c->bw = borderpx;
-		XWindowChanges wc;
-		wc.border_width = c->bw;
-		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
-		updateborder(c);
-	}
+	/*for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){*/
+		/*[>c->bw = borderpx;<]*/
+		/*XWindowChanges wc;*/
+		/*wc.border_width = c->bw;*/
+		/*XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);*/
+		/*updateborder(c);*/
+	/*}*/
 }
 
 void
 tile6zoom(const Arg *arg)
 {
 	tile6initwinfactor += arg->f;
+	arrange(selmon);
+}
+
+void
+tile6maximize(const Arg *arg)
+{
+	if (tile6initwinfactor == 1) {
+		tile6initwinfactor = lasttile6initwinfactor;
+	}else{
+		lasttile6initwinfactor = tile6initwinfactor;
+		tile6initwinfactor = 1.0;
+	}
 	arrange(selmon);
 }
 
