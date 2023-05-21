@@ -6893,8 +6893,6 @@ updatesystray(void)
 	/* redraw background */
 	XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
 	XFillRectangle(dpy, systray->win, drw->gc, 0, 0, w, bh);
-	// my raise
-	XRaiseWindow(dpy, systray->win);
 	XSync(dpy, False);
 }
 
