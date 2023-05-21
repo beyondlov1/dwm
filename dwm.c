@@ -5519,11 +5519,12 @@ tile6(Monitor *m)
 
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
-	/*int gapx = 7;*/
-	/*int gapy = 7;*/
-
-	int gapx = 0;
-	int gapy = 0;
+	int gapx = 7;
+	int gapy = 7;
+	if (tile6initwinfactor == 1) {
+		gapx = 0;
+		gapy = 0;
+	}
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -5537,10 +5538,10 @@ tile6(Monitor *m)
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t sc;
-	sc.x = 1;
-	sc.y = 1;
-	sc.w = selmon->ww - 1;
-	sc.h = selmon->wh - 1;
+	sc.x = 0;
+	sc.y = 0;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
 	int initn = 121;
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
