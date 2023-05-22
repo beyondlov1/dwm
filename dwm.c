@@ -590,13 +590,19 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 
+
+static int islog = 0;
+
 void
 LOG(char *content, char * content2){
+	if(!islog) return;
 	fprintf(logfile,"%s%s\n", content, content2);
 }
 
 void
 LOG_FORMAT(char *format, ...){
+
+	if(!islog) return;
 
 	struct timeval us;
 	gettimeofday(&us, NULL);
@@ -2091,11 +2097,11 @@ drawswitcher(Monitor *m)
 	m->switcherbarww = ww;
 	m->switcherbarwh = bh;
 	m->switcherbarwx = wx;
-	m->switcherbarwy = wy+wh;
+	m->switcherbarwy = wy-bh;
 	m->switcherbaraction.drawfunc = drawswitcherbar;
 	m->switcherbaraction.movefunc = NULL;
 	m->switcherbaraction.pointerfunc = switcherbaraction;
-	m->switcherbarwin = XCreateWindow(dpy, root, wx, wy+wh, ww, bh, 0, DefaultDepth(dpy, screen),
+	m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
