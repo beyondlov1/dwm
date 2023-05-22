@@ -640,6 +640,7 @@ getclass(Window w, char c[])
 /* function implementations */
 void actionlog(char *action, Client *c)
 {
+	if (!islog) return;
 	if (strstr(c->name,"Private")) return;
 
 	char *class = "NULL";
