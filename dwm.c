@@ -2078,6 +2078,14 @@ drawswitcher(Monitor *m)
 	XClassHint ch = {"dwm", "dwm"};
 
 
+	/*m->switcherww = m->ww/9;*/
+	/*m->switcherwh = m->wh;*/
+	/*m->switcherwx = m->ww - m->switcherww;*/
+	/*m->switcherwy = 0;*/
+	/*m->switcheraction.drawfunc = drawclientswitcherwinvertical;*/
+	/*m->switcheraction.movefunc = clientswitchermovevertical;*/
+	/*m->switcheraction.pointerfunc = clientswitcheractionvertical;*/
+
 	m->switcherww = ww;
 	m->switcherwh = wh;
 	m->switcherwx = wx;
@@ -2085,12 +2093,12 @@ drawswitcher(Monitor *m)
 	m->switcheraction.drawfunc = drawclientswitcherwin;
 	m->switcheraction.movefunc = clientswitchermove;
 	m->switcheraction.pointerfunc = clientswitcheraction;
-	m->switcher = XCreateWindow(dpy, root, wx, wy, ww, wh, 0, DefaultDepth(dpy, screen),
+	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcher);
-	m->switcheraction.drawfunc(m->switcher, ww, wh);
+	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
 	XMapRaised(dpy, m->switcher);
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
@@ -2107,7 +2115,7 @@ drawswitcher(Monitor *m)
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcherbarwin);
-	m->switcherbaraction.drawfunc(m->switcherbarwin, ww, bh);
+	m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);
 	XMapRaised(dpy, m->switcherbarwin);
 	XSetClassHint(dpy, m->switcherbarwin, &ch);
 }
