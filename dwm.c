@@ -174,6 +174,7 @@ typedef struct {
 typedef struct SwitcherAction SwitcherAction ;
 struct SwitcherAction{
 	void (*drawfunc)(Window win, int ww, int wh);
+	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
 	void (*pointerfunc)(int rx, int ry);
 };
@@ -396,6 +397,7 @@ static void monocle(Monitor *m);
 static void monoclespace(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
+static void movemouseswitcher(const Arg *arg);
 static void movex(const Arg *arg);
 static void movey(const Arg *arg);
 static int mmax(int num,...);
@@ -1095,8 +1097,10 @@ buttonpress(XEvent *e)
 			}
 		}
 	}else if(ev->window == selmon->switcher){
-		selmon->switcheraction.pointerfunc(ev->x, ev->y);
-		destroyswitcher(selmon);
+		/*selmon->switcheraction.pointerfunc(ev->x, ev->y);*/
+		/*destroyswitcher(selmon);*/
+		movemouseswitcher(&arg);
+		return;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
 		LOG("buttonpress.elseif", c->name);
@@ -1798,6 +1802,55 @@ switcherbaraction(int rx, int ry)
 }
 
 void
+drawclientswitcherwinx(Window win, int ww, int wh)
+{
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	int i;
+	Client *c;
+	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = factor * c->x + offsetx;
+		y = factor * c->y + offsety;
+		w = factor * c->w;
+		h = factor * c->h;
+		if (c == selmon->sel) {
+			drw_setscheme(drw, scheme[SchemeSel]);
+		}else {
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+		drw_rect(drw, x, y, w, h, 1, 1);
+		int size_level = 1;
+		if(c->icons[size_level]){
+			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
+		}else{
+			drw_text(drw, x+w/2-TEXTW(c->class)/2, y+h/2-bh, TEXTW(c->class), bh, 0, c->class, 0);
+		}
+		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
+	}
+}
+
+void
 drawclientswitcherwin(Window win, int ww, int wh)
 {
 	drw_setscheme(drw, scheme[SchemeNorm]);
@@ -2090,6 +2143,7 @@ drawswitcher(Monitor *m)
 	m->switcherwh = wh;
 	m->switcherwx = wx;
 	m->switcherwy = wy;
+	m->switcheraction.drawfuncx = drawclientswitcherwinx;
 	m->switcheraction.drawfunc = drawclientswitcherwin;
 	m->switcheraction.movefunc = clientswitchermove;
 	m->switcheraction.pointerfunc = clientswitcheraction;
@@ -3798,6 +3852,74 @@ movemouse(const Arg *arg)
 		focus(NULL);
 		LOG("movemouse.motionNotify.if", c->name);
 	}
+}
+
+void
+movemouseswitcher(const Arg *arg)
+{
+	int x, y, ocx, ocy, nx, ny;
+	Client *c;
+	Monitor *m;
+	XEvent ev;
+	Time lasttime = 0;
+
+	if (!(c = selmon->sel))
+		return;
+	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
+		return;
+	/*restack(selmon);*/
+	ocx = c->x;
+	ocy = c->y;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
+		return;
+	if (!getrootptr(&x, &y))
+		return;
+	do {
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		switch(ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+
+			nx = ocx + (ev.xmotion.x - x);
+			ny = ocy + (ev.xmotion.y - y);
+			/*if (abs(selmon->wx - nx) < snap)*/
+				/*nx = selmon->wx;*/
+			/*else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)*/
+				/*nx = selmon->wx + selmon->ww - WIDTH(c);*/
+			/*if (abs(selmon->wy - ny) < snap)*/
+				/*ny = selmon->wy;*/
+			/*else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)*/
+				/*ny = selmon->wy + selmon->wh - HEIGHT(c);*/
+			/*if (!c->isfloating && selmon->lt[selmon->sellt]->arrange*/
+			/*&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))*/
+				/*togglefloating(NULL);*/
+			/*if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)*/
+				/*resize(c, nx, ny, c->w, c->h, 1);*/
+			/*LOG("movemouse.motionNotify", c->name);*/
+			int px = ev.xmotion.x - selmon->switcherwx;
+			int py = ev.xmotion.y - selmon->switcherwy;
+			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+			drw_setscheme(drw, scheme[SchemeNorm]);
+			drw_rect(drw, px, py, selmon->switcherww/5, selmon->switcherwh/5, 1, 1);
+			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
+			break;
+		}
+	} while (ev.type != ButtonRelease);
+	XUngrabPointer(dpy, CurrentTime);
+	/*if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {*/
+		/*sendmon(c, m);*/
+		/*selmon = m;*/
+		/*focus(NULL);*/
+		/*LOG("movemouse.motionNotify.if", c->name);*/
+	/*}*/
 }
 
 Client *
