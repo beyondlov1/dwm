@@ -2208,6 +2208,15 @@ enternotify(XEvent *e)
 		return;
 	
 	Client *oldc = selmon->sel;
+	if (oldc->isfloating) {
+		focus(c);
+		return;
+	}
+	if (c->isfloating) {
+		focus(c);
+		return;
+	}
+
 	int oldx = c->x;
 	int oldy = c->y;
 	focus(c);
@@ -3431,6 +3440,7 @@ manage(Window w, XWindowAttributes *wa)
 	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
 	if (c->istemp)
 	{
+		c->isfloating = 1;
 		XSetWindowAttributes wa = {.event_mask = EnterWindowMask | FocusChangeMask | PropertyChangeMask | StructureNotifyMask | KeyPressMask};
 		XChangeWindowAttributes(dpy, c->win, CWEventMask, &wa);
 	}
