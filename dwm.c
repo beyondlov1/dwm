@@ -3879,6 +3879,7 @@ pyplace(int targetindex[], int n, MXY targetpos[])
 }
 
 
+// switcher 中的相对坐标转化为实际坐标
 XY
 switcherxy2clientxy(XY sxy)
 {
@@ -3912,6 +3913,8 @@ switcherxy2clientxy(XY sxy)
 	return xy;
 }
 
+// 实际坐标转化为spiral 布局中的以中间为中心的坐标
+XY
 XY
 clientxy2centered(XY cxy)
 {
@@ -3935,6 +3938,8 @@ clientxy2centered(XY cxy)
 	return xy;
 }
 
+
+// 将转化后的spiral 坐标进行搜索, 查找对应的位置
 int 
 spiralsearch(XY centeredxy){
 	int w = selmon->ww * tile6initwinfactor;
