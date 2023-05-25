@@ -178,7 +178,7 @@ def resort2(launchparents):
 
     # print(n)
     remainindex = [i for i in range(k)]
-    filled = [] #(index, i, j)
+    filled = [] #(index, i, j)  i j 为绝对坐标
 
     # first
     # firstindex = np.argmin(mat.sum(axis=0), axis=0) 
@@ -250,6 +250,21 @@ def resort2(launchparents):
 
 def train():
     return word2vecmain.train()
+
+def place(pairs):
+    n = 6; # nlevel
+    center = n-1
+    global lastfilledlist
+    n = len(lastfilledlist)
+    for i in range(n):
+        filled = lastfilledlist[i]    
+        for pair in pairs:
+            if pair[0] == filled[0]:
+                mi,mj = center_itrans((pair[1],pair[2]),center)
+                print(f"{mi} {mj}")
+                lastfilledlist[i] = (pair[0],mi,mj)
+                break
+
 
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))
 lastfilledlist = []

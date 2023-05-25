@@ -114,6 +114,20 @@ typedef union {
 	const void *v;
 } Arg;
 
+typedef struct MXY MXY ;
+struct MXY
+{
+	int row;
+	int col;
+};
+
+typedef struct XY XY ;
+struct XY
+{
+	int x;
+	int y;
+};
+
 typedef struct {
 	unsigned int click;
 	unsigned int mask;
@@ -151,6 +165,8 @@ struct Client {
 	float factx, facty;
 	unsigned int icw, ich; Picture icon;
 	unsigned int icws[3], ichs[3]; Picture icons[3];
+	MXY matcoor;
+	int launchindex;
 };
 
 typedef struct {
@@ -176,7 +192,8 @@ struct SwitcherAction{
 	void (*drawfunc)(Window win, int ww, int wh);
 	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
-	void (*pointerfunc)(int rx, int ry);
+	Client *(*pointerfunc)(int rx, int ry);
+	Client *(*pointerfuncx)(int rx, int ry);
 };
 
 typedef struct Pertag Pertag;
@@ -591,7 +608,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
-
+static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
 static int islog = 0;
 
@@ -1763,7 +1780,7 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 	drw_map(drw, switcherbarwin, 0, 0, ww, wh);
 }
 
-void 
+Client * 
 switcherbaraction(int rx, int ry)
 {
 	Monitor *m = selmon;
@@ -1799,6 +1816,7 @@ switcherbaraction(int rx, int ry)
 			}
 		}
 	}
+	return NULL;
 }
 
 void
@@ -1853,56 +1871,12 @@ drawclientswitcherwinx(Window win, int ww, int wh)
 void
 drawclientswitcherwin(Window win, int ww, int wh)
 {
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
-
-	int i;
-	Client *c;
-	int maxw = 0;
-	int maxh = 0;
-	int maxx = INT_MIN;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x) maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		if (maxy == c->y) maxh = c->h;
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
-	}
-	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
-	int offsetx = - factor * minx;
-	int offsety = - factor * miny;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		int x, y, w, h;
-		x = factor * c->x + offsetx;
-		y = factor * c->y + offsety;
-		w = factor * c->w;
-		h = factor * c->h;
-		if (c == selmon->sel) {
-			drw_setscheme(drw, scheme[SchemeSel]);
-		}else {
-			drw_setscheme(drw, scheme[SchemeNorm]);
-		}
-		drw_rect(drw, x, y, w, h, 1, 1);
-		int size_level = 1;
-		if(c->icons[size_level]){
-			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
-		}else{
-			drw_text(drw, x+w/2-TEXTW(c->class)/2, y+h/2-bh, TEXTW(c->class), bh, 0, c->class, 0);
-		}
-		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
-	}
-
+	drawclientswitcherwinx(win, ww, wh);
 	drw_map(drw,win, 0, 0, ww, wh);
 }
 
-void 
-clientswitcheraction(int rx, int ry)
+Client *
+clientswitcheractionx(int rx, int ry)
 {
 	Client *c;
 	int ww = selmon->switcherww;
@@ -1936,16 +1910,26 @@ clientswitcheraction(int rx, int ry)
 		y = factor * c->y + offsety;
 		h = factor * c->h;
 		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
-			focus(c);
-			arrange(selmon);
-			drawclientswitcherwin(selmon->switcher, ww, wh);
-			XMapWindow(dpy, selmon->switcher);
-			XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 			break;
 		}
 	}
+	return c;
 }
 
+Client *
+clientswitcheraction(int rx, int ry)
+{
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	Client *c = clientswitcheractionx(rx, ry);
+	if (c) {
+		focus(c);
+		arrange(selmon);
+		drawclientswitcherwin(selmon->switcher, ww, wh);
+		XMapWindow(dpy, selmon->switcher);
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+	}
+}
 
 void 
 switchermove(const Arg *arg)
@@ -2146,6 +2130,7 @@ drawswitcher(Monitor *m)
 	m->switcheraction.drawfuncx = drawclientswitcherwinx;
 	m->switcheraction.drawfunc = drawclientswitcherwin;
 	m->switcheraction.movefunc = clientswitchermove;
+	m->switcheraction.pointerfuncx = clientswitcheractionx;
 	m->switcheraction.pointerfunc = clientswitcheraction;
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
@@ -3854,10 +3839,126 @@ movemouse(const Arg *arg)
 	}
 }
 
+int
+pyplace(int targetindex[], int n, MXY targetpos[])
+{
+	if(n==0) return 0;
+	int i;
+	char *url = "http://localhost:8666/place";
+	char params[3000];
+	memset(params, 0, sizeof(params));
+
+	strcat(params, "targets=");
+	for(i=0;i<n;i++)
+	{
+		char str[20];
+		sprintf(str, "%d|%d|%d", targetindex[i], targetpos[i].row, targetpos[i].col);
+		strcat(params, str);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
+	struct HttpResponse resp;
+	resp.content = malloc(1);
+	resp.size = 0;
+	resp.code = CURLE_OK;
+	int ok = httppost(url,params, &resp);
+	if (!ok) return 0;
+
+	/*int j = 0;*/
+	/*char *temp = strtok(resp.content,",");*/
+	/*while(temp)*/
+	/*{*/
+		/*[>LOG_FORMAT("pyresort2 %s", temp);<]*/
+		/*sscanf(temp,"%d",&resorted[j]);*/
+		/*j++;*/
+		/*temp = strtok(NULL,",");*/
+	/*}*/
+	free(resp.content);
+	return 1;
+}
+
+
+XY
+switcherxy2clientxy(XY sxy)
+{
+
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	int i;
+	Client *c;
+	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+
+	XY xy;
+	xy.x = sxy.x/factor+minx;
+	xy.y = sxy.y/factor+miny;
+	return xy;
+}
+
+XY
+clientxy2centered(XY cxy)
+{
+	XY xy;
+	rect_t sc;
+	sc.x = 0;
+	sc.y = 0;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
+	int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+	int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+
+	
+	int w = selmon->ww * tile6initwinfactor;
+	int h = selmon->wh * tile6initwinfactor;
+	int centerx = selmon->sel->matcoor.col * w - w / 2;
+	int centery = selmon->sel->matcoor.row * h - h / 2;
+
+	xy.x = cxy.x - offsetx + centerx;
+	xy.y = cxy.y - offsety + centery;
+	return xy;
+}
+
+int 
+spiralsearch(XY centeredxy){
+	int w = selmon->ww * tile6initwinfactor;
+	int h = selmon->wh * tile6initwinfactor;
+
+	int n = 121;
+	int i;
+	for(i=0;i<n;i++)
+	{
+		int col = spiral_index[i].col;
+		int row = spiral_index[i].row;
+		int blockcenterx = col * w;
+		int blockcentery = row * h;
+		if (centeredxy.x > blockcenterx - w/2 && centeredxy.x < blockcenterx + w/2 && centeredxy.y > blockcentery - h/2 && centeredxy.y < blockcentery + h/2) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 void
 movemouseswitcher(const Arg *arg)
 {
-	int x, y, ocx, ocy, nx, ny;
+	int x, y, ocx, ocy, px, py;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -3875,6 +3976,11 @@ movemouseswitcher(const Arg *arg)
 		return;
 	if (!getrootptr(&x, &y))
 		return;
+
+	/*int oldx = ev.xmotion.x - selmon->switcherwx;*/
+	/*int oldy = ev.xmotion.y - selmon->switcherwy;*/
+	/*Client *oldc = selmon->switcheraction.pointerfuncx(oldx, oldy);*/
+	Client *oldc = selmon->sel;
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
@@ -3887,39 +3993,53 @@ movemouseswitcher(const Arg *arg)
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
 				continue;
 			lasttime = ev.xmotion.time;
-
-			nx = ocx + (ev.xmotion.x - x);
-			ny = ocy + (ev.xmotion.y - y);
-			/*if (abs(selmon->wx - nx) < snap)*/
-				/*nx = selmon->wx;*/
-			/*else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)*/
-				/*nx = selmon->wx + selmon->ww - WIDTH(c);*/
-			/*if (abs(selmon->wy - ny) < snap)*/
-				/*ny = selmon->wy;*/
-			/*else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)*/
-				/*ny = selmon->wy + selmon->wh - HEIGHT(c);*/
-			/*if (!c->isfloating && selmon->lt[selmon->sellt]->arrange*/
-			/*&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))*/
-				/*togglefloating(NULL);*/
-			/*if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)*/
-				/*resize(c, nx, ny, c->w, c->h, 1);*/
-			/*LOG("movemouse.motionNotify", c->name);*/
-			int px = ev.xmotion.x - selmon->switcherwx;
-			int py = ev.xmotion.y - selmon->switcherwy;
+			px = ev.xmotion.x - selmon->switcherwx;
+			py = ev.xmotion.y - selmon->switcherwy;
 			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
-			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_rect(drw, px, py, selmon->switcherww/5, selmon->switcherwh/5, 1, 1);
+			drw_setscheme(drw, scheme[SchemeSel]);
+			drw_rect(drw, px, py, selmon->switcherww/7, selmon->switcherwh/7, 1, 1);
 			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
-	/*if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {*/
-		/*sendmon(c, m);*/
-		/*selmon = m;*/
-		/*focus(NULL);*/
-		/*LOG("movemouse.motionNotify.if", c->name);*/
-	/*}*/
+
+	XY sxy = {px, py};
+	XY centerxy = clientxy2centered(switcherxy2clientxy(sxy));
+
+	Client *chosenc = selmon->switcheraction.pointerfuncx(px, py);
+	if (chosenc) {
+		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
+		if (oldc) {
+			LOG_FORMAT("movemouseswitcher sending");
+			int n = 2;
+			int targetindex[n];
+			MXY targetpos[n];
+			targetindex[0] = oldc->launchindex;
+			targetindex[1] = chosenc->launchindex;
+			targetpos[0] = chosenc->matcoor;
+			targetpos[1] = oldc->matcoor;
+			pyplace(targetindex, n, targetpos);
+			arrange(selmon);
+			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+		}
+	}else{
+		LOG_FORMAT("movemouseswitcher centerxy:%d %d ", centerxy.x, centerxy.y);
+		if (oldc) {
+			LOG_FORMAT("movemouseswitcher sending");
+			int n = 1;
+			int targetindex[n];
+			MXY targetpos[n];
+			targetindex[0] = oldc->launchindex;
+			int foundspiralindex = spiralsearch(centerxy);
+			if (foundspiralindex >= 0) {
+				targetpos[0] = spiral_index[foundspiralindex];
+				pyplace(targetindex, n, targetpos);
+				arrange(selmon);
+				selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+			}
+		}
+	}
 }
 
 Client *
@@ -5523,20 +5643,13 @@ tile5(Monitor *m)
 	}
 }
 
-typedef struct XY XY ;
-struct XY
-{
-	int row;
-	int col;
-};
 
-static XY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
 int 
 fillspiral(rect_t sc, int w, int h, int i, rect_t ts[], int tsn, rect_t *r)
 {
 	if(!w || !h) return 0;
-	XY matcoor = spiral_index[i];
+	MXY matcoor = spiral_index[i];
 	r->w = w;
 	r->h = h;
 	r->x = matcoor.col * w - w / 2;
@@ -5616,7 +5729,7 @@ pyresort2(Client *cs[], int n, int resorted[])
 {
 	if(n==0) return 0;
 	int i;
-	char *url = "http://localhost:8666";
+	char *url = "http://localhost:8666/resort";
 	char params[3000];
 	memset(params, 0, sizeof(params));
 
@@ -5680,7 +5793,10 @@ tile6(Monitor *m)
 	// reverse
 	Client *tiledcs[n];
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		c->launchindex = n-i-1;
 		tiledcs[n-i-1] = c;
+	}
 	int tsn = n;
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
@@ -5727,6 +5843,7 @@ tile6(Monitor *m)
 			c->y = r.y;
 			c->w = r.w;
 			c->h = r.h;
+			c->matcoor = spiral_index[i];
 
 			ts[resorteindex].x = c->x;
 			ts[resorteindex].y = c->y;
@@ -5764,6 +5881,7 @@ tile6(Monitor *m)
 			c->y = r.y;
 			c->w = r.w;
 			c->h = r.h;
+			c->matcoor = spiral_index[i];
 
 			ts[i].x = c->x;
 			ts[i].y = c->y;
