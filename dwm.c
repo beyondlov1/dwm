@@ -3915,7 +3915,6 @@ switcherxy2clientxy(XY sxy)
 
 // 实际坐标转化为spiral 布局中的以中间为中心的坐标
 XY
-XY
 clientxy2centered(XY cxy)
 {
 	XY xy;
