@@ -166,7 +166,7 @@ def create_adjacent_matrix_from2(launchparents):
     print(resultmat)
     return resultmat
 
-def resort2(launchparents):
+def resort2(tag,launchparents):
     mat = create_adjacent_matrix_from2(launchparents)
     # print(mat)
     k,_ = mat.shape
@@ -182,7 +182,12 @@ def resort2(launchparents):
 
     # first
     # firstindex = np.argmin(mat.sum(axis=0), axis=0) 
-    global lastfilledlist
+    global lastfilledlistdict
+    if tag not in lastfilledlistdict:
+        lastfilledlist = []
+        lastfilledlistdict[tag] = lastfilledlist
+    else:
+        lastfilledlist = lastfilledlistdict[tag]
     if len(lastfilledlist) > 0:
         for lastfilled in lastfilledlist:
             if lastfilled[0] in remainindex:
@@ -232,6 +237,7 @@ def resort2(launchparents):
     
 
     lastfilledlist = filled
+    lastfilledlistdict[tag] = filled
 
     # print(filled)
     # print(remainindex)
@@ -251,10 +257,16 @@ def resort2(launchparents):
 def train():
     return word2vecmain.train()
 
-def place(pairs):
+def place(tag, pairs):
     n = 6; # nlevel
     center = n-1
-    global lastfilledlist
+    global lastfilledlistdict
+    if tag not in lastfilledlistdict:
+        lastfilledlist = []
+        lastfilledlistdict[tag] = lastfilledlist
+    else:
+        lastfilledlist = lastfilledlistdict[tag]
+
     n = len(lastfilledlist)
     for i in range(n):
         filled = lastfilledlist[i]    
@@ -267,5 +279,5 @@ def place(pairs):
 
 
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))
-lastfilledlist = []
+lastfilledlistdict = {}
 # resort2([-1,-1,-1,-1,-1,-1,-1,6])

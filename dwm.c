@@ -3848,6 +3848,11 @@ pyplace(int targetindex[], int n, MXY targetpos[])
 	char params[3000];
 	memset(params, 0, sizeof(params));
 
+	strcat(params, "tag=");
+	char tag[2];
+	sprintf(tag, "%d", getcurtagindex(selmon));
+	strcat(params, tag);
+	strcat(params, "&");
 	strcat(params, "targets=");
 	for(i=0;i<n;i++)
 	{
@@ -5737,6 +5742,11 @@ pyresort2(Client *cs[], int n, int resorted[])
 	char params[3000];
 	memset(params, 0, sizeof(params));
 
+	strcat(params, "tag=");
+	char tag[2];
+	sprintf(tag, "%d", getcurtagindex(selmon));
+	strcat(params, tag);
+	strcat(params, "&");
 	strcat(params, "launchparents=");
 	for(i=0;i<n;i++)
 	{

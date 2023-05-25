@@ -31,8 +31,10 @@ class Resquest(BaseHTTPRequestHandler):
 
         launchparents = query.get("launchparents")
         launchparents = list(map(int, launchparents[0].split(",") ))
+        tag = query.get("tag")
+        tag = int(tag[0])
         print(launchparents)
-        resorted = smartwin.resort2(launchparents)
+        resorted = smartwin.resort2(tag,launchparents)
         buf = ",".join(list(map(str,resorted)))
 
         self.wfile.write(buf.encode())  #里面需要传入二进制数据，用encode()函数转换为二进制数据   #设置响应body，即前端页面要展示的数据
@@ -43,6 +45,8 @@ class Resquest(BaseHTTPRequestHandler):
         self.end_headers()
         query = parse_qs(self.rfile.read(int(self.headers['content-length'])).decode("utf-8"))
         print(query)
+        tag = query.get("tag")
+        tag = int(tag[0])
         targets = query.get("targets")
         targets = targets[0].split(",")
         targetpairs = []
@@ -51,7 +55,7 @@ class Resquest(BaseHTTPRequestHandler):
             arr = list(map(int, arr))
             targetpairs.append((arr[0], arr[1], arr[2]))
         print(targets)
-        smartwin.place(targetpairs)
+        smartwin.place(tag,targetpairs)
         buf = ""
 
         self.wfile.write(buf.encode())  #里面需要传入二进制数据，用encode()函数转换为二进制数据   #设置响应body，即前端页面要展示的数据
