@@ -526,6 +526,9 @@ static void left(int **arr, int row ,int col, int x, int y, int result[2]);
 static void right(int **arr, int row ,int col, int x, int y, int result[2]);
 static void up(int **arr, int row ,int col, int x, int y, int result[2]);
 static void down(int **arr, int row ,int col, int x, int y, int result[2]);
+static XY switcherxy2clientxy(XY sxy);
+static XY clientxy2switcherxy(XY xy);
+static XY clientxy2centered(XY xy);
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -2101,10 +2104,7 @@ drawswitcher(Monitor *m)
 	if(!m->sel) return;
 	if(m->sel->isfloating) return;
 	
-	int ww = m->ww/2;
-	int wh = m->wh/2;
-	int wx = m->ww/2-ww/2;
-	int wy = m->wh/2-wh/2;
+
 
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
@@ -2123,10 +2123,29 @@ drawswitcher(Monitor *m)
 	/*m->switcheraction.movefunc = clientswitchermovevertical;*/
 	/*m->switcheraction.pointerfunc = clientswitcheractionvertical;*/
 
+	int ww = m->ww/2;
+	int wh = m->wh/2;
 	m->switcherww = ww;
 	m->switcherwh = wh;
+
+	int wx = m->ww/2-ww/2;
+	int wy = m->wh/2-wh/2;
+
+	int prx, pry;
+	getrootptr(&prx, &pry);
+	XY cxy = {selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2};
+	XY sxy = clientxy2switcherxy(cxy);
+	wx = prx - sxy.x;
+	wy = pry - sxy.y;
+	if (wx < 0) wx = 0;
+	if (wx > m->ww - m->switcherww) wx = m->ww - m->switcherww;
+	if (wy < 0) wy = 0;
+	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
+	
+
 	m->switcherwx = wx;
 	m->switcherwy = wy;
+
 	m->switcheraction.drawfuncx = drawclientswitcherwinx;
 	m->switcheraction.drawfunc = drawclientswitcherwin;
 	m->switcheraction.movefunc = clientswitchermove;
@@ -3883,6 +3902,39 @@ pyplace(int targetindex[], int n, MXY targetpos[])
 	return 1;
 }
 
+// 实际坐标转化为switcher 中的相对坐标
+XY
+clientxy2switcherxy(XY xy)
+{
+
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	int i;
+	Client *c;
+	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+
+	XY sxy;
+	sxy.x = (xy.x - minx) * factor;
+	sxy.y = (xy.y - miny) * factor;
+	return sxy;
+}
 
 // switcher 中的相对坐标转化为实际坐标
 XY
