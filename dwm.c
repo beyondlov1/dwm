@@ -2848,6 +2848,9 @@ swap(const Arg *arg)
 	}while (cnext && cnext->isfloating);
 	swapclient(selmon->sel, cnext, selmon);
 	arrange(selmon);
+	if (selmon->switcher) {
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+	}
 }
 
 Atom
