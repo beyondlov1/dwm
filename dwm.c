@@ -1119,7 +1119,10 @@ buttonpress(XEvent *e)
 	}else if(ev->window == selmon->switcher){
 		/*selmon->switcheraction.pointerfunc(ev->x, ev->y);*/
 		/*destroyswitcher(selmon);*/
-		movemouseswitcher(&arg);
+		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state))
+			movemouseswitcher(&arg);
+		else 
+			destroyswitcher(selmon);
 		return;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -3768,6 +3771,16 @@ motionnotify(XEvent *e)
 			const Arg arg = {.ui = 1 << i};
 			view(&arg);
 		}else{
+			// 鼠标移动到标题栏 出现switcher
+			/*if(ev->x > x && ev->x < selmon->ww - statusw - getsystraywidth()){*/
+				/*drawswitcher(selmon);*/
+				/*if (selmon->sel) {*/
+					/*XY cxy = {selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2};*/
+					/*XY sxy = clientxy2switcherxy(cxy);*/
+					/*XWarpPointer(dpy, None, root, 0, 0, 0, 0, sxy.x + selmon->switcherwx, sxy.y + selmon->switcherwy);*/
+				/*}*/
+			/*}*/
+
 			x += blw;
 
 			for(i = 0; i < LENGTH(launchers); i++) {
