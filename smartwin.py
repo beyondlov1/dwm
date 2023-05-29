@@ -166,7 +166,7 @@ def create_adjacent_matrix_from2(launchparents):
     print(resultmat)
     return resultmat
 
-def resort2(tag,launchparents):
+def resort2(tag,launchparents, ids:list):
     mat = create_adjacent_matrix_from2(launchparents)
     # print(mat)
     k,_ = mat.shape
@@ -188,15 +188,22 @@ def resort2(tag,launchparents):
         lastfilledlistdict[tag] = lastfilledlist
     else:
         lastfilledlist = lastfilledlistdict[tag]
+
+    print(lastfilledlist)
     if len(lastfilledlist) > 0:
-        for lastfilled in lastfilledlist:
-            if lastfilled[0] in remainindex:
-                filled.append(lastfilled)
-                remainindex.remove(lastfilled[0])
-                posmat[lastfilled[1],lastfilled[2]] = lastfilled[0]
+        for i in range(len(ids)):
+            id = ids[i]
+            for j in range(len(lastfilledlist)):
+                lastfilled = lastfilledlist[j]
+                if lastfilled[3] == id:
+                    newlastfilled = (i, lastfilled[1], lastfilled[2], id)
+                    filled.append(newlastfilled)
+                    remainindex.remove(newlastfilled[0])
+                    posmat[newlastfilled[1],newlastfilled[2]] = newlastfilled[0]
+                    break
     else:
         firstindex = 0
-        filled.append((firstindex, center, center))
+        filled.append((firstindex, center, center, ids[0]))
         remainindex.remove(firstindex)
         posmat[center,center] = firstindex
 
@@ -204,7 +211,7 @@ def resort2(tag,launchparents):
         # minscore = float("inf")
         # minitem = (-1,-1,-1) #(index, i, j)
         maxscore = float("-inf")
-        maxitem = (-1,-1,-1) #(index, i, j)
+        maxitem = (-1,-1,-1,-1) #(index, i, j)
 
         filledlen = len(filled)
         filledn = int((np.sqrt(filledlen)-1)/2) + 1 + has_decimal_part((np.sqrt(filledlen)-1)/2)
@@ -227,7 +234,7 @@ def resort2(tag,launchparents):
                                     score += (1/distance((mi,mj), (fi, fj))) * mat[ri,findex]
                                 if score > maxscore:
                                     maxscore = score
-                                    maxitem = (ri,mi,mj)
+                                    maxitem = (ri,mi,mj,ids[ri])
             # if maxscore != float("-inf"):
             #     break     
         filled.append(maxitem)
@@ -274,7 +281,7 @@ def place(tag, pairs):
             if pair[0] == filled[0]:
                 mi,mj = center_itrans((pair[1],pair[2]),center)
                 print(f"{mi} {mj}")
-                lastfilledlist[i] = (pair[0],mi,mj)
+                lastfilledlist[i] = (pair[0],mi,mj, pair[3])
                 break
 
 

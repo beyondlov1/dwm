@@ -139,6 +139,7 @@ typedef struct {
 typedef struct Monitor Monitor;
 typedef struct Client Client;
 struct Client {
+	int id;
 	char name[256];
 	char class[64];
 	float mina, maxa;
@@ -593,6 +594,7 @@ static int switchercurtagindex;
 /*static float tile6initwinfactor = 0.9;*/
 static float tile6initwinfactor = 1;
 static float lasttile6initwinfactor = 0.8;
+static int global_client_id = 1;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -3435,6 +3437,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->factx = factx;
 	c->facty = facty;
 	c->launchparent = selmon->sel;
+	global_client_id ++;
+	c->id = global_client_id;
 
 	updateicon(c);
 	updateicons(c);
@@ -3928,7 +3932,7 @@ movemouse(const Arg *arg)
 }
 
 int
-pyplace(int targetindex[], int n, MXY targetpos[])
+pyplace(int targetindex[], int n, MXY targetpos[], int clientids[])
 {
 	if(n==0) return 0;
 	int i;
@@ -3945,7 +3949,7 @@ pyplace(int targetindex[], int n, MXY targetpos[])
 	for(i=0;i<n;i++)
 	{
 		char str[20];
-		sprintf(str, "%d|%d|%d", targetindex[i], targetpos[i].row, targetpos[i].col);
+		sprintf(str, "%d|%d|%d|%d", targetindex[i], targetpos[i].row, targetpos[i].col, clientids[i]);
 		strcat(params, str);
 		if(i!=n-1)
 			strcat(params, ",");
@@ -4080,11 +4084,15 @@ movemouseswitcher(const Arg *arg)
 			int n = 2;
 			int targetindex[n];
 			MXY targetpos[n];
+			int clientids[n];
 			targetindex[0] = oldc->launchindex;
-			targetindex[1] = chosenc->launchindex;
 			targetpos[0] = chosenc->matcoor;
+			clientids[0] = oldc->id;
+
+			targetindex[1] = chosenc->launchindex;
 			targetpos[1] = oldc->matcoor;
-			pyplace(targetindex, n, targetpos);
+			clientids[1] = chosenc->id;
+			pyplace(targetindex, n, targetpos, clientids);
 			arrange(selmon);
 			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 		}
@@ -4095,11 +4103,13 @@ movemouseswitcher(const Arg *arg)
 			int n = 1;
 			int targetindex[n];
 			MXY targetpos[n];
+			int clientids[n];
 			targetindex[0] = oldc->launchindex;
 			int foundspiralindex = spiralsearch(centerxy);
 			if (foundspiralindex >= 0) {
 				targetpos[0] = spiral_index[foundspiralindex];
-				pyplace(targetindex, n, targetpos);
+				clientids[0] = oldc->id;
+				pyplace(targetindex, n, targetpos, clientids);
 				arrange(selmon);
 				selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 			}
@@ -5818,6 +5828,18 @@ pyresort2(Client *cs[], int n, int resorted[])
 			}
 		}
 		sprintf(str, "%d", foundindex);
+		strcat(params, str);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
+	strcat(params, "&");
+	strcat(params, "ids=");
+	for(i=0;i<n;i++)
+	{
+		Client *c = cs[i];
+		char str[3];
+		sprintf(str, "%d", c->id);
 		strcat(params, str);
 		if(i!=n-1)
 			strcat(params, ",");
