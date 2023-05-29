@@ -192,8 +192,10 @@ struct SwitcherAction{
 	void (*drawfunc)(Window win, int ww, int wh);
 	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
-	Client *(*pointerfunc)(int rx, int ry);
-	Client *(*pointerfuncx)(int rx, int ry);
+	Client *(*sxy2client)(int rx, int ry);
+	void *(*pointerfunc)(int rx, int ry);
+	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[]);
+	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[]);
 };
 
 typedef struct Pertag Pertag;
@@ -526,8 +528,8 @@ static void left(int **arr, int row ,int col, int x, int y, int result[2]);
 static void right(int **arr, int row ,int col, int x, int y, int result[2]);
 static void up(int **arr, int row ,int col, int x, int y, int result[2]);
 static void down(int **arr, int row ,int col, int x, int y, int result[2]);
-static XY switcherxy2clientxy(XY sxy);
-static XY clientxy2switcherxy(XY xy);
+static void switcherxy2clientxy(XY sxys[], int n, XY cxys[]);
+static void clientxy2switcherxy(XY cxys[], int n, XY sxys[]);
 static XY clientxy2centered(XY xy);
 static void LOG(char *content,char *content2);
 
@@ -1825,12 +1827,14 @@ switcherbaraction(int rx, int ry)
 	return NULL;
 }
 
+// ------------------ switcher --------------------
+// 实际坐标转化为switcher 中的相对坐标
 void
-drawclientswitcherwinx(Window win, int ww, int wh)
+clientxy2switcherxy(XY cxys[], int n, XY sxys[])
 {
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
 
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
 	int i;
 	Client *c;
 	int maxw = 0;
@@ -1851,13 +1855,79 @@ drawclientswitcherwinx(Window win, int ww, int wh)
 	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
 	int offsetx = - factor * minx;
 	int offsety = - factor * miny;
+
+	for(i = 0; i<n; i++)
+	{
+		sxys[i].x = (cxys[i].x - minx) * factor;
+		sxys[i].y = (cxys[i].y - miny) * factor;
+	}
+}
+
+// switcher 中的相对坐标转化为实际坐标
+void
+switcherxy2clientxy(XY sxys[], int n, XY cxys[])
+{
+
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	int i;
+	Client *c;
+	int maxw = 0;
+	int maxh = 0;
+	int maxx = INT_MIN;
+	int minx = INT_MAX;
+	int maxy = INT_MIN;
+	int miny = INT_MAX;
 	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 	{
+		maxx = MAX(c->x, maxx);
+		if (maxx == c->x) maxw = c->w;
+		maxy = MAX(c->y, maxy);
+		if (maxy == c->y) maxh = c->h;
+		minx = MIN(c->x, minx);
+		miny = MIN(c->y, miny);
+	}
+	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
+	int offsetx = - factor * minx;
+	int offsety = - factor * miny;
+
+	for(i = 0; i<n; i++)
+	{
+		cxys[i].x = sxys[i].x/factor+minx;
+		cxys[i].y = sxys[i].y/factor+miny;
+	}
+}
+void
+drawclientswitcherwinx(Window win, int ww, int wh)
+{
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	Client *c;
+	int n = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) n++;
+	XY cxys[n];
+	XY cxyse[n];
+	int i;
+	for (c = nexttiled(selmon->clients), i=0; c; c = nexttiled(c->next), i++)
+	{
+		cxys[i].x = c->x;
+		cxys[i].y = c->y;
+		cxyse[i].x = c->x + c->w;
+		cxyse[i].y = c->y + c->h;
+	}
+
+	XY sxys[n];
+	XY sxyse[n];
+	clientxy2switcherxy(cxys, n, sxys);
+	clientxy2switcherxy(cxyse, n, sxyse);
+	for (c = nexttiled(selmon->clients), i=0; c; c = nexttiled(c->next),i++)
+	{
 		int x, y, w, h;
-		x = factor * c->x + offsetx;
-		y = factor * c->y + offsety;
-		w = factor * c->w;
-		h = factor * c->h;
+		x = sxys[i].x;
+		y = sxys[i].y;
+		w = sxyse[i].x - sxys[i].x;
+		h = sxyse[i].y - sxys[i].y;
 		if (c == selmon->sel) {
 			drw_setscheme(drw, scheme[SchemeSel]);
 		}else {
@@ -1882,52 +1952,28 @@ drawclientswitcherwin(Window win, int ww, int wh)
 }
 
 Client *
-clientswitcheractionx(int rx, int ry)
+sxy2client(int rx, int ry)
 {
+	XY sxys[] = {{rx, ry}};
+	XY cxys[1];
+	switcherxy2clientxy(sxys, 1, cxys);
+
 	Client *c;
-	int ww = selmon->switcherww;
-	int wh = selmon->switcherwh;
-	int maxw = 0;
-	int maxh = 0;
-	int maxx = INT_MIN;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
 	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 	{
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x) maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		if (maxy == c->y) maxh = c->h;
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
-	}
-	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
-	int offsetx = - factor * minx;
-	int offsety = - factor * miny;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		int x;
-		int w;
-		int y;
-		int h;
-		x = factor * c->x + offsetx;
-		w = factor * c->w;
-		y = factor * c->y + offsety;
-		h = factor * c->h;
-		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h && c != selmon->sel) {
 			break;
 		}
 	}
 	return c;
 }
 
-Client *
+void
 clientswitcheraction(int rx, int ry)
 {
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	Client *c = clientswitcheractionx(rx, ry);
+	Client *c = sxy2client(rx, ry);
 	if (c) {
 		focus(c);
 		arrange(selmon);
@@ -1935,12 +1981,6 @@ clientswitcheraction(int rx, int ry)
 		XMapWindow(dpy, selmon->switcher);
 		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 	}
-}
-
-void 
-switchermove(const Arg *arg)
-{
-	selmon->switcheraction.movefunc(arg);
 }
 
 void 
@@ -1954,6 +1994,12 @@ clientswitchermove(const Arg *arg)
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
 
+// ------------------ switcher end  --------------------
+
+
+
+
+// ------------------ switcher vertical  --------------------
 void
 drawclientswitcherwinvertical(Window win, int ww, int wh)
 {
@@ -2100,6 +2146,8 @@ clientswitchermovevertical(const Arg *arg)
 	/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
 }
 
+// ------------------ switcher vertical end  --------------------
+
 void
 drawswitcher(Monitor *m)
 {
@@ -2117,14 +2165,13 @@ drawswitcher(Monitor *m)
 	
 	XClassHint ch = {"dwm", "dwm"};
 
-
-	/*m->switcherww = m->ww/9;*/
-	/*m->switcherwh = m->wh;*/
-	/*m->switcherwx = m->ww - m->switcherww;*/
-	/*m->switcherwy = 0;*/
-	/*m->switcheraction.drawfunc = drawclientswitcherwinvertical;*/
-	/*m->switcheraction.movefunc = clientswitchermovevertical;*/
-	/*m->switcheraction.pointerfunc = clientswitcheractionvertical;*/
+	m->switcheraction.drawfuncx = drawclientswitcherwinx;
+	m->switcheraction.drawfunc = drawclientswitcherwin;
+	m->switcheraction.movefunc = clientswitchermove;
+	m->switcheraction.sxy2client = sxy2client;
+	m->switcheraction.pointerfunc = clientswitcheraction;
+	m->switcheraction.xy2switcherxy = clientxy2switcherxy;
+	m->switcheraction.switcherxy2xy = switcherxy2clientxy;
 
 	int ww = m->ww/2;
 	int wh = m->wh/2;
@@ -2136,24 +2183,17 @@ drawswitcher(Monitor *m)
 
 	int prx, pry;
 	getrootptr(&prx, &pry);
-	XY cxy = {selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2};
-	XY sxy = clientxy2switcherxy(cxy);
-	wx = prx - sxy.x;
-	wy = pry - sxy.y;
+	XY cxys[] = {{selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2}};
+	XY sxys[1];
+	m->switcheraction.xy2switcherxy(cxys, 1, sxys);
+	wx = prx - sxys[0].x;
+	wy = pry - sxys[0].y;
 	if (wx < 0) wx = 0;
 	if (wx > m->ww - m->switcherww) wx = m->ww - m->switcherww;
 	if (wy < 0) wy = 0;
 	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
-	
-
 	m->switcherwx = wx;
 	m->switcherwy = wy;
-
-	m->switcheraction.drawfuncx = drawclientswitcherwinx;
-	m->switcheraction.drawfunc = drawclientswitcherwin;
-	m->switcheraction.movefunc = clientswitchermove;
-	m->switcheraction.pointerfuncx = clientswitcheractionx;
-	m->switcheraction.pointerfunc = clientswitcheraction;
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
@@ -2210,6 +2250,14 @@ toggleswitchers(const Arg *arg)
 		destroyswitcher(selmon);
 	}else{
 		drawswitcher(selmon);
+	}
+}
+
+void 
+switchermove(const Arg *arg)
+{
+	if (selmon->switcheraction.movefunc) {
+		selmon->switcheraction.movefunc(arg);
 	}
 }
 
@@ -3773,12 +3821,7 @@ motionnotify(XEvent *e)
 		}else{
 			// 鼠标移动到标题栏 出现switcher
 			/*if(ev->x > x && ev->x < selmon->ww - statusw - getsystraywidth()){*/
-				/*drawswitcher(selmon);*/
-				/*if (selmon->sel) {*/
-					/*XY cxy = {selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2};*/
-					/*XY sxy = clientxy2switcherxy(cxy);*/
-					/*XWarpPointer(dpy, None, root, 0, 0, 0, 0, sxy.x + selmon->switcherwx, sxy.y + selmon->switcherwy);*/
-				/*}*/
+			// todo
 			/*}*/
 
 			x += blw;
@@ -3918,73 +3961,6 @@ pyplace(int targetindex[], int n, MXY targetpos[])
 	return 1;
 }
 
-// 实际坐标转化为switcher 中的相对坐标
-XY
-clientxy2switcherxy(XY xy)
-{
-
-	int ww = selmon->switcherww;
-	int wh = selmon->switcherwh;
-	int i;
-	Client *c;
-	int maxw = 0;
-	int maxh = 0;
-	int maxx = INT_MIN;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x) maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		if (maxy == c->y) maxh = c->h;
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
-	}
-	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
-	int offsetx = - factor * minx;
-	int offsety = - factor * miny;
-
-	XY sxy;
-	sxy.x = (xy.x - minx) * factor;
-	sxy.y = (xy.y - miny) * factor;
-	return sxy;
-}
-
-// switcher 中的相对坐标转化为实际坐标
-XY
-switcherxy2clientxy(XY sxy)
-{
-
-	int ww = selmon->switcherww;
-	int wh = selmon->switcherwh;
-	int i;
-	Client *c;
-	int maxw = 0;
-	int maxh = 0;
-	int maxx = INT_MIN;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x) maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		if (maxy == c->y) maxh = c->h;
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
-	}
-	float factor = MIN(1.0*ww/(maxx-minx+maxw),1.0*wh/(maxy-miny+maxh));
-	int offsetx = - factor * minx;
-	int offsety = - factor * miny;
-
-	XY xy;
-	xy.x = sxy.x/factor+minx;
-	xy.y = sxy.y/factor+miny;
-	return xy;
-}
 
 // 实际坐标转化为spiral 布局中的以中间为中心的坐标
 XY
@@ -4081,10 +4057,12 @@ movemouseswitcher(const Arg *arg)
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
 
-	XY sxy = {px, py};
-	XY centerxy = clientxy2centered(switcherxy2clientxy(sxy));
+	XY sxys[] = {{px, py}};
+	XY cxys[1];
+	selmon->switcheraction.switcherxy2xy(sxys,1,cxys);
+	XY centerxy = clientxy2centered(cxys[0]);
 
-	Client *chosenc = selmon->switcheraction.pointerfuncx(px, py);
+	Client *chosenc = selmon->switcheraction.sxy2client(px, py);
 	if (chosenc) {
 		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
 		if (oldc) {
@@ -6870,7 +6848,8 @@ unmanage(Client *c, int destroyed)
 			view(&arg);
 		}
 	}
-	
+
+	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 }
 
 void
