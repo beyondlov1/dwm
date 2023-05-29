@@ -1944,44 +1944,8 @@ drawclientswitcherwinx(Window win, int ww, int wh)
 	}
 }
 
-void
-drawclientswitcherwin(Window win, int ww, int wh)
-{
-	drawclientswitcherwinx(win, ww, wh);
-	drw_map(drw,win, 0, 0, ww, wh);
-}
 
-Client *
-sxy2client(int rx, int ry)
-{
-	XY sxys[] = {{rx, ry}};
-	XY cxys[1];
-	switcherxy2clientxy(sxys, 1, cxys);
 
-	Client *c;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-	{
-		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h && c != selmon->sel) {
-			break;
-		}
-	}
-	return c;
-}
-
-void
-clientswitcheraction(int rx, int ry)
-{
-	int ww = selmon->switcherww;
-	int wh = selmon->switcherwh;
-	Client *c = sxy2client(rx, ry);
-	if (c) {
-		focus(c);
-		arrange(selmon);
-		drawclientswitcherwin(selmon->switcher, ww, wh);
-		XMapWindow(dpy, selmon->switcher);
-		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
-	}
-}
 
 void 
 clientswitchermove(const Arg *arg)
@@ -2148,6 +2112,51 @@ clientswitchermovevertical(const Arg *arg)
 
 // ------------------ switcher vertical end  --------------------
 
+
+
+// ------------------ switcher common  --------------------
+
+void
+clientswitcheraction(int rx, int ry)
+{
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	Client *c = selmon->switcheraction.sxy2client(rx, ry);
+	if (c) {
+		focus(c);
+		arrange(selmon);
+		selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+		XMapWindow(dpy, selmon->switcher);
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+	}
+}
+
+void
+drawclientswitcherwin(Window win, int ww, int wh)
+{
+	selmon->switcheraction.drawfuncx(win, ww, wh);
+	drw_map(drw,win, 0, 0, ww, wh);
+}
+
+Client *
+sxy2client(int rx, int ry)
+{
+	XY sxys[] = {{rx, ry}};
+	XY cxys[1];
+	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys);
+
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h && c != selmon->sel) {
+			break;
+		}
+	}
+	return c;
+}
+
+// ------------------ switcher common end --------------------
+
 void
 drawswitcher(Monitor *m)
 {
@@ -2165,11 +2174,12 @@ drawswitcher(Monitor *m)
 	
 	XClassHint ch = {"dwm", "dwm"};
 
-	m->switcheraction.drawfuncx = drawclientswitcherwinx;
-	m->switcheraction.drawfunc = drawclientswitcherwin;
-	m->switcheraction.movefunc = clientswitchermove;
-	m->switcheraction.sxy2client = sxy2client;
 	m->switcheraction.pointerfunc = clientswitcheraction;
+	m->switcheraction.drawfunc = drawclientswitcherwin;
+	m->switcheraction.sxy2client = sxy2client;
+
+	m->switcheraction.drawfuncx = drawclientswitcherwinx;
+	m->switcheraction.movefunc = clientswitchermove;
 	m->switcheraction.xy2switcherxy = clientxy2switcherxy;
 	m->switcheraction.switcherxy2xy = switcherxy2clientxy;
 
