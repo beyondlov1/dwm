@@ -160,6 +160,7 @@ static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
 static const char *copyqcmd[] = {"copyq", "toggle", NULL };
+static const char *browsercmd[] = {"firefox", NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
@@ -179,6 +180,7 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
@@ -187,8 +189,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ ControlMask,                  XK_space, spawn,          {.v = copyqcmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
-	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
-	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
+	{ MODKEY,                       XK_z, spawn,          {.v = todotxtcmd} },
+	{ MODKEY,                       XK_x, spawn,          {.v = enotecmd} },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
@@ -245,7 +247,8 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,                       XK_n,      setfacty,       {0} },
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
 	// { MODKEY,             XK_Tab,   toggleswitchers,           {0} },
-	{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
+	//{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
+	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
 	// { MODKEY,                       XK_Tab,    toggleswitchers,           {0} },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
@@ -360,14 +363,15 @@ static Key switcherkeys[] = {
 	{MODKEY, XK_Return, toggleswitchers, {0}},
 	{MODKEY, XK_grave, tile6maximize, {0}},
 
+	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ MODKEY,                       XK_Return, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
-	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
-	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
+	{ MODKEY,                       XK_z, spawn,          {.v = todotxtcmd} },
+	{ MODKEY,                       XK_x, spawn,          {.v = enotecmd} },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
 	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
@@ -392,7 +396,7 @@ static Key switcherkeys[] = {
 	{ MODKEY|ControlMask,                       XK_Right,      tiledual,       {.i = +1} },
 	{ MODKEY|ControlMask,                       XK_Left,      tiledual,       {.i = -1} },
 	{ MODKEY|ShiftMask,                       XK_n,      setfacty,       {0} },
-	{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
+	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },
