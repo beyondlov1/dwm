@@ -2216,21 +2216,21 @@ drawswitcher(Monitor *m)
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 
-	m->switcherbarww = ww;
-	m->switcherbarwh = bh;
-	m->switcherbarwx = wx;
-	m->switcherbarwy = wy-bh;
-	m->switcherbaraction.drawfunc = drawswitcherbar;
-	m->switcherbaraction.movefunc = NULL;
-	m->switcherbaraction.pointerfunc = switcherbaraction;
-	m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),
-				CopyFromParent, DefaultVisual(dpy, screen),
-				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
-	XMapWindow(dpy, m->switcherbarwin);
-	m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);
-	XMapRaised(dpy, m->switcherbarwin);
-	XSetClassHint(dpy, m->switcherbarwin, &ch);
+	/*m->switcherbarww = ww;*/
+	/*m->switcherbarwh = bh;*/
+	/*m->switcherbarwx = wx;*/
+	/*m->switcherbarwy = wy-bh;*/
+	/*m->switcherbaraction.drawfunc = drawswitcherbar;*/
+	/*m->switcherbaraction.movefunc = NULL;*/
+	/*m->switcherbaraction.pointerfunc = switcherbaraction;*/
+	/*m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),*/
+				/*CopyFromParent, DefaultVisual(dpy, screen),*/
+				/*CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);*/
+	/*XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);*/
+	/*XMapWindow(dpy, m->switcherbarwin);*/
+	/*m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);*/
+	/*XMapRaised(dpy, m->switcherbarwin);*/
+	/*XSetClassHint(dpy, m->switcherbarwin, &ch);*/
 }
 
 void 
@@ -2849,7 +2849,8 @@ focusgrid5(const Arg *arg)
 	Client *c = nextclosestc(arg);
 	if (c) {
 		focus(c);
-		restack(selmon);
+		// try remove this for performance
+		/*restack(selmon);*/
 		arrange(selmon);
 	}
 }
@@ -2902,6 +2903,7 @@ swapclient(Client *c1, Client *c2, Monitor *m)
 	m->clients = head.next;
 }
 
+// 在pysort情况下不生效
 void
 swap(const Arg *arg)
 {
