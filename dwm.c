@@ -1930,6 +1930,14 @@ drawclientswitcherwinx(Window win, int ww, int wh)
 		y = sxys[i].y;
 		w = sxyse[i].x - sxys[i].x;
 		h = sxyse[i].y - sxys[i].y;
+		if (c->isdoublepagemarked) {
+			drw_setscheme(drw, scheme[SchemeSel]);
+			drw_rect(drw, x, y, w, h, 1, 1);
+			x = x+1;
+			y = y+1;
+			w = w-2;
+			h = h-2;
+		}
 		if (c == selmon->sel) {
 			drw_setscheme(drw, scheme[SchemeSel]);
 		}else {
@@ -2165,7 +2173,6 @@ drawswitcher(Monitor *m)
 	if(m->switcher) return;
 	if(!m->sel) return;
 	if(m->sel->isfloating) return;
-	
 
 
 	XSetWindowAttributes wa = {
@@ -2335,6 +2342,9 @@ enternotify(XEvent *e)
 	}
 	if (c->isfloating) {
 		focus(c);
+		return;
+	}
+	if (oldc->isdoubled && c->isdoubled) {
 		return;
 	}
 
