@@ -3500,7 +3500,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (c->istemp)
 	{
-		c->isfloating = True;
+		/*c->isfloating = True;*/
 		c->tags = TAGMASK;
 		c->w = c->mon->ww / 2.5;
 		c->h = c->mon->wh / 2;
@@ -3578,7 +3578,7 @@ manage(Window w, XWindowAttributes *wa)
 	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
 	if (c->istemp)
 	{
-		c->isfloating = 1;
+		/*c->isfloating = 1;*/
 		XSetWindowAttributes wa = {.event_mask = EnterWindowMask | FocusChangeMask | PropertyChangeMask | StructureNotifyMask | KeyPressMask};
 		XChangeWindowAttributes(dpy, c->win, CWEventMask, &wa);
 	}
@@ -3748,7 +3748,7 @@ void doublepagemarkclient(Client *c){
 
 void doublepagemark(const Arg *arg){
 	if(doubled) {
-		cleardoublepage(2);
+		cleardoublepage(3);
 		return;
 	}
 	doublepagemarkclient(selmon->sel);
@@ -3771,6 +3771,10 @@ void cleardoublepage(int v){
 		/*}*/
 		if (v == 2) {
 			Arg viewarg = {.ui =selmon->pertag->prevtag};
+			view(&viewarg);
+		}
+		if (v == 3) {
+			Arg viewarg = {.ui = 1<<0};
 			view(&viewarg);
 		}
 	}

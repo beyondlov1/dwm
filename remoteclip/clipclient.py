@@ -195,4 +195,4 @@ while True:
         lastcliptime = remotetime
         pyperclip.copy(remotedata)
         set_primary(remotedata)
-    time.sleep(0.2)
+    time.sleep(1)
