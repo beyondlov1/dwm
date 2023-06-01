@@ -2327,6 +2327,9 @@ enternotify(XEvent *e)
 	if (selmon->switcher) {
 		return;
 	}
+	if (selmon->sel->istemp) {
+		return;
+	}
 	c = wintoclient(ev->window);
 	m = c ? c->mon : wintomon(ev->window);
 	if (m != selmon) {
@@ -7537,6 +7540,10 @@ view(const Arg *arg)
 	focus(NULL);
 	arrange(selmon);
 	updatecurrentdesktop();
+
+	if (selmon->switcher) {
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+	}
 }
 
 
