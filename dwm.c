@@ -2327,7 +2327,7 @@ enternotify(XEvent *e)
 	if (selmon->switcher) {
 		return;
 	}
-	if (selmon->sel->istemp) {
+	if (selmon->sel && selmon->sel->istemp) {
 		return;
 	}
 	c = wintoclient(ev->window);
