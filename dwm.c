@@ -2634,7 +2634,9 @@ drawswitcher(Monitor *m)
 	getrootptr(&prx, &pry);
 	XY cxys[] = {{selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2}};
 	XY sxys[1];
-	int tagindexin[] = {getcurtagindex(selmon)};
+	int curtagindex = getcurtagindex(selmon);
+	if(curtagindex < 0) return;
+	int tagindexin[] = {curtagindex};
 	m->switcheraction.xy2switcherxy(cxys, 1, sxys, tagindexin);
 	wx = prx - sxys[0].x;
 	wy = pry - sxys[0].y;
