@@ -203,6 +203,9 @@ mmax(int num, ...)
 
 int main(int argc, char const *argv[])
 {
+
+	int coln = sqrt(3) + 1;
+	printf("%d",coln);
 	/*int arr1[1][7] = {{1,1,1,1,1,1,1}};*/
 	int arr1[1][7];
 	memset(arr1, 0, 7 * sizeof(int));

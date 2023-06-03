@@ -195,8 +195,8 @@ struct SwitcherAction{
 	void (*movefunc)(const Arg *);
 	Client *(*sxy2client)(int rx, int ry);
 	void *(*pointerfunc)(int rx, int ry);
-	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[]);
-	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[]);
+	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[], int tagindexin[]);
+	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[], int tagindexout[]);
 };
 
 typedef struct Pertag Pertag;
@@ -512,6 +512,7 @@ static void updateicon(Client *c);
 static void updateicons(Client *c);
 static void view(const Arg *arg);
 static void viewi(int tagindex);
+static void viewui(unsigned int tagui);
 static void relview(const Arg *arg);
 static void reltag(const Arg *arg);
 static void reltagd(const Arg *arg);
@@ -1960,7 +1961,8 @@ sxy2client(int rx, int ry)
 {
 	XY sxys[] = {{rx, ry}};
 	XY cxys[1];
-	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys);
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys, tagindexout);
 
 	Client *c;
 	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
@@ -2169,69 +2171,208 @@ drawclientswitcherwin(Window win, int ww, int wh)
 
 // ------------------ switcher tag client --------------------
 
-// 实际坐标转化为switcher 中的相对坐标
-void clientxy2switcherxy_pertag(XY cxys[], int n, XY sxys[], int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
-{
-	unsigned int tags = 1 << tagindex;
+void clientxy2switcherxy_pertag_one(XY cxys[], int n, XY sxys[], int s2t[], int tagindexin, int tagsx, int tagsy, int tagsww, int tagswh){
 	int ww = tagsww;
 	int wh = tagswh;
-	int i;
+	int tmaxw = 0;
+	int tmaxh = 0;
+	int tmaxx = INT_MIN;
+	int tminx = INT_MAX;
+	int tmaxy = INT_MIN;
+	int tminy = INT_MAX;
+	unsigned int tags = 1 << tagindexin;
 	Client *c;
-	int maxw = 0;
-	int maxh = 0;
-	int maxx = INT_MIN;
-	int minx = INT_MAX;
-	int maxy = INT_MIN;
-	int miny = INT_MAX;
 	for (c = selmon->clients; c; c = c->next)
 	{
-		if(c->tags & tags == 0)
+		if ((c->tags & tags) == 0)
 		{
 			continue;
 		}
-		maxx = MAX(c->x, maxx);
-		if (maxx == c->x)
-			maxw = c->w;
-		maxy = MAX(c->y, maxy);
-		if (maxy == c->y)
-			maxh = c->h;
-		minx = MIN(c->x, minx);
-		miny = MIN(c->y, miny);
+		tmaxx = MAX(c->x, tmaxx);
+		if (tmaxx == c->x)
+			tmaxw = c->w;
+		tmaxy = MAX(c->y, tmaxy);
+		if (tmaxy == c->y)
+			tmaxh = c->h;
+		tminx = MIN(c->x, tminx);
+		tminy = MIN(c->y, tminy);
 	}
-	float factor = MIN(1.0 * ww / (maxx - minx + maxw), 1.0 * wh / (maxy - miny + maxh));
-	int offsetx = -factor * minx;
-	int offsety = -factor * miny;
-
+	float tfactor = MIN(1.0 * ww / (tmaxx - tminx + tmaxw), 1.0 * wh / (tmaxy - tminy + tmaxh));
+	int toffsetx = -tfactor * tminx;
+	int toffsety = -tfactor * tminy;
+	int i;
 	for (i = 0; i < n; i++)
 	{
-		sxys[i].x = (cxys[i].x - minx) * factor + tagsx;
-		sxys[i].y = (cxys[i].y - miny) * factor + tagsy;
+		int tagindex = s2t[i];
+		if(tagindex != tagindexin) continue;
+		sxys[i].x = (cxys[i].x - tminx) * tfactor + tagsx;
+		sxys[i].y = (cxys[i].y - tminy) * tfactor + tagsy;
 	}
 }
 
-void clientxy2switcherxy_tag(XY cxys[], int n, XY sxys[])
+
+// 实际坐标转化为switcher 中的相对坐标
+void clientxy2switcherxy_pertag2(XY cxys[], int n, XY sxys[], int tagindexin[], int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
 {
-	int tagindex = gettagindex(selmon->tagset[selmon->seltags]);
+	int k;
+	for (k = 0; k < tagn; k++)
+	{
+		clientxy2switcherxy_pertag_one(cxys, n, sxys, tagindexin, k, tagsx[k], tagsy[k], tagsww[k], tagswh[k]);
+	}
+}
+
+// 实际坐标转化为switcher 中的相对坐标
+/**
+ * @brief 
+ * 
+ * @param cxys 
+ * @param n 
+ * @param sxys 
+ * @param s2t 长度是LENGTH(tags) xys -> tagindex
+ * @param tagn LENGTH(tags)
+ * @param tagsx LENGTH(tags)
+ * @param tagsy LENGTH(tags)
+ * @param tagsww LENGTH(tags)
+ * @param tagswh LENGTH(tags)
+ */
+void clientxy2switcherxy_pertag(XY cxys[], int n, XY sxys[], int s2t[], int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
+{
+	
+	float factor[tagn];
+	int minx[tagn];
+	int miny[tagn];
+
+	int k;
+	for (k = 0; k < tagn; k++)
+	{
+		int tagindex = k;
+		int ww = tagsww[k];
+		int wh = tagswh[k];
+		int tmaxw = 0;
+		int tmaxh = 0;
+		int tmaxx = INT_MIN;
+		int tminx = INT_MAX;
+		int tmaxy = INT_MIN;
+		int tminy = INT_MAX;
+		unsigned int tags = 1 << tagindex;
+		Client *c;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if ((c->tags & tags) == 0)
+			{
+				continue;
+			}
+			tmaxx = MAX(c->x, tmaxx);
+			if (tmaxx == c->x)
+				tmaxw = c->w;
+			tmaxy = MAX(c->y, tmaxy);
+			if (tmaxy == c->y)
+				tmaxh = c->h;
+			tminx = MIN(c->x, tminx);
+			tminy = MIN(c->y, tminy);
+		}
+		float tfactor = MIN(1.0 * ww / (tmaxx - tminx + tmaxw), 1.0 * wh / (tmaxy - tminy + tmaxh));
+		int toffsetx = -tfactor * tminx;
+		int toffsety = -tfactor * tminy;
+
+		factor[k] = tfactor;
+		minx[k] = tminx;
+		miny[k] = tminy;
+	}
+	
+	int i;
+	for (i = 0; i < n; i++)
+	{
+		int tagindex = s2t[i];
+		sxys[i].x = (cxys[i].x - minx[tagindex]) * factor[tagindex] + tagsx[tagindex];
+		sxys[i].y = (cxys[i].y - miny[tagindex]) * factor[tagindex] + tagsy[tagindex];
+	}
+}
+
+void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
+{
+	
+	// int i, j;
+	// for(i=0;i<3;i++)
+	// {
+	// 	for(j=0;j<3;j++)
+	// 	{
+	// 		tagsx[i*3+j] = j*ww/3;
+	// 		tagsy[i*3+j] = i*wh/3;
+	// 		tagsww[i*3+j] = ww/3;
+	// 		tagswh[i*3+j] = wh/3;
+	// 	}
+	// }
+	unsigned int occ = 0;
+	Client *c;
+	for (c = selmon->clients; c; c = c->next) {
+		if(c->isfloating) continue;
+		occ |= c->tags;
+	}
+	int n = 0; // n个有client的tag
+	int i;
+	for(i=0;i<LENGTH(tags);i++)
+	{
+		if (((occ >> i) & 1) > 0)
+			n++;
+	}
+
+	int tagi2t[n]; // tagi -> tagindex
+	int j = 0;
+	for(i=0;i<LENGTH(tags);i++)
+	{
+		if (((occ >> i) & 1) > 0)
+		{
+			tagi2t[j] = i;
+			j++;
+		}
+	}
+
+	double cold = sqrt(n);
+	int bias = 1;
+	if(cold == (int)cold)
+		bias = 0;
+	int coln = sqrt(n)+bias;
+	for (i = 0; i < n; i++)
+	{
+		int t = tagi2t[i];
+		tagsx[t] = i % coln *ww / coln;
+		tagsy[t] = i / coln *wh / coln;
+		tagsww[t] = ww / coln;
+		tagswh[t] = wh / coln;
+	}
+}
+
+
+void clientxy2switcherxy_tag(XY cxys[], int n, XY sxys[], int tagindexin[])
+{
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	clientxy2switcherxy_pertag(cxys, n, sxys, tagindex, tagindex % 3 * ww / 3, tagindex / 3 * wh / 3, ww / 3, wh / 3);
+	int tagn = LENGTH(tags);
+	int tagsx[tagn];
+	int tagsy[tagn];
+	int tagsww[tagn];
+	int tagswh[tagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh);
+	clientxy2switcherxy_pertag(cxys, n, sxys, tagindexin, tagn, tagsx, tagsy, tagsww, tagswh);
 }
+
 // switcher 中的相对坐标转化为实际坐标
-void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
+void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
 {
 	int i,j;
 	Client *c;
 
-    XY tsxys[tagn];
-	int s2t[n];
+    XY tsxys[n];
+	int s2t[n]; // sxy->tagindex
 	for (j = 0; j < n; j++)
 	{
 		for (i = 0; i < tagn; i++)
 		{
-			if(sxys[j].x > tagsx[i] && sxys[j].x < tagsx[i]+tagsww[i] && sxys[j].y > tagsy[i] && sxys[j].y < tagsy[i]+tagswh[i])
+			if(sxys[j].x > tagsx[i] && sxys[j].x <= tagsx[i]+tagsww[i] && sxys[j].y > tagsy[i] && sxys[j].y <= tagsy[i]+tagswh[i])
 			{
-				XY tsxy = { sxys[j].x - tagsx[i] , sxys[j].y - tagsy[i]};
-				tsxys[j] = tsxy;
+				tsxys[j].x = sxys[j].x - tagsx[i];
+				tsxys[j].y = sxys[j].y - tagsy[i];
 				s2t[j] = i;
 				break;
 			}
@@ -2254,7 +2395,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagn, int tagsx
 		int miny = INT_MAX;
 		for (c = selmon->clients; c; c = c->next)
 		{
-			if (c->tags & tags == 0)
+			if ((c->tags & (1 << i)) == 0)
 			{
 				continue;
 			}
@@ -2278,33 +2419,27 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagn, int tagsx
 		float factor = tfactor[s2t[i]];
 		int minx = tminx[s2t[i]];
 		int miny = tminy[s2t[i]];
-		cxys[i].x = sxys[i].x / factor + minx;
-		cxys[i].y = sxys[i].y / factor + miny;
+		if(minx == INT_MIN || miny == INT_MIN)
+		{
+			LOG_FORMAT("switcherxy2clientxy_pertag 1");
+		}
+		cxys[i].x = tsxys[i].x / factor + minx;
+		cxys[i].y = tsxys[i].y / factor + miny;
+		tagindexout[i] = s2t[i];
 	}
 }
 // switcher 中的相对坐标转化为实际坐标
-void switcherxy2clientxy_tag(XY sxys[], int n, XY cxys[])
+void switcherxy2clientxy_tag(XY sxys[], int n, XY cxys[], int tagindexout[])
 {
-	int tagindex = gettagindex(selmon->tagset[selmon->seltags]);
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	int tagn = 9;
+	int tagn = LENGTH(tags);
 	int tagsx[tagn];
 	int tagsy[tagn];
 	int tagsww[tagn];
-	int tagswh[tagn] ;
-	int i, j;
-	for(i=0;i<3;i++)
-	{
-		for(j=0;j<3;j++)
-		{
-			tagsx[i*3+j] = j*ww/3;
-			tagsy[i*3+j] = i*wh/3;
-			tagsww[i*3+j] = ww/3;
-			tagswh[i*3+j] = wh/3;
-		}
-	}
-	switcherxy2clientxy_pertag(cxys, n, sxys, tagindex, tagindex % 3 * ww / 3, tagindex / 3 * wh / 3, ww / 3, wh / 3);
+	int tagswh[tagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh);
+	switcherxy2clientxy_pertag(sxys, n, cxys,tagindexout,tagn, tagsx, tagsy, tagsww, tagswh);
 }
 
 void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
@@ -2323,6 +2458,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 	}
 	XY cxys[n];
 	XY cxyse[n];
+	int s2t[n];
 	int i;
 	for (c = selmon->clients, i = 0; c; c = c->next)
 	{
@@ -2332,13 +2468,14 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		cxys[i].y = c->y;
 		cxyse[i].x = c->x + c->w;
 		cxyse[i].y = c->y + c->h;
+		s2t[i] = tagindex;
 		i++;
 	}
 
 	XY sxys[n];
 	XY sxyse[n];
-	clientxy2switcherxy_pertag(cxys, n, sxys, tagindex, tagsx, tagsy, tagsww, tagswh);
-	clientxy2switcherxy_pertag(cxyse, n, sxyse, tagindex, tagsx, tagsy, tagsww, tagswh);
+	clientxy2switcherxy_pertag_one(cxys, n, sxys, s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
+	clientxy2switcherxy_pertag_one(cxyse, n, sxyse,s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
 	for (c = selmon->clients, i = 0; c; c = c->next)
 	{
 		if ((c->tags & tags) == 0)
@@ -2388,14 +2525,37 @@ void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 		if(c->isfloating) continue;
 		occ |= c->tags;
 	}
+	int n = 0; // n个有client的tag
 	int i;
 	for(i=0;i<LENGTH(tags);i++)
 	{
-		// if ((occ >> i) & 1 > 0)
-		// {
-		// }
-		drawclientswitcherwinx_pretag(win, i, i%3*ww/3, i/3*wh/3, ww/3, wh/3);
+		if (((occ >> i) & 1) > 0)
+			n++;
 	}
+
+	int tagi2t[n]; // tagi -> tagindex
+	int j = 0;
+	for(i=0;i<LENGTH(tags);i++)
+	{
+		if (((occ >> i) & 1) > 0)
+		{
+			tagi2t[j] = i;
+			j++;
+		}
+	}
+
+	double cold = sqrt(n);
+	int bias = 1;
+	if(cold == (int)cold)
+		bias = 0;
+	int coln = sqrt(n)+bias;
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);
+	for (i = 0; i < n; i++)
+	{
+		drawclientswitcherwinx_pretag(win, tagi2t[i], i%coln*ww/coln, i/coln*wh/coln, ww/coln, wh/coln);
+	}
+	
 }
 
 Client *
@@ -2403,11 +2563,13 @@ sxy2client_tag(int rx, int ry)
 {
 	XY sxys[] = {{rx, ry}};
 	XY cxys[1];
-	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys);
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys, tagindexout);
 
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
 	{
+		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
 		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h && c != selmon->sel)
 		{
 			break;
@@ -2472,7 +2634,8 @@ drawswitcher(Monitor *m)
 	getrootptr(&prx, &pry);
 	XY cxys[] = {{selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2}};
 	XY sxys[1];
-	m->switcheraction.xy2switcherxy(cxys, 1, sxys);
+	int tagindexin[] = {getcurtagindex(selmon)};
+	m->switcheraction.xy2switcherxy(cxys, 1, sxys, tagindexin);
 	wx = prx - sxys[0].x;
 	wy = pry - sxys[0].y;
 	if (wx < 0) wx = 0;
@@ -4360,7 +4523,8 @@ movemouseswitcher(const Arg *arg)
 
 	XY sxys[] = {{px, py}};
 	XY cxys[1];
-	selmon->switcheraction.switcherxy2xy(sxys,1,cxys);
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys,1,cxys, tagindexout);
 	XY centerxy = clientxy2centered(cxys[0]);
 
 	Client *chosenc = selmon->switcheraction.sxy2client(px, py);
@@ -7820,7 +7984,7 @@ viewui(unsigned int tagui)
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
-	if (tags == ~0 && isoverview)
+	if (tagui == ~0 && isoverview)
 	{
 		detach(selmon->sel);
 		attach(selmon->sel);
