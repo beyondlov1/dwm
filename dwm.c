@@ -2332,7 +2332,7 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 	int bias = 1;
 	if(cold == (int)cold)
 		bias = 0;
-	int coln = sqrt(n)+bias;
+	int coln = ((int)cold)+bias;
 	for (i = 0; i < n; i++)
 	{
 		int t = tagi2t[i];
@@ -2548,7 +2548,7 @@ void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 	int bias = 1;
 	if(cold == (int)cold)
 		bias = 0;
-	int coln = sqrt(n)+bias;
+	int coln = ((int)cold)+bias;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, ww, wh, 1, 1);
 	for (i = 0; i < n; i++)
