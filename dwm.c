@@ -218,10 +218,11 @@ struct Monitor {
 	Client *sel;
 	Client *stack;
 	Monitor *next;
-	Window barwin,switcher,switcherbarwin;
+	Window barwin,switcher,switcherbarwin, switcherstickywin;
 	int switcherww, switcherwh, switcherwx, switcherwy;
 	int switcherbarww, switcherbarwh, switcherbarwx, switcherbarwy;
-	SwitcherAction switcheraction, switcherbaraction;
+	int switcherstickyww, switcherstickywh, switcherstickywx, switcherstickywy;
+	SwitcherAction switcheraction, switcherbaraction, switcherstickyaction;
 	const Layout *lt[2];
 	Pertag *pertag;
 	int systrayrx, systrayy;
@@ -368,12 +369,15 @@ static void drawbar(Monitor *m);
 static void drawbars(void);
 static void drawswitcher(Monitor *m);
 static void destroyswitcher(Monitor *m);
+static void drawswitchersticky(Monitor *m);
+static void destroyswitchersticky(Monitor *m);
 static void doublepage(Monitor *m);
 static void doublepagemarkclient(Client *c);
 static void doublepagemark(const Arg *arg);
 static void dismiss(const Arg *arg);
 static void cleardoublepage(int view);
 static void toggleswitchers(const Arg *arg);
+static void toggleswitchersticky(const Arg *arg);
 static void enqueue(Client *c);
 static void enqueuestack(Client *c);
 static void enternotify(XEvent *e);
@@ -594,8 +598,8 @@ static long lastspawntime;
 
 static int switchercurtagindex;
 
-/*static float tile6initwinfactor = 0.9;*/
-static float tile6initwinfactor = 1;
+static float tile6initwinfactor = 0.9;
+/*static float tile6initwinfactor = 1;*/
 static float lasttile6initwinfactor = 0.8;
 static int global_client_id = 1;
 
@@ -928,6 +932,10 @@ arrange(Monitor *m)
 		LOG_FORMAT("arrange 5");
 	} else for (m = mons; m; m = m->next)
 		arrangemon(m);
+	
+	if (selmon->switcherstickywin) {
+		selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, selmon->switcherstickyww, selmon->switcherstickywh);
+	}
 }
 
 void
@@ -2139,6 +2147,124 @@ clientswitchermovevertical(const Arg *arg)
 // ------------------ switcher vertical end  --------------------
 
 
+// ------------------ switcher vertical sticky --------------------
+void
+drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
+{
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_rect(drw, 0, 0, ww, wh, 1, 1);	
+
+	int n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+		n++;
+
+	if (n == 0)
+	{
+		drw_map(drw,win, 0, 0, ww, wh);
+		return;
+	}
+	int itemh = wh/n;
+	int itemw = ww;
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = 0;
+		y = itemh * i;
+		w = itemw;
+		h = itemh;
+		if (c == selmon->sel) {
+			drw_setscheme(drw, scheme[SchemeSel]);
+		}else {
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+		drw_rect(drw, x, y, w, h, 1, 1);
+		int size_level = 0;
+		if(c->icons[size_level]){
+			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
+		}else{
+			drw_text(drw, x, y+h/2-bh, w, bh, 30, c->class, 0);
+		}
+		drw_text(drw, x, y+h/2, w, bh, 30, c->name, 0);
+		i++;
+	}
+
+	drw_map(drw,win, 0, 0, ww, wh);
+}
+
+
+void 
+clientswitcheractionverticalsticky(int rx, int ry)
+{
+	int n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+		n++;
+
+	int ww = selmon->switcherstickyww;
+	int wh = selmon->switcherstickywh;
+	int itemh = wh/n;
+	int itemw = ww;
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		int x, y, w, h;
+		x = 0;
+		y = itemh * i;
+		w = itemw;
+		h = itemh;
+		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+			focus(c);
+			arrange(selmon);
+			selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, ww, wh);
+			XMapWindow(dpy, selmon->switcher);
+			/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
+			break;
+		}
+		i++;
+	}
+}
+
+
+void 
+clientswitchermoveverticalsticky(const Arg *arg)
+{
+	LOG_FORMAT("clientswitchermovevertical 1");
+	int selindex = 0, n = 0;
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) n++;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (selmon->sel == c) {
+			break;
+		}
+		selindex++;
+	}
+
+	int row = n;
+	int col = 1;
+	int result[2];
+	selindex = matrixmove(arg, selindex, row, col, result);
+	LOG_FORMAT("clientswitchermovevertical 2 %d", selindex);
+	int i = 0;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (i == selindex) {
+			focus(c);
+			arrange(selmon);
+			break;
+		}
+		i++;
+	}
+	int ww = selmon->switcherstickyww;
+	int wh = selmon->switcherstickywh;
+	selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
+	/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
+}
+
+// ------------------ switcher vertical end  --------------------
 
 // ------------------ switcher common  --------------------
 
@@ -2820,6 +2946,62 @@ destroyswitcher(Monitor *m)
 }
 
 void
+drawswitchersticky(Monitor *m)
+{
+	if(m->switcherstickywin) return;
+	if(!m->sel) return;
+
+	XSetWindowAttributes wa = {
+		.override_redirect = True,
+		.background_pixmap = ParentRelative,
+		.event_mask = ButtonPressMask|ExposureMask|KeyPressMask|PointerMotionMask
+	};
+	
+	XClassHint ch = {"dwm", "dwm"};
+
+	m->switcherstickyaction.pointerfunc = clientswitcheractionverticalsticky;
+	m->switcherstickyaction.drawfunc = drawclientswitcherwinverticalsticky;
+	m->switcherstickyaction.movefunc = clientswitchermoveverticalsticky;
+
+	int ww = m->ww - m->ww * tile6initwinfactor + 2;
+	int wh = m->wh;
+
+	m->switcherstickyww = ww;
+	m->switcherstickywh = wh;
+
+	int wx = m->ww * tile6initwinfactor;
+	int wy = 0;
+
+	m->switcherstickywx = wx;
+	m->switcherstickywy = wy;
+	m->switcherstickywin = XCreateWindow(dpy, root, m->switcherstickywx, m->switcherstickywy, m->switcherstickyww, m->switcherstickywh, 0, DefaultDepth(dpy, screen),
+				CopyFromParent, DefaultVisual(dpy, screen),
+				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XDefineCursor(dpy, m->switcherstickywin, cursor[CurNormal]->cursor);
+	XMapWindow(dpy, m->switcherstickywin);
+	m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
+	XMapRaised(dpy, m->switcherstickywin);
+	XSetClassHint(dpy, m->switcherstickywin, &ch);
+	XSetInputFocus(dpy, m->switcherstickywin, RevertToPointerRoot, 0);
+}
+
+void 
+destroyswitchersticky(Monitor *m)
+{
+	if (!m->switcherstickywin) {
+		return;
+	}
+	if(selmon->sel){
+		XSetInputFocus(dpy, selmon->sel->win, RevertToPointerRoot, CurrentTime);
+	}else{
+		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+	}
+	XUnmapWindow(dpy, m->switcherstickywin);
+	XDestroyWindow(dpy, m->switcherstickywin);
+	selmon->switcherstickywin = 0L;	
+}
+
+void
 toggleswitchers(const Arg *arg)
 {
 	ScratchGroup *sg = scratchgroupptr;
@@ -2830,6 +3012,16 @@ toggleswitchers(const Arg *arg)
 		destroyswitcher(selmon);
 	}else{
 		drawswitcher(selmon);
+	}
+}
+
+void
+toggleswitchersticky(const Arg *arg)
+{
+	if(selmon->switcherstickywin){
+		destroyswitchersticky(selmon);
+	}else{
+		drawswitchersticky(selmon);
 	}
 }
 
@@ -4385,6 +4577,10 @@ motionnotify(XEvent *e)
 	}
 	if (ev->window == selmon->switcherbarwin) {
 		selmon->switcherbaraction.pointerfunc(ev->x, ev->y);
+		return;
+	}
+	if (ev->window == selmon->switcherstickywin) {
+		selmon->switcherstickyaction.pointerfunc(ev->x, ev->y);
 		return;
 	}
 
@@ -6493,7 +6689,8 @@ tile6(Monitor *m)
 			c = tiledcs[resorteindex];
 			/*c = tiledcs[i];*/
 			int neww = sc.w * tile6initwinfactor;
-			int newh = sc.h * tile6initwinfactor;
+			/*int newh = sc.h * tile6initwinfactor;*/
+			int newh = sc.h;
 
 			if(c->placed) 
 			{
@@ -6531,7 +6728,8 @@ tile6(Monitor *m)
 		{
 			c = tiledcs[i];
 			int neww = sc.w * tile6initwinfactor;
-			int newh = sc.h * tile6initwinfactor;
+			/*int newh = sc.h * tile6initwinfactor;*/
+			int newh = sc.h;
 
 			if(c->placed) 
 			{
@@ -6567,6 +6765,8 @@ tile6(Monitor *m)
 	if (!selmon->sel->isfloating) {
 		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
 		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+		offsetx = offsetx - (sc.w - selmon->sel->w)/2;
+		offsety = offsety - (sc.h - selmon->sel->h)/2;
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
@@ -6597,9 +6797,11 @@ tile6maximize(const Arg *arg)
 {
 	if (tile6initwinfactor == 1) {
 		tile6initwinfactor = lasttile6initwinfactor;
+		drawswitchersticky(selmon);
 	}else{
 		lasttile6initwinfactor = tile6initwinfactor;
 		tile6initwinfactor = 1.0;
+		destroyswitchersticky(selmon);
 	}
 	arrange(selmon);
 }
