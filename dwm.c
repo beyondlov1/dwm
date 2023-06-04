@@ -2335,16 +2335,19 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 	if(cold == (int)cold)
 		bias = 0;
 	int coln = ((int)cold)+bias;
-	int rown = coln;
-	// double rowd = 1.0 * n / coln;
-	// int rown = n / coln + (rowd == (int)rowd ? 0 : 1);
+	// int rown = coln;
+	double rowd = 1.0 * n / coln;
+	int rown = n / coln + (rowd == (int)rowd ? 0 : 1);
 	for (i = 0; i < n; i++)
 	{
 		int t = tagi2t[i];
 		tagsx[t] = i % coln *ww / coln;
-		tagsy[t] = i / coln *wh / rown;
+		// tagsy[t] = i / coln *wh / rown;
+		tagsy[t] = i / coln *wh / coln;
 		tagsww[t] = ww / coln;
-		tagswh[t] = wh / rown;
+		// tagswh[t] = wh / rown;
+		// 按比例
+		tagswh[t] = ww / coln * selmon->wh / selmon->ww;
 	}
 }
 
@@ -2725,6 +2728,7 @@ drawswitcher(Monitor *m)
 	int ww = m->ww/2;
 	int wh = m->wh/2;
 
+	// -------------- 剪裁空白tag ---------------
 	int tagn = LENGTH(tags);
 	int tagsx[tagn];
 	int tagsy[tagn];
@@ -2746,6 +2750,7 @@ drawswitcher(Monitor *m)
 	ww = maxx - minx;
 	wh = maxy - miny;
 	if(ww == 0 || wh == 0) return;
+	// -------------- 剪裁空白tag end ---------------
 
 	m->switcherww = ww;
 	m->switcherwh = wh;
