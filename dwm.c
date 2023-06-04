@@ -2290,7 +2290,7 @@ void clientxy2switcherxy_pertag(XY cxys[], int n, XY sxys[], int s2t[], int tagn
 	}
 }
 
-void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[])
+void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[], int *validtagn, int tagi2t[])
 {
 	
 	// int i, j;
@@ -2317,8 +2317,9 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 		if (((occ >> i) & 1) > 0)
 			n++;
 	}
+	*validtagn = n;
 
-	int tagi2t[n]; // tagi -> tagindex
+	// int tagi2t[n]; // tagi -> tagindex
 	int j = 0;
 	for(i=0;i<LENGTH(tags);i++)
 	{
@@ -2334,13 +2335,16 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 	if(cold == (int)cold)
 		bias = 0;
 	int coln = ((int)cold)+bias;
+	int rown = coln;
+	// double rowd = 1.0 * n / coln;
+	// int rown = n / coln + (rowd == (int)rowd ? 0 : 1);
 	for (i = 0; i < n; i++)
 	{
 		int t = tagi2t[i];
 		tagsx[t] = i % coln *ww / coln;
-		tagsy[t] = i / coln *wh / coln;
+		tagsy[t] = i / coln *wh / rown;
 		tagsww[t] = ww / coln;
-		tagswh[t] = wh / coln;
+		tagswh[t] = wh / rown;
 	}
 }
 
@@ -2354,7 +2358,9 @@ void clientxy2switcherxy_tag(XY cxys[], int n, XY sxys[], int tagindexin[])
 	int tagsy[tagn];
 	int tagsww[tagn];
 	int tagswh[tagn];
-	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh);
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	clientxy2switcherxy_pertag(cxys, n, sxys, tagindexin, tagn, tagsx, tagsy, tagsww, tagswh);
 }
 
@@ -2439,7 +2445,9 @@ void switcherxy2clientxy_tag(XY sxys[], int n, XY cxys[], int tagindexout[])
 	int tagsy[tagn];
 	int tagsww[tagn];
 	int tagswh[tagn];
-	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh);
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	switcherxy2clientxy_pertag(sxys, n, cxys,tagindexout,tagn, tagsx, tagsy, tagsww, tagswh);
 }
 
@@ -2520,41 +2528,21 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 
 void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 {
-	unsigned int occ = 0;
-	Client *c;
-	for (c = selmon->clients; c; c = c->next) {
-		if(c->isfloating) continue;
-		occ |= c->tags;
-	}
-	int n = 0; // n个有client的tag
-	int i;
-	for(i=0;i<LENGTH(tags);i++)
-	{
-		if (((occ >> i) & 1) > 0)
-			n++;
-	}
-
-	int tagi2t[n]; // tagi -> tagindex
-	int j = 0;
-	for(i=0;i<LENGTH(tags);i++)
-	{
-		if (((occ >> i) & 1) > 0)
-		{
-			tagi2t[j] = i;
-			j++;
-		}
-	}
-
-	double cold = sqrt(n);
-	int bias = 1;
-	if(cold == (int)cold)
-		bias = 0;
-	int coln = ((int)cold)+bias;
+	int tagn = LENGTH(tags);
+	int tagsx[tagn];
+	int tagsy[tagn];
+	int tagsww[tagn];
+	int tagswh[tagn];
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, ww, wh, 1, 1);
-	for (i = 0; i < n; i++)
+	int i;
+	for (i = 0; i < validtagn; i++)
 	{
-		drawclientswitcherwinx_pretag(win, tagi2t[i], i%coln*ww/coln, i/coln*wh/coln, ww/coln, wh/coln);
+		int tagindex = tagi2t[i];
+		drawclientswitcherwinx_pretag(win, tagindex, tagsx[tagindex], tagsy[tagindex], tagsww[tagindex], tagswh[tagindex]);
 	}
 	
 }
@@ -2736,6 +2724,29 @@ drawswitcher(Monitor *m)
 
 	int ww = m->ww/2;
 	int wh = m->wh/2;
+
+	int tagn = LENGTH(tags);
+	int tagsx[tagn];
+	int tagsy[tagn];
+	int tagsww[tagn];
+	int tagswh[tagn];
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
+	int minx = INT_MAX, miny= INT_MAX, maxx= INT_MIN, maxy= INT_MIN;
+	int i;
+	for (i = 0; i < validtagn; i++)
+	{
+		int t = tagi2t[i];
+		maxx = MAX(tagsx[t] + tagsww[t], maxx);
+		maxy = MAX(tagsy[t] + tagswh[t], maxy);
+		minx = MIN(tagsx[t], minx);
+		miny = MIN(tagsy[t], miny);
+	}
+	ww = maxx - minx;
+	wh = maxy - miny;
+	if(ww == 0 || wh == 0) return;
+
 	m->switcherww = ww;
 	m->switcherwh = wh;
 
