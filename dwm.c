@@ -2180,6 +2180,8 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 			drw_setscheme(drw, scheme[SchemeNorm]);
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
+		drw_line(drw, x, y, x+w,y, 0);
+		drw_line(drw, x, y+h, x+w,y+h, 0);
 		int size_level = 0;
 		if(c->icons[size_level]){
 			drw_pic(drw, x+w/2-c->icws[size_level]/2, y+h/2-c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
@@ -2416,20 +2418,8 @@ void clientxy2switcherxy_pertag(XY cxys[], int n, XY sxys[], int s2t[], int tagn
 	}
 }
 
-void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[], int *validtagn, int tagi2t[])
+int getvalidtagn(int *validtagn, int tagi2t[])
 {
-	
-	// int i, j;
-	// for(i=0;i<3;i++)
-	// {
-	// 	for(j=0;j<3;j++)
-	// 	{
-	// 		tagsx[i*3+j] = j*ww/3;
-	// 		tagsy[i*3+j] = i*wh/3;
-	// 		tagsww[i*3+j] = ww/3;
-	// 		tagswh[i*3+j] = wh/3;
-	// 	}
-	// }
 	unsigned int occ = 0;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next) {
@@ -2445,7 +2435,6 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 	}
 	*validtagn = n;
 
-	// int tagi2t[n]; // tagi -> tagindex
 	int j = 0;
 	for(i=0;i<LENGTH(tags);i++)
 	{
@@ -2455,6 +2444,27 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 			j++;
 		}
 	}
+}
+
+void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[], int *validtagn, int tagi2t[])
+{
+	
+	// int i, j;
+	// for(i=0;i<3;i++)
+	// {
+	// 	for(j=0;j<3;j++)
+	// 	{
+	// 		tagsx[i*3+j] = j*ww/3;
+	// 		tagsy[i*3+j] = i*wh/3;
+	// 		tagsww[i*3+j] = ww/3;
+	// 		tagswh[i*3+j] = wh/3;
+	// 	}
+	// }
+	
+	int i;
+
+	getvalidtagn(validtagn, tagi2t);
+	int n = *validtagn;
 
 	double cold = sqrt(n);
 	int bias = 1;
@@ -2467,13 +2477,11 @@ void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], 
 	for (i = 0; i < n; i++)
 	{
 		int t = tagi2t[i];
-		tagsx[t] = i % coln *ww / coln;
-		// tagsy[t] = i / coln *wh / rown;
-		tagsy[t] = i / coln *wh / coln;
 		tagsww[t] = ww / coln;
-		// tagswh[t] = wh / rown;
 		// 按比例
-		tagswh[t] = ww / coln * selmon->wh / selmon->ww;
+		tagswh[t] = tagsww[t] * selmon->wh / selmon->ww;
+		tagsx[t] = i % coln * tagsww[t];
+		tagsy[t] = (i / coln) * tagswh[t];
 	}
 }
 
@@ -2642,15 +2650,23 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
 		int size_level = 1;
+		if (c->ichs[size_level] > h/2) {
+			size_level = 0;
+		}
 		if (c->icons[size_level])
 		{
 			drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
 		}
 		else
 		{
-			drw_text(drw, x + w / 2 - TEXTW(c->class) / 2, y + h / 2 - bh, TEXTW(c->class), bh, 0, c->class, 0);
+			int tw = MIN(TEXTW(c->class), w);
+			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - bh, tw, bh, 0, c->class, 0);
 		}
 		drw_text(drw, x, y + h / 2, w, bh, 30, c->name, 0);
+		drw_line(drw, x, y, x+w,y, 0);
+		drw_line(drw, x, y+h, x+w, y+h, 0);
+		drw_line(drw, x, y, x,y+h, 0);
+		drw_line(drw, x+w, y, x+w,y+h, 0);
 		i++;
 	}
 }
@@ -2778,6 +2794,7 @@ nextclosestxy(const Arg *arg, int n, XY xys[], int curi)
 	}
 	return closest;
 }
+
 void 
 clientswitchermove_tag(const Arg *arg)
 {
@@ -2787,11 +2804,79 @@ clientswitchermove_tag(const Arg *arg)
 	{
 		if(!c->isfloating) n++;
 	}
-	XY cxys[n];
-	int tagindexin[n];
+
 	int i=0;
+
+	XY cxys2[4*n+1];
+	XY sxys2[4*n+1];
+	int tagindexin2[4*n+1];
+	int curi2 = 0;
+	int MY_INT_MAX = 50000;
+	int bias = 4;
+	for(i=0,c = selmon->clients;c;c=c->next)
+	{
+		if(!c->isfloating){
+			if(selmon->sel == c){
+				cxys2[i].x = MY_INT_MAX;
+				cxys2[i].y = MY_INT_MAX;
+				cxys2[i+1].x = MY_INT_MAX;
+				cxys2[i+1].y = MY_INT_MAX;
+				cxys2[i+2].x = MY_INT_MAX;
+				cxys2[i+2].y = MY_INT_MAX;
+				cxys2[i+3].x = MY_INT_MAX;
+				cxys2[i+3].y = MY_INT_MAX;
+				tagindexin2[i] = gettagindex(c->tags);
+				tagindexin2[i+1] = gettagindex(c->tags);
+				tagindexin2[i+2] = gettagindex(c->tags);
+				tagindexin2[i+3] = gettagindex(c->tags);
+				i+=4;
+				continue;
+			}
+			cxys2[i].x = c->x + bias;
+			cxys2[i].y = c->y + bias;
+			cxys2[i+1].x = c->x + c->w - bias;
+			cxys2[i+1].y = c->y + bias;
+			cxys2[i+2].x = c->x + c->w - bias;
+			cxys2[i+2].y = c->y + c->h - bias;
+			cxys2[i+3].x = c->x + bias;
+			cxys2[i+3].y = c->y + c->h - bias;
+			tagindexin2[i] = gettagindex(c->tags);
+			tagindexin2[i+1] = gettagindex(c->tags);
+			tagindexin2[i+2] = gettagindex(c->tags);
+			tagindexin2[i+3] = gettagindex(c->tags);
+			i+=4;
+		}
+	}
+	curi2 = 4*n;
+	if (arg->i == FOCUS_LEFT) 
+	{
+		cxys2[curi2].x = selmon->sel->x + bias;
+		cxys2[curi2].y = selmon->sel->y + selmon->sel->h/2;
+	}
+	else if (arg->i == FOCUS_RIGHT) 
+	{
+		cxys2[curi2].x = selmon->sel->x + selmon->sel->w - bias;
+		cxys2[curi2].y = selmon->sel->y + selmon->sel->h/2;
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		cxys2[curi2].x = selmon->sel->x + selmon->sel->w/2;
+		cxys2[curi2].y = selmon->sel->y + bias;
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		cxys2[curi2].x = selmon->sel->x + selmon->sel->w/2;
+		cxys2[curi2].y = selmon->sel->y + selmon->sel->h - bias;
+	}
+	tagindexin2[curi2] = gettagindex(selmon->sel->tags);
+	clientxy2switcherxy_tag(cxys2,4*n+1,sxys2,tagindexin2);
+	int closest2 = nextclosestxy(arg, 4*n+1, sxys2, curi2);
+
+	XY cxys[n];
+	XY sxys[n];
+	int tagindexin[n];
 	int curi = 0;
-	for(c = selmon->clients;c;c=c->next)
+	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
 		if(!c->isfloating){
 			if(selmon->sel == c) curi = i;
@@ -2801,9 +2886,10 @@ clientswitchermove_tag(const Arg *arg)
 			i++;
 		}
 	}
-	XY sxys[n];
+
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
-	int closest = nextclosestxy(arg, n, sxys, curi);
+	int closest = closest2/4;
+	/*int closest = nextclosestxy(arg, n, sxys, curi);*/
 	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
@@ -2818,6 +2904,138 @@ clientswitchermove_tag(const Arg *arg)
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
 }
 
+int
+angley(XY xy1, XY xy2)
+{
+	// 上下
+	return selmon->wh * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y);
+}
+
+int
+anglex(XY xy1, XY xy2)
+{
+	// 左右
+	return selmon->ww * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x);
+}
+int
+nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
+{
+	int i;
+	int closest = 0;
+	if (arg->i == FOCUS_LEFT) {
+		int min = INT_MAX;
+		for (i=0;i<n;i++)
+		{
+			XY xy = xys[i];
+			XY curxy = xys[curi];
+			if (i!=curi && xy.x < curxy.x)
+			{
+				int dist = anglex(xy, curxy);
+				if (min > anglex(xy,curxy)) {
+					closest = i;
+					min = dist;
+				}
+			}
+		}
+	}
+	else if (arg->i == FOCUS_RIGHT) {
+		int min = INT_MAX;
+		for (i = 0; i < n; i++)
+		{
+			XY xy = xys[i];
+			XY curxy = xys[curi];
+			if (i != curi && xy.x > curxy.x)
+			{
+				int dist = anglex(xy, curxy);
+				if (min > anglex(xy, curxy))
+				{
+					closest = i;
+					min = dist;
+				}
+			}
+		}
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		int min = INT_MAX;
+		for (i = 0; i < n; i++)
+		{
+			XY xy = xys[i];
+			XY curxy = xys[curi];
+			if (i != curi && xy.y < curxy.y)
+			{
+				int dist = angley(xy, curxy);
+				if (min > angley(xy, curxy))
+				{
+					closest = i;
+					min = dist;
+				}
+			}
+		}
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		int min = INT_MAX;
+		for (i = 0; i < n; i++)
+		{
+			XY xy = xys[i];
+			XY curxy = xys[curi];
+			if (i != curi && xy.y > curxy.y)
+			{
+				int dist = angley(xy, curxy);
+				if (min > angley(xy, curxy))
+				{
+					closest = i;
+					min = dist;
+				}
+			}
+		}
+	}
+	return closest;
+}
+
+void 
+clientswitchermove_tag2(const Arg *arg)
+{
+	int n = 0;
+	Client *c;
+	for(c = selmon->clients;c;c=c->next)
+	{
+		if(!c->isfloating) n++;
+	}
+
+	int i=0;
+
+	XY cxys[n];
+	XY sxys[n];
+	int tagindexin[n];
+	int curi = 0;
+	for(i = 0, c = selmon->clients;c;c=c->next)
+	{
+		if(!c->isfloating){
+			if(selmon->sel == c) curi = i;
+			cxys[i].x = c->x + c->w/2;
+			cxys[i].y = c->y + c->h/2;
+			tagindexin[i] = gettagindex(c->tags);
+			i++;
+		}
+	}
+
+	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
+	int closest = nextclosestanglexy(arg, n, sxys, curi);
+	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
+	if (closestc) {
+		if((closestc->tags & selmon->sel->tags) == 0)
+			viewui(closestc->tags);
+		focus(closestc);
+		arrange(selmon);
+	}
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
 // ------------------ switcher tag client end --------------------
 
 void
@@ -2849,19 +3067,25 @@ drawswitcher(Monitor *m)
 	m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;
 	m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
 	m->switcheraction.sxy2client = sxy2client_tag;
-	m->switcheraction.movefunc = clientswitchermove_tag;
+	m->switcheraction.movefunc = clientswitchermove_tag2;
 
 	int ww = m->ww/2;
 	int wh = m->wh/2;
 
 	// -------------- 剪裁空白tag ---------------
 	int tagn = LENGTH(tags);
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	getvalidtagn(&validtagn, tagi2t);
+	double zoomf = sqrt(validtagn);
+	zoomf = MIN(zoomf,1.6);
+	ww = zoomf * ww;
+	wh = zoomf * wh;
+
 	int tagsx[tagn];
 	int tagsy[tagn];
 	int tagsww[tagn];
 	int tagswh[tagn];
-	int validtagn = tagn;
-	int tagi2t[validtagn];
 	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	int minx = INT_MAX, miny= INT_MAX, maxx= INT_MIN, maxy= INT_MIN;
 	int i;
