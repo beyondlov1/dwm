@@ -2890,6 +2890,7 @@ clientswitchermove_tag(const Arg *arg)
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
 	int closest = closest2/4;
 	/*int closest = nextclosestxy(arg, n, sxys, curi);*/
+	if (closest < 0) return;
 	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
@@ -2908,20 +2909,21 @@ int
 angley(XY xy1, XY xy2)
 {
 	// 上下
-	return selmon->wh * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y);
+	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y)+0.1*distancexy(xy1, xy2);
 }
 
 int
 anglex(XY xy1, XY xy2)
 {
 	// 左右
-	return selmon->ww * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x);
+	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + 0.1 *distancexy(xy1, xy2);
 }
+
 int
 nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 {
 	int i;
-	int closest = 0;
+	int closest = -1;
 	if (arg->i == FOCUS_LEFT) {
 		int min = INT_MAX;
 		for (i=0;i<n;i++)
@@ -3023,6 +3025,7 @@ clientswitchermove_tag2(const Arg *arg)
 
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
 	int closest = nextclosestanglexy(arg, n, sxys, curi);
+	if (closest < 0) return;
 	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
