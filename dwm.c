@@ -515,6 +515,7 @@ static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void updateicon(Client *c);
 static void updateicons(Client *c);
+static void updateswitchersticky(Monitor *m);
 static void view(const Arg *arg);
 static void viewi(int tagindex);
 static void viewui(unsigned int tagui);
@@ -1134,10 +1135,15 @@ buttonpress(XEvent *e)
 	}else if(ev->window == selmon->switcher){
 		/*selmon->switcheraction.pointerfunc(ev->x, ev->y);*/
 		/*destroyswitcher(selmon);*/
-		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state))
-			movemouseswitcher(&arg);
-		else 
-			destroyswitcher(selmon);
+		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state)) movemouseswitcher(&arg);
+		else destroyswitcher(selmon);
+		return;
+	}else if(ev->window == selmon->switcherstickywin && ev->button == Button3){
+		Client *sc = selmon->switcherstickyaction.sxy2client(ev->x, ev->y);
+		if (sc) {
+			killclientc(sc);
+			updateswitchersticky(selmon);
+		}
 		return;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -2197,8 +2203,8 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 }
 
 
-void 
-clientswitcheractionverticalsticky(int rx, int ry)
+Client *
+sxy2clientxysticky(int rx, int ry)
 {
 	int n = 0;
 	Client *c;
@@ -2219,18 +2225,28 @@ clientswitcheractionverticalsticky(int rx, int ry)
 		y = itemh * i;
 		w = itemw;
 		h = itemh;
-		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
-			if(c->tags != selmon->tagset[selmon->seltags]) 
-				viewui(c->tags);
-			focus(c);
-			arrange(selmon);
-			selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, ww, wh);
-			XMapWindow(dpy, selmon->switcher);
-			/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
-			break;
+		if (rx > x && rx < (x+w) && ry > y && ry < (y+h)) {
+			return c;
 		}
 		i++;
 	}
+	return NULL;
+}
+
+void 
+clientswitcheractionverticalsticky(int rx, int ry)
+{
+	int ww = selmon->switcherstickyww;
+	int wh = selmon->switcherstickywh;
+	Client *c = sxy2clientxysticky(rx, ry);
+	if (!c) return;
+	if (selmon->sel && c == selmon->sel) return;
+	if(c->tags != selmon->tagset[selmon->seltags]) 
+		viewui(c->tags);
+	focus(c);
+	arrange(selmon);
+	selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
 }
 
 
@@ -3199,8 +3215,9 @@ drawswitchersticky(Monitor *m)
 	
 	XClassHint ch = {"dwm", "dwm"};
 
-	m->switcherstickyaction.pointerfunc = clientswitcheractionverticalsticky;
 	m->switcherstickyaction.drawfunc = drawclientswitcherwinverticalsticky;
+	m->switcherstickyaction.sxy2client = sxy2clientxysticky;
+	m->switcherstickyaction.pointerfunc = clientswitcheractionverticalsticky;
 	m->switcherstickyaction.movefunc = clientswitchermoveverticalsticky;
 
 	int ww = m->ww - m->ww * tile6initwinfactor + 2;
@@ -3225,6 +3242,13 @@ drawswitchersticky(Monitor *m)
 	XSetInputFocus(dpy, m->switcherstickywin, RevertToPointerRoot, 0);
 }
 
+void
+updateswitchersticky(Monitor *m)
+{
+	if(m->switcherstickywin)
+		m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
+}
+
 void 
 destroyswitchersticky(Monitor *m)
 {
@@ -3244,6 +3268,9 @@ destroyswitchersticky(Monitor *m)
 void
 toggleswitchers(const Arg *arg)
 {
+	if (selmon->switcherstickywin) {
+		return;
+	}
 	ScratchGroup *sg = scratchgroupptr;
 	if(sg->isfloating){
 		hidescratchgroup(sg);
@@ -3268,9 +3295,19 @@ toggleswitchersticky(const Arg *arg)
 void 
 switchermove(const Arg *arg)
 {
-	if (selmon->switcheraction.movefunc) {
-		selmon->switcheraction.movefunc(arg);
+	if (selmon->switcherstickywin) {
+		if (selmon->switcherstickyaction.movefunc) {
+			selmon->switcherstickyaction.movefunc(arg);
+			return;
+		}
 	}
+	if (selmon->switcher) {
+		if (selmon->switcheraction.movefunc) {
+			selmon->switcheraction.movefunc(arg);
+			return;
+		}
+	}
+	focusgrid5(arg);
 }
 
 void
@@ -5195,6 +5232,7 @@ propertynotify(XEvent *e)
 		case XA_WM_HINTS:
 			updatewmhints(c);
 			drawbars();
+			updateswitchersticky(selmon);
 			break;
 		}
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
