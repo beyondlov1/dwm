@@ -2156,9 +2156,9 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 
 	int n = 0;
 	Client *c;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-		n++;
-
+	for (c = selmon->clients; c; c = c->next)
+		if (!c->isfloating)
+			n++;
 	if (n == 0)
 	{
 		drw_map(drw,win, 0, 0, ww, wh);
@@ -2167,8 +2167,9 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 	int itemh = wh/n;
 	int itemw = ww;
 	int i = 0;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	for (c = selmon->clients; c; c = c->next)
 	{
+		if (c->isfloating) continue;
 		int x, y, w, h;
 		x = 0;
 		y = itemh * i;
@@ -2201,22 +2202,26 @@ clientswitcheractionverticalsticky(int rx, int ry)
 {
 	int n = 0;
 	Client *c;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
-		n++;
+	for (c = selmon->clients; c; c = c->next)
+		if (!c->isfloating)
+			n++;
 
 	int ww = selmon->switcherstickyww;
 	int wh = selmon->switcherstickywh;
 	int itemh = wh/n;
 	int itemw = ww;
 	int i = 0;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	for (c = selmon->clients; c; c = c->next)
 	{
+		if (c->isfloating) continue;
 		int x, y, w, h;
 		x = 0;
 		y = itemh * i;
 		w = itemw;
 		h = itemh;
 		if (rx > x && rx < (x+w) && ry > y && ry < (y+h) && c != selmon->sel) {
+			if(c->tags != selmon->tagset[selmon->seltags]) 
+				viewui(c->tags);
 			focus(c);
 			arrange(selmon);
 			selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, ww, wh);
@@ -2235,9 +2240,13 @@ clientswitchermoveverticalsticky(const Arg *arg)
 	LOG_FORMAT("clientswitchermovevertical 1");
 	int selindex = 0, n = 0;
 	Client *c;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) n++;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	for (c = selmon->clients; c; c = c->next)
+		if (!c->isfloating)
+			n++;
+	for (c = selmon->clients; c; c = c->next)
 	{
+		if (c->isfloating)
+			continue;
 		if (selmon->sel == c) {
 			break;
 		}
@@ -2250,9 +2259,13 @@ clientswitchermoveverticalsticky(const Arg *arg)
 	selindex = matrixmove(arg, selindex, row, col, result);
 	LOG_FORMAT("clientswitchermovevertical 2 %d", selindex);
 	int i = 0;
-	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	for (c = selmon->clients; c; c = c->next)
 	{
+		if (c->isfloating)
+			continue;
 		if (i == selindex) {
+			if(c->tags != selmon->tagset[selmon->seltags]) 
+				viewui(c->tags);
 			focus(c);
 			arrange(selmon);
 			break;
@@ -2266,7 +2279,7 @@ clientswitchermoveverticalsticky(const Arg *arg)
 	/*XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);*/
 }
 
-// ------------------ switcher vertical end  --------------------
+// ------------------ switcher vertical sticky end  --------------------
 
 // ------------------ switcher common  --------------------
 
