@@ -138,6 +138,17 @@ typedef struct {
 
 typedef struct Monitor Monitor;
 typedef struct Client Client;
+typedef struct Container Container;
+struct Container {
+	int id;
+	MXY matcoor;
+	int launchindex;
+	Container *launchparent;
+	int cn;
+	Client *cs[2];
+	int placed;
+	int x, y, w, h;
+};
 struct Client {
 	int id;
 	char name[256];
@@ -168,7 +179,15 @@ struct Client {
 	unsigned int icws[3], ichs[3]; Picture icons[3];
 	MXY matcoor;
 	int launchindex;
+
+	int containerid;
+	int containern;
+	int containerlaunchindex;
+	Client *containerrefc;
+	//tmp
+	Container *container;
 };
+
 
 typedef struct {
 	unsigned int mod;
@@ -485,6 +504,7 @@ static void tile3(Monitor *);
 static void tile4(Monitor *);
 static void tile5(Monitor *);
 static void tile6(Monitor *);
+static void tile7(Monitor *);
 static void tile6zoom(const Arg *arg);
 static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
@@ -625,7 +645,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
+static int islog = 1;
 
 void
 LOG(char *content, char * content2){
@@ -3303,7 +3323,7 @@ switchermove(const Arg *arg)
 	}
 	if (selmon->switcher) {
 		if (selmon->switcheraction.movefunc) {
-			selmon->switcheraction.movefunc(arg);
+	 		selmon->switcheraction.movefunc(arg);
 			return;
 		}
 	}
@@ -4484,6 +4504,9 @@ manage(Window w, XWindowAttributes *wa)
 	c->launchparent = selmon->sel;
 	global_client_id ++;
 	c->id = global_client_id;
+	c->containerid = c->id;
+	c->containern = 0;
+	c->containerrefc = NULL;
 
 	updateicon(c);
 	updateicons(c);
@@ -5134,19 +5157,26 @@ movemouseswitcher(const Arg *arg)
 	if (chosenc) {
 		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
 		if (oldc) {
-			LOG_FORMAT("movemouseswitcher sending");
-			int n = 2;
-			int targetindex[n];
-			MXY targetpos[n];
-			int clientids[n];
-			targetindex[0] = oldc->launchindex;
-			targetpos[0] = chosenc->matcoor;
-			clientids[0] = oldc->id;
+			LOG_FORMAT("movemouseswitcher sending, %d->%d", oldc->containerid, chosenc->containerid);
+			/*int n = 2;*/
+			/*int targetindex[n];*/
+			/*MXY targetpos[n];*/
+			/*int clientids[n];*/
+			/*targetindex[0] = oldc->launchindex;*/
+			/*targetpos[0] = chosenc->matcoor;*/
+			/*[>clientids[0] = oldc->id;<]*/
+			/*clientids[0] = oldc->containerid;*/
 
-			targetindex[1] = chosenc->launchindex;
-			targetpos[1] = oldc->matcoor;
-			clientids[1] = chosenc->id;
-			pyplace(targetindex, n, targetpos, clientids);
+			/*targetindex[1] = chosenc->launchindex;*/
+			/*targetpos[1] = oldc->matcoor;*/
+			/*[>clientids[1] = chosenc->id;<]*/
+			/*clientids[1] = chosenc->containerid;*/
+			/*pyplace(targetindex, n, targetpos, clientids);*/
+
+			if(chosenc->containern >= 2) return;
+			oldc->containerid = chosenc->containerid;
+			oldc->containerrefc = chosenc;
+			chosenc->containerrefc = oldc;
 			arrange(selmon);
 			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 		}
@@ -5158,12 +5188,34 @@ movemouseswitcher(const Arg *arg)
 			int targetindex[n];
 			MXY targetpos[n];
 			int clientids[n];
-			targetindex[0] = oldc->launchindex;
 			int foundspiralindex = spiralsearch(centerxy);
 			if (foundspiralindex >= 0) {
-				targetpos[0] = spiral_index[foundspiralindex];
-				clientids[0] = oldc->id;
-				pyplace(targetindex, n, targetpos, clientids);
+				/*clientids[0] = oldc->id;*/
+				if(oldc->containern > 1){
+					if (oldc->containerid == oldc->id && oldc->containerrefc) {
+						targetindex[0] = oldc->containerlaunchindex;
+						targetpos[0] = spiral_index[foundspiralindex];
+						clientids[0] = oldc->containerid;
+						pyplace(targetindex, n, targetpos, clientids);
+
+						oldc->containerrefc->containerid = oldc->containerrefc->id;
+						targetindex[0] = oldc->containerrefc->containerlaunchindex;
+						targetpos[0] = oldc->matcoor;
+						clientids[0] = oldc->containerrefc->containerid;
+						pyplace(targetindex, n, targetpos, clientids);
+					}else{
+						oldc->containerid = oldc->id;
+						targetindex[0] = oldc->containerlaunchindex;
+						targetpos[0] = spiral_index[foundspiralindex];
+						clientids[0] = oldc->containerid;
+						pyplace(targetindex, n, targetpos, clientids);
+					}
+				}else{
+					targetindex[0] = oldc->containerlaunchindex;
+					targetpos[0] = spiral_index[foundspiralindex];
+					clientids[0] = oldc->containerid;
+					pyplace(targetindex, n, targetpos, clientids);
+				}
 				arrange(selmon);
 				selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 			}
@@ -7082,6 +7134,307 @@ tile6maximize(const Arg *arg)
 		destroyswitchersticky(selmon);
 	}
 	arrange(selmon);
+}
+
+int
+pyresort3(Container *cs[], int n, int resorted[])
+{
+	if(n==0) return 0;
+	int i;
+	char *url = "http://localhost:8666/resort";
+	char params[3000];
+	memset(params, 0, sizeof(params));
+
+	strcat(params, "tag=");
+	char tag[2];
+	sprintf(tag, "%d", getcurtagindex(selmon));
+	strcat(params, tag);
+	strcat(params, "&");
+	strcat(params, "launchparents=");
+	for(i=0;i<n;i++)
+	{
+		Container *lp = cs[i]->launchparent;
+		char str[3];
+		int foundindex = -1;
+		int j;
+		for(j=0;j<n;j++)
+		{
+			if (lp == cs[j]) {
+				foundindex = j;
+				break;
+			}
+		}
+		sprintf(str, "%d", foundindex);
+		strcat(params, str);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
+	strcat(params, "&");
+	strcat(params, "ids=");
+	for(i=0;i<n;i++)
+	{
+		Container *c = cs[i];
+		char str[3];
+		sprintf(str, "%d", c->id);
+		strcat(params, str);
+		if(i!=n-1)
+			strcat(params, ",");
+	}
+
+	struct HttpResponse resp;
+	resp.content = malloc(1);
+	resp.size = 0;
+	resp.code = CURLE_OK;
+	int ok = httppost(url,params, &resp);
+	if (!ok) return 0;
+
+	int j = 0;
+	char *temp = strtok(resp.content,",");
+	while(temp)
+	{
+		/*LOG_FORMAT("pyresort2 %s", temp);*/
+		sscanf(temp,"%d",&resorted[j]);
+		j++;
+		temp = strtok(NULL,",");
+	}
+	free(resp.content);
+	return 1;
+}
+void
+tile7(Monitor *m)
+{
+
+	LOG_FORMAT("tile7 1");
+	unsigned int i, n, h, mw,mx, my, ty;
+	Client *c;
+	Container *container;
+	int gapx = 7;
+	int gapy = 7;
+	if (tile6initwinfactor == 1) {
+		gapx = 0;
+		gapy = 0;
+	}
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	// reverse
+	Client *clients[n];
+	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+	{
+		c->launchindex = n-i-1;
+		clients[n-i-1] = c;
+		c->containerid = c->containerid >= 0 ? c->containerid:c->id;
+	}
+
+	int containern = 0;
+	Container *tiledcs[n];
+	for(i=0;i<n;i++)
+	{
+		Container *ct = (Container *)malloc(sizeof(Container));
+		memset(ct, 0, sizeof(Container));
+		ct->id = -1;
+		tiledcs[i] = ct;
+	}
+
+	for(i=0;i<n;i++)
+	{
+		c = clients[i];
+		int found = 0;
+		int j;
+		for(j=0;j<containern;j++)
+		{
+			if (tiledcs[j]->id == c->containerid) {
+				tiledcs[j]->cs[tiledcs[j]->cn] = c;
+				tiledcs[j]->cn ++;
+				c->container = tiledcs[j];
+				found = 1;
+				break;
+			}
+		}
+		if (found) {
+			continue;
+		}
+		tiledcs[containern]->id = c->containerid;
+		tiledcs[containern]->cs[tiledcs[i]->cn] = c;
+		tiledcs[containern]->cn ++;
+		tiledcs[containern]->launchindex = containern;
+		c->container = tiledcs[containern];
+		containern++;
+	}
+
+	for(i=0;i<containern;i++)
+	{
+		if (tiledcs[i]->cn >= 1) {
+			Client *launchparentc = tiledcs[i]->cs[0]->launchparent;
+			if (launchparentc) {
+				tiledcs[i]->launchparent = launchparentc->container;
+			}else{
+				tiledcs[i]->launchparent = NULL;
+			}
+		}
+	}
+
+	for(i=0;i<n;i++)
+	{
+		c = clients[i];
+		c->containern = c->container->cn;
+		c->containerlaunchindex = c->container->launchindex;
+	}
+
+	LOG_FORMAT("tile7 2");
+
+	int tsn = n;
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	sc.x = 0;
+	sc.y = 0;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
+	int initn = 121;
+	int resorted[initn];
+	memset(resorted, -1, sizeof(resorted));
+	int resortok = pyresort3(tiledcs, containern, resorted);
+	/*LOG_FORMAT("%d %d", resorted[0], resorted[1]);*/
+	/*for(i = 0;i<n;i++)*/
+	if(resortok)
+	{
+		for(i = 0;i<initn;i++)
+		{
+			int resorteindex = resorted[i];
+			if(resorteindex < 0 || resorteindex >= initn) continue;
+			container = tiledcs[resorteindex];
+			/*c = tiledcs[i];*/
+			int neww = sc.w * tile6initwinfactor;
+			/*int newh = sc.h * tile6initwinfactor;*/
+			int newh = sc.h;
+
+			if(container->placed) 
+			{
+				neww = container->w + 2*gapx;
+				newh = container->h + 2*gapy;
+			}
+
+			rect_t r;
+			int ok = 0;
+			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			if(!ok)
+			{
+				r.x = (selmon->ww - neww) / 2;
+				r.y = (selmon->wh - newh) / 2;
+				r.w = neww;
+				r.h = newh;
+			}
+
+			container->x = r.x;
+			container->y = r.y;
+			container->w = r.w;
+			container->h = r.h;
+			container->matcoor = spiral_index[i];
+
+			ts[resorteindex].x = container->x;
+			ts[resorteindex].y = container->y;
+			ts[resorteindex].w = container->w;
+			ts[resorteindex].h = container->h;
+
+		}
+	}
+	else 
+	{
+		for(i = 0;i<n;i++)
+		{
+			container = tiledcs[i];
+			int neww = sc.w * tile6initwinfactor;
+			/*int newh = sc.h * tile6initwinfactor;*/
+			int newh = sc.h;
+
+			if(container->placed) 
+			{
+				neww = container->w + 2*gapx;
+				newh = container->h + 2*gapy;
+			}
+
+			rect_t r;
+			int ok = 0;
+			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			if(!ok)
+			{
+				r.x = (selmon->ww - neww) / 2;
+				r.y = (selmon->wh - newh) / 2;
+				r.w = neww;
+				r.h = newh;
+			}
+
+			container->x = r.x;
+			container->y = r.y;
+			container->w = r.w;
+			container->h = r.h;
+			container->matcoor = spiral_index[i];
+
+			ts[i].x = container->x;
+			ts[i].y = container->y;
+			ts[i].w = container->w;
+			ts[i].h = container->h;
+		}
+	}
+
+	LOG_FORMAT("tile7 3");
+
+	for(i=0;i<containern;i++)
+	{
+		
+		if (tiledcs[i]->cn > 0) {
+			int perw = tiledcs[i]->w / tiledcs[i]->cn;
+			int j;
+			for(j=0;j<tiledcs[i]->cn;j++){
+				c = tiledcs[i]->cs[j];
+				c->x = tiledcs[i]->x + j * perw;
+				c->y = tiledcs[i]->y;
+				c->w = perw;
+				c->h = tiledcs[i]->h;
+				c->matcoor = tiledcs[i]->matcoor;
+			}
+		}
+	}
+
+	LOG_FORMAT("tile7 4");
+
+	// move the axis
+	if (!selmon->sel->isfloating) {
+		int selctx = selmon->sel->container->x;
+		int selcty = selmon->sel->container->y;
+		int selctw = selmon->sel->container->w;
+		int selcth = selmon->sel->container->h;
+		int offsetx = sc.w / 2 - (selctw / 2 + selctx);
+		int offsety = sc.h / 2 - (selcth / 2 + selcty);
+		offsetx = offsetx - (sc.w - selctw)/2;
+		offsety = offsety - (sc.h - selcth)/2;
+
+		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		{
+			c->bw = 0;
+			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
+			/*c->placed = 1;*/
+		}
+	}
+
+	/*for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){*/
+		/*[>c->bw = borderpx;<]*/
+		/*XWindowChanges wc;*/
+		/*wc.border_width = c->bw;*/
+		/*XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);*/
+		/*updateborder(c);*/
+	/*}*/
+
+	for(i=0;i<n;i++)
+	{
+		if (tiledcs[i]) {
+			free(tiledcs[i]);
+		}
+	}
 }
 
 void
