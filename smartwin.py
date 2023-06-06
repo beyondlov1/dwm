@@ -283,6 +283,7 @@ def place(tag, pairs):
                 print(f"{mi} {mj}")
                 lastfilledlist[i] = (pair[0],mi,mj, pair[3])
                 break
+            
 
 
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))

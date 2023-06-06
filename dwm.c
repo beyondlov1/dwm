@@ -5210,6 +5210,10 @@ movemouseswitcher(const Arg *arg)
 						clientids[0] = oldc->containerid;
 						pyplace(targetindex, n, targetpos, clientids);
 					}
+					if (oldc->containerrefc) {
+						oldc->containerrefc = NULL;
+						oldc->containerrefc->containerrefc = NULL;
+					}
 				}else{
 					targetindex[0] = oldc->containerlaunchindex;
 					targetpos[0] = spiral_index[foundspiralindex];
