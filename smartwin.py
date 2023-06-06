@@ -274,6 +274,7 @@ def place(tag, pairs):
     else:
         lastfilledlist = lastfilledlistdict[tag]
 
+    missedpairs = [pair for pair in  pairs]
     n = len(lastfilledlist)
     for i in range(n):
         filled = lastfilledlist[i]    
@@ -282,7 +283,12 @@ def place(tag, pairs):
                 mi,mj = center_itrans((pair[1],pair[2]),center)
                 print(f"{mi} {mj}")
                 lastfilledlist[i] = (pair[0],mi,mj, pair[3])
+                missedpairs.remove(pair)
                 break
+
+    for pair in missedpairs:
+        mi,mj = center_itrans((pair[1],pair[2]),center)
+        lastfilledlist.append((pair[0],mi,mj, pair[3]))
             
 
 

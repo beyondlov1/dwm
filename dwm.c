@@ -619,9 +619,9 @@ static long lastspawntime;
 
 static int switchercurtagindex;
 
-static float tile6initwinfactor = 0.9;
-/*static float tile6initwinfactor = 1;*/
-static float lasttile6initwinfactor = 0.8;
+/*static float tile6initwinfactor = 0.9;*/
+static float tile6initwinfactor = 1;
+static float lasttile6initwinfactor = 0.9;
 static int global_client_id = 1;
 
 /* configuration, allows nested code to access above variables */
@@ -645,7 +645,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 1;
+static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -3243,6 +3243,10 @@ drawswitchersticky(Monitor *m)
 	int ww = m->ww - m->ww * tile6initwinfactor + 2;
 	int wh = m->wh;
 
+	if (tile6initwinfactor == 1) {
+		return;
+	}
+
 	m->switcherstickyww = ww;
 	m->switcherstickywh = wh;
 
@@ -3400,6 +3404,9 @@ enternotify(XEvent *e)
 	if (oldc->isdoubled && c->isdoubled) {
 		return;
 	}
+	if (oldc->containern > 1 && c->containern > 1) {
+		return;
+	}
 
 	int oldx = c->x;
 	int oldy = c->y;
@@ -3415,7 +3422,7 @@ enternotify(XEvent *e)
 	}
 	int cursorx = c->x + c->w/2;
 	int cursory = c->y + c->h/2;
-	XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);
+	/*XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);*/
 
 }
 
@@ -5184,7 +5191,7 @@ movemouseswitcher(const Arg *arg)
 		LOG_FORMAT("movemouseswitcher centerxy:%d %d ", centerxy.x, centerxy.y);
 		if (oldc) {
 			LOG_FORMAT("movemouseswitcher sending");
-			int n = 1;
+			int n = 2;
 			int targetindex[n];
 			MXY targetpos[n];
 			int clientids[n];
@@ -5193,33 +5200,45 @@ movemouseswitcher(const Arg *arg)
 				/*clientids[0] = oldc->id;*/
 				if(oldc->containern > 1){
 					if (oldc->containerid == oldc->id && oldc->containerrefc) {
-						targetindex[0] = oldc->containerlaunchindex;
-						targetpos[0] = spiral_index[foundspiralindex];
-						clientids[0] = oldc->containerid;
-						pyplace(targetindex, n, targetpos, clientids);
-
 						oldc->containerrefc->containerid = oldc->containerrefc->id;
-						targetindex[0] = oldc->containerrefc->containerlaunchindex;
-						targetpos[0] = oldc->matcoor;
-						clientids[0] = oldc->containerrefc->containerid;
-						pyplace(targetindex, n, targetpos, clientids);
+						MXY oldmxy = oldc->matcoor;
+						MXY newmxy = spiral_index[foundspiralindex];
+						arrange(selmon);
+
+						LOG_FORMAT("movemouseswitcher 3");
+						targetindex[0] = oldc->containerlaunchindex;
+						targetpos[0] = newmxy;
+						clientids[0] = oldc->containerid;
+
+						targetindex[1] = oldc->containerrefc->containerlaunchindex;
+						targetpos[1] = oldmxy;
+						clientids[1] = oldc->containerrefc->containerid;
+						pyplace(targetindex, 2, targetpos, clientids);
+						LOG_FORMAT("movemouseswitcher 4");
+
 					}else{
+						LOG_FORMAT("movemouseswitcher 5");
 						oldc->containerid = oldc->id;
 						targetindex[0] = oldc->containerlaunchindex;
 						targetpos[0] = spiral_index[foundspiralindex];
 						clientids[0] = oldc->containerid;
-						pyplace(targetindex, n, targetpos, clientids);
+						pyplace(targetindex, 1, targetpos, clientids);
+						LOG_FORMAT("movemouseswitcher 6");
 					}
 					if (oldc->containerrefc) {
-						oldc->containerrefc = NULL;
 						oldc->containerrefc->containerrefc = NULL;
+						oldc->containerrefc = NULL;
 					}
 				}else{
+					LOG_FORMAT("movemouseswitcher 7");
 					targetindex[0] = oldc->containerlaunchindex;
 					targetpos[0] = spiral_index[foundspiralindex];
 					clientids[0] = oldc->containerid;
-					pyplace(targetindex, n, targetpos, clientids);
+					pyplace(targetindex, 1, targetpos, clientids);
+					LOG_FORMAT("movemouseswitcher 8");
 				}
+
+				LOG_FORMAT("movemouseswitcher 2");
 				arrange(selmon);
 				selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 			}
