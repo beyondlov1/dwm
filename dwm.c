@@ -181,6 +181,7 @@ struct Client {
 	int launchindex;
 
 	int containerid;
+	int containerx, containery, containerw, containerh;
 	int containern;
 	int containerlaunchindex;
 	Client *containerrefc;
@@ -449,6 +450,7 @@ static Client *nexttiled(Client *c);
 static Client *nextclosestc(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
+static void pysmoveclient(Client *target, int sx, int sy);
 static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void removesystrayicon(Client *i);
@@ -2556,7 +2558,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], 
 	int i,j;
 	Client *c;
 
-    XY tsxys[n];
+    	XY tsxys[n];
 	int s2t[n]; // sxy->tagindex
 	for (j = 0; j < n; j++)
 	{
@@ -2753,7 +2755,7 @@ sxy2client_tag(int rx, int ry)
 	for (c = selmon->clients; c; c = c->next)
 	{
 		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
-		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h && c != selmon->sel)
+		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
 		{
 			break;
 		}
@@ -3973,20 +3975,54 @@ swapclient(Client *c1, Client *c2, Monitor *m)
 	m->clients = head.next;
 }
 
-// 在pysort情况下不生效
 void
-swap(const Arg *arg)
+pyswap(const Arg *arg)
 {
-	Client *cnext;
-	do {
-		cnext = nextclosestc(arg);
-	}while (cnext && cnext->isfloating);
-	swapclient(selmon->sel, cnext, selmon);
+	if (!selmon->sel) return;
+	int cx = selmon->sel->x + selmon->sel->w/2 + 10;
+	int cy = selmon->sel->y + selmon->sel->h/2;
+	int times = selmon->sel->containern > 1?selmon->sel->containern:1;
+	if (arg->i == FOCUS_RIGHT) {
+		cx = selmon->sel->x + selmon->sel->w /2 + selmon->sel->w * times + 10;
+	}
+	if (arg->i == FOCUS_LEFT) {
+		cx = selmon->sel->x + selmon->sel->w /2 - selmon->sel->w * times - 10;
+	}
+	if (arg->i == FOCUS_UP) {
+		cy = selmon->sel->y + selmon->sel->h/2 - selmon->sel->h;
+	}
+	if (arg->i == FOCUS_DOWN) {
+		cy = selmon->sel->y + selmon->sel->h/2 + selmon->sel->h;
+	}
+	XY cxys[] = {{cx, cy}};
+	XY sxys[1];
+	int curtagindex = getcurtagindex(selmon);
+	if(curtagindex < 0) return;
+	int tagindexin[] = {curtagindex};
+	selmon->switcheraction.xy2switcherxy(cxys, 1, sxys, tagindexin);
+	pysmoveclient(selmon->sel, sxys[0].x, sxys[0].y);
 	arrange(selmon);
 	if (selmon->switcher) {
 		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 	}
 }
+
+// 在pysort情况下不生效
+void
+swap(const Arg *arg)
+{
+	pyswap(arg);
+	/*Client *cnext;*/
+	/*do {*/
+		/*cnext = nextclosestc(arg);*/
+	/*}while (cnext && cnext->isfloating);*/
+	/*swapclient(selmon->sel, cnext, selmon);*/
+	/*arrange(selmon);*/
+	/*if (selmon->switcher) {*/
+		/*selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);*/
+	/*}*/
+}
+
 
 Atom
 getwinatomprop(Window win, Atom prop)
@@ -5060,8 +5096,15 @@ pyplace(int targetindex[], int n, MXY targetpos[], int clientids[])
 
 
 // 实际坐标转化为spiral 布局中的以中间为中心的坐标
+/**
+ * 假設所有塊的大小都相同
+ * cxy: 待轉換的cxy
+ * currcentercxy: 當前中心的塊(client or container)cxy座標
+ * currcenterblockw, currcenterblockh: 當前中心塊的大小
+ * currcentermatcoor: 當前中心所在塊兒的矩陣位置
+*/
 XY
-clientxy2centered(XY cxy)
+clientxy2centeredx(XY cxy, XY currcentercxy, int currcenterblockw, int currcenterblockh, MXY curcentermatcoor)
 {
 	XY xy;
 	rect_t sc;
@@ -5069,20 +5112,41 @@ clientxy2centered(XY cxy)
 	sc.y = 0;
 	sc.w = selmon->ww;
 	sc.h = selmon->wh;
-	int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
-	int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+	int offsetx = sc.w / 2 - currcentercxy.x;
+	int offsety = sc.h / 2 - currcentercxy.y;
 
 	
-	int w = selmon->ww * tile6initwinfactor;
-	int h = selmon->wh * tile6initwinfactor;
-	int centerx = selmon->sel->matcoor.col * w - w / 2;
-	int centery = selmon->sel->matcoor.row * h - h / 2;
+	int w = currcenterblockw;
+	int h = currcenterblockh;
+	int centerx = curcentermatcoor.col * w - w / 2;
+	int centery = curcentermatcoor.row * h - h / 2;
 
 	xy.x = cxy.x - offsetx + centerx;
 	xy.y = cxy.y - offsety + centery;
 	return xy;
 }
 
+XY
+clientxy2centered(XY cxy)
+{
+	XY currcentercxy = {selmon->sel->x + selmon->sel->w / 2, selmon->sel->y + selmon->sel->h / 2};
+	int currcenterblockw = selmon->ww * tile6initwinfactor;
+	int currcenterblockh = selmon->wh * tile6initwinfactor;
+	MXY curcentermatcoor = selmon->sel->matcoor;
+	LOG_FORMAT("clientxy2centered 0 currcentercxy:%d %d ", currcentercxy.x, currcentercxy.y);
+	return clientxy2centeredx(cxy, currcentercxy, currcenterblockw, currcenterblockh, curcentermatcoor);
+}
+
+XY
+clientxy2centered_container(XY cxy)
+{
+	XY currcentercxy = {selmon->sel->containerx + selmon->sel->containerw / 2, selmon->sel->containery + selmon->sel->containerh / 2};
+	int currcenterblockw = selmon->sel->containerw;
+	int currcenterblockh = selmon->sel->containerh;
+	MXY curcentermatcoor = selmon->sel->matcoor;
+	LOG_FORMAT("clientxy2centered_container 0 currcentercxy:%d %d ", currcentercxy.x, currcentercxy.y);
+	return clientxy2centeredx(cxy, currcentercxy, currcenterblockw, currcenterblockh, curcentermatcoor);
+}
 
 // 将转化后的spiral 坐标进行搜索, 查找对应的位置
 int 
@@ -5105,62 +5169,22 @@ spiralsearch(XY centeredxy){
 	return -1;
 }
 
+
 void
-movemouseswitcher(const Arg *arg)
+pysmoveclient(Client *target, int sx, int sy)
 {
-	int x, y, ocx, ocy, px, py;
-	Client *c;
-	Monitor *m;
-	XEvent ev;
-	Time lasttime = 0;
+	LOG_FORMAT("movemouseswitcher sx:%d, sy:%d", sx, sy);
+	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) return;
 
-	if (!(c = selmon->sel))
-		return;
-	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
-		return;
-	/*restack(selmon);*/
-	ocx = c->x;
-	ocy = c->y;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
-		return;
-	if (!getrootptr(&x, &y))
-		return;
-
-	/*int oldx = ev.xmotion.x - selmon->switcherwx;*/
-	/*int oldy = ev.xmotion.y - selmon->switcherwy;*/
-	/*Client *oldc = selmon->switcheraction.pointerfuncx(oldx, oldy);*/
-	Client *oldc = selmon->sel;
-	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
-		switch(ev.type) {
-		case ConfigureRequest:
-		case Expose:
-		case MapRequest:
-			handler[ev.type](&ev);
-			break;
-		case MotionNotify:
-			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
-				continue;
-			lasttime = ev.xmotion.time;
-			px = ev.xmotion.x - selmon->switcherwx;
-			py = ev.xmotion.y - selmon->switcherwy;
-			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
-			drw_setscheme(drw, scheme[SchemeSel]);
-			drw_rect(drw, px, py, selmon->switcherww/7, selmon->switcherwh/7, 1, 1);
-			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
-			break;
-		}
-	} while (ev.type != ButtonRelease);
-	XUngrabPointer(dpy, CurrentTime);
-
-	XY sxys[] = {{px, py}};
+	Client *oldc = target;
+	XY sxys[] = {{sx, sy}};
 	XY cxys[1];
 	int tagindexout[1];
 	selmon->switcheraction.switcherxy2xy(sxys,1,cxys, tagindexout);
-	XY centerxy = clientxy2centered(cxys[0]);
+	XY centerxy = clientxy2centered_container(cxys[0]);
+	LOG_FORMAT("movemouseswitcher 0 centerxy:%d %d ", centerxy.x, centerxy.y);
 
-	Client *chosenc = selmon->switcheraction.sxy2client(px, py);
+	Client *chosenc = selmon->switcheraction.sxy2client(sx, sy);
 	if (chosenc) {
 		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
 		if (oldc) {
@@ -5219,11 +5243,12 @@ movemouseswitcher(const Arg *arg)
 					}else{
 						LOG_FORMAT("movemouseswitcher 5");
 						oldc->containerid = oldc->id;
+						arrange(selmon);
 						targetindex[0] = oldc->containerlaunchindex;
 						targetpos[0] = spiral_index[foundspiralindex];
 						clientids[0] = oldc->containerid;
 						pyplace(targetindex, 1, targetpos, clientids);
-						LOG_FORMAT("movemouseswitcher 6");
+						LOG_FORMAT("movemouseswitcher 6 %d,%d", targetpos[0].row, targetpos[0].col);
 					}
 					if (oldc->containerrefc) {
 						oldc->containerrefc->containerrefc = NULL;
@@ -5244,6 +5269,59 @@ movemouseswitcher(const Arg *arg)
 			}
 		}
 	}
+}
+
+void
+movemouseswitcher(const Arg *arg)
+{
+	int x, y, ocx, ocy, px, py;
+	Client *c;
+	Monitor *m;
+	XEvent ev;
+	Time lasttime = 0;
+
+	if (!(c = selmon->sel))
+		return;
+	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
+		return;
+	/*restack(selmon);*/
+	ocx = c->x;
+	ocy = c->y;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
+		return;
+	if (!getrootptr(&x, &y))
+		return;
+
+	/*int oldx = ev.xmotion.x - selmon->switcherwx;*/
+	/*int oldy = ev.xmotion.y - selmon->switcherwy;*/
+	/*Client *oldc = selmon->switcheraction.pointerfuncx(oldx, oldy);*/
+	Client *oldc = selmon->sel;
+	do {
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		switch(ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+			px = ev.xmotion.x - selmon->switcherwx;
+			py = ev.xmotion.y - selmon->switcherwy;
+			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+			drw_setscheme(drw, scheme[SchemeSel]);
+			drw_rect(drw, px, py, selmon->switcherww/7, selmon->switcherwh/7, 1, 1);
+			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
+			break;
+		}
+	} while (ev.type != ButtonRelease);
+	XUngrabPointer(dpy, CurrentTime);
+
+	pysmoveclient(oldc, px, py);
+
 }
 
 Client *
@@ -7205,6 +7283,7 @@ pyresort3(Container *cs[], int n, int resorted[])
 			strcat(params, ",");
 	}
 
+	LOG_FORMAT("pysort3 %s", params);
 	struct HttpResponse resp;
 	resp.content = malloc(1);
 	resp.size = 0;
@@ -7216,7 +7295,7 @@ pyresort3(Container *cs[], int n, int resorted[])
 	char *temp = strtok(resp.content,",");
 	while(temp)
 	{
-		/*LOG_FORMAT("pyresort2 %s", temp);*/
+		LOG_FORMAT("pyresort3 %s", temp);
 		sscanf(temp,"%d",&resorted[j]);
 		j++;
 		temp = strtok(NULL,",");
@@ -7321,13 +7400,14 @@ tile7(Monitor *m)
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
 	int resortok = pyresort3(tiledcs, containern, resorted);
+	
 	/*LOG_FORMAT("%d %d", resorted[0], resorted[1]);*/
-	/*for(i = 0;i<n;i++)*/
 	if(resortok)
 	{
 		for(i = 0;i<initn;i++)
 		{
 			int resorteindex = resorted[i];
+			LOG_FORMAT("tile7 11 %d", resorteindex);
 			if(resorteindex < 0 || resorteindex >= initn) continue;
 			container = tiledcs[resorteindex];
 			/*c = tiledcs[i];*/
@@ -7418,7 +7498,14 @@ tile7(Monitor *m)
 				c->y = tiledcs[i]->y;
 				c->w = perw;
 				c->h = tiledcs[i]->h;
+				LOG_FORMAT("tile7 10 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
 				c->matcoor = tiledcs[i]->matcoor;
+				c->containern = tiledcs[i]->cn;
+				c->containerx = tiledcs[i]->x;
+				c->containery = tiledcs[i]->y;
+				c->containerw = tiledcs[i]->w;
+				c->containerh = tiledcs[i]->h;
+				c->containerlaunchindex = tiledcs[i]->launchindex;
 			}
 		}
 	}
@@ -7427,17 +7514,23 @@ tile7(Monitor *m)
 
 	// move the axis
 	if (!selmon->sel->isfloating) {
+		if(!selmon->sel->container) return;
 		int selctx = selmon->sel->container->x;
 		int selcty = selmon->sel->container->y;
 		int selctw = selmon->sel->container->w;
 		int selcth = selmon->sel->container->h;
+		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, selmon->sel->container->id);
 		int offsetx = sc.w / 2 - (selctw / 2 + selctx);
 		int offsety = sc.h / 2 - (selcth / 2 + selcty);
 		offsetx = offsetx - (sc.w - selctw)/2;
 		offsety = offsety - (sc.h - selcth)/2;
+		LOG_FORMAT("tile7 8 %d,%d", offsetx, offsety);
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
+			c->containerx = c->containerx + offsetx + gapx;
+			c->containery = c->containery + offsety + gapy;
+			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
 			c->bw = 0;
 			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
 			/*c->placed = 1;*/
@@ -7452,12 +7545,15 @@ tile7(Monitor *m)
 		/*updateborder(c);*/
 	/*}*/
 
+	LOG_FORMAT("tile7 5");
+
 	for(i=0;i<n;i++)
 	{
 		if (tiledcs[i]) {
 			free(tiledcs[i]);
 		}
 	}
+	LOG_FORMAT("tile7 6");
 }
 
 void
