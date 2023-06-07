@@ -7520,10 +7520,10 @@ tile7(Monitor *m)
 		int selctw = selmon->sel->container->w;
 		int selcth = selmon->sel->container->h;
 		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, selmon->sel->container->id);
-		int offsetx = sc.w / 2 - (selctw / 2 + selctx);
-		int offsety = sc.h / 2 - (selcth / 2 + selcty);
-		offsetx = offsetx - (sc.w - selctw)/2;
-		offsety = offsety - (sc.h - selcth)/2;
+		// cxy的座标系: 0,0处的窗口中心点 在座标 0,0处, 将所选的窗口移动到0,0处需要 -selctx, -selcty, (selctx,selcty为原座标系座标)
+		// 移动到左上角
+		int offsetx = - selctx;
+		int offsety = - selcty;
 		LOG_FORMAT("tile7 8 %d,%d", offsetx, offsety);
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
