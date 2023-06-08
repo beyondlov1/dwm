@@ -492,6 +492,7 @@ static void spawn(const Arg *arg);
 static void sspawn(const Arg *arg);
 static void stspawn(const Arg *arg);
 static void stsspawn(const Arg *arg);
+static void stispawn(const Arg *arg);
 static void swap(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
@@ -618,6 +619,8 @@ static const char **nexttempcmd;
 static long lastnexttemptime;
 static long lastmanagetime;
 static long lastspawntime;
+static pid_t ispawnpids[] = {0};
+static long ispawntimes[] = {0};
 
 static int switchercurtagindex;
 
@@ -4525,6 +4528,8 @@ manage(Window w, XWindowAttributes *wa)
 {
 	lastmanagetime = getcurrusec(); 
 	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1000000*5) && lastnexttemptime >= lastspawntime;
+	int isispawn = ispawnpids[0] == getwindowpid(w) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0;
+	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)
 	if(scratchgroupptr->isfloating && !isnexttemp)
@@ -4550,6 +4555,9 @@ manage(Window w, XWindowAttributes *wa)
 	c->containerid = c->id;
 	c->containern = 0;
 	c->containerrefc = NULL;
+	if (isispawn && selmon->sel && selmon->sel->containern <= 1) {
+		c->containerid = selmon->sel->containerid;
+	}
 
 	updateicon(c);
 	updateicons(c);
@@ -6250,14 +6258,13 @@ sigstatusbar(const Arg *arg)
 	sigqueue(statuspid, SIGRTMIN+statussig, sv);
 }
 
-void
-spawn(const Arg *arg)
+pid_t
+forkrun(const Arg *arg)
 {
 	lastspawntime = getcurrusec();
-	if (arg->v == dmenucmd)
-		dmenumon[0] = '0' + selmon->num;
-	selmon->tagset[selmon->seltags] &= ~scratchtag;
-	if (fork() == 0) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		// child process
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
@@ -6265,7 +6272,19 @@ spawn(const Arg *arg)
 		fprintf(stderr, "dwm: execvp %s", ((char **)arg->v)[0]);
 		perror(" failed");
 		exit(EXIT_SUCCESS);
+	}else{
+		// parent process
+		return pid;
 	}
+}
+
+void
+spawn(const Arg *arg)
+{
+	if (arg->v == dmenucmd)
+		dmenumon[0] = '0' + selmon->num;
+	selmon->tagset[selmon->seltags] &= ~scratchtag;
+	forkrun((arg));
 }
 
 void
@@ -6295,6 +6314,15 @@ void tsspawn(const Arg *arg)
 	lastnexttemptime = getcurrusec();
 	spawn(arg);
 	lastspawntime = lastnexttemptime;
+}
+
+
+void 
+ispawn(const Arg *arg)
+{
+	pid_t pid = forkrun(arg);
+	ispawnpids[0] = pid;
+	ispawntimes[0] = getcurrusec();
 }
 
 char *
@@ -6377,6 +6405,19 @@ void stsspawn(const Arg *arg){
 	char *cmd[] = {"st","-d",workingdir,NULL};
 	const Arg a = {.v = cmd};
 	sspawn(&a);
+}
+
+void stispawn(const Arg *arg){
+	char workingdir[128] = "";
+	if (selmon->sel) {
+		pid_t currpid = selmon->sel->pid;
+		if (currpid) {
+			getstworkingdir(workingdir, currpid);
+		}
+	}
+	char *cmd[] = {"st","-d",workingdir,NULL};
+	const Arg a = {.v = cmd};
+	ispawn(&a);
 }
 
 void reltag(const Arg *arg)
