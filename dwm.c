@@ -5238,9 +5238,26 @@ void
 pysmoveclient(Client *target, int sx, int sy)
 {
 	LOG_FORMAT("movemouseswitcher sx:%d, sy:%d", sx, sy);
-	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) return;
-
 	Client *oldc = target;
+	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) 
+	{
+		if (!oldc->containerrefc) {
+			return;
+		}
+		if (oldc->containerid == oldc->id && oldc->containerrefc) {
+			oldc->containerrefc->containerid = oldc->containerrefc->id;
+		}else{
+			oldc->containerid = oldc->id;
+		}
+		if (oldc->containerrefc) {
+			oldc->containerrefc->containerrefc = NULL;
+			oldc->containerrefc = NULL;
+		}
+		arrange(selmon);
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+		return;
+	}
+
 	XY sxys[] = {{sx, sy}};
 	XY cxys[1];
 	int tagindexout[1];
