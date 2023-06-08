@@ -4557,6 +4557,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->containerrefc = NULL;
 	if (isispawn && selmon->sel && selmon->sel->containern <= 1) {
 		c->containerid = selmon->sel->containerid;
+		ispawnpids[0] = 0;
+		ispawntimes[0] = 0;
 	}
 
 	updateicon(c);
