@@ -489,6 +489,8 @@ static void sigstatusbar(const Arg *arg);
 static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
+static void ispawn(const Arg *arg);
+static void itspawn(const Arg *arg);
 static void sspawn(const Arg *arg);
 static void stspawn(const Arg *arg);
 static void stsspawn(const Arg *arg);
@@ -4522,13 +4524,38 @@ scratchsingle(char *cmd[],ScratchItem **siptr){
 	return 0;
 }
 
+int 
+ischildof(unsigned long pid, unsigned long ppid)
+{
+	int found = 0;
+	if(pid){
+		if (pid == ppid) {
+			return 1;
+		}
+		int PPIDCHAIN_N = 10;
+		unsigned long ppidchain[PPIDCHAIN_N];
+		getppidchain(pid, ppidchain, PPIDCHAIN_N, 0);
+		for (int i = 0; i < PPIDCHAIN_N; i++)
+		{
+			if (ppidchain[i] <= 1)
+				break;
+			if (ppidchain[i] == ppid)
+			{
+				found = 1;
+				break;
+			}
+		}
+	}
+	return found;
+}
 
 void
 manage(Window w, XWindowAttributes *wa)
 {
 	lastmanagetime = getcurrusec(); 
 	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1000000*5) && lastnexttemptime >= lastspawntime;
-	int isispawn = ispawnpids[0] == getwindowpid(w) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0;
+
+	int isispawn = ischildof(getwindowpid(w), ispawnpids[0]) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0;
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)
@@ -4609,8 +4636,12 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (c->istemp)
 	{
-		c->isfloating = True;
-		c->tags = TAGMASK;
+		if (isispawn) {
+			c->isfloating = False;
+		}else {
+			c->isfloating = True;
+			c->tags = TAGMASK;
+		}
 		c->w = c->mon->ww / 2.5;
 		c->h = c->mon->wh / 2;
 		c->x = c->mon->wx + (c->mon->ww - WIDTH(c));
@@ -4687,7 +4718,6 @@ manage(Window w, XWindowAttributes *wa)
 	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
 	if (c->istemp)
 	{
-		c->isfloating = 1;
 		XSetWindowAttributes wa = {.event_mask = EnterWindowMask | FocusChangeMask | PropertyChangeMask | StructureNotifyMask | KeyPressMask};
 		XChangeWindowAttributes(dpy, c->win, CWEventMask, &wa);
 	}
@@ -6327,6 +6357,18 @@ ispawn(const Arg *arg)
 	ispawntimes[0] = getcurrusec();
 }
 
+void 
+itspawn(const Arg *arg)
+{
+	isnexttemp = 1;
+	nexttempcmd = arg->v;
+	lastnexttemptime = getcurrusec();
+	pid_t pid = forkrun(arg);
+	lastspawntime = lastnexttemptime;
+	ispawnpids[0] = pid;
+	ispawntimes[0] = getcurrusec();
+}
+
 char *
 getcwd_by_pid(pid_t pid) {
 	char buf[32];
@@ -6409,7 +6451,8 @@ void stsspawn(const Arg *arg){
 	sspawn(&a);
 }
 
-void stispawn(const Arg *arg){
+void 
+stispawn(const Arg *arg){
 	char workingdir[128] = "";
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
