@@ -426,12 +426,14 @@ static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
 static long getcurrusec();
 static Picture geticonprop(Window w, unsigned int *icw, unsigned int *ich);
+static unsigned long getwindowpid(Window w);
 static void hidescratchgroup(ScratchGroup *sg);
 static void hidescratchgroupv(ScratchGroup *sg, int isarrange);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
+static void killclientforce(const Arg *arg);
 static void killclientc(Client *c);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -3411,9 +3413,9 @@ enternotify(XEvent *e)
 	if (oldc->isdoubled && c->isdoubled) {
 		return;
 	}
-	if (oldc->containern > 1 && c->containern > 1) {
-		return;
-	}
+	/*if (oldc->containern > 1 && c->containern > 1) {*/
+		/*return;*/
+	/*}*/
 
 	int oldx = c->x;
 	int oldy = c->y;
@@ -4259,6 +4261,7 @@ void
 keyrelease(XEvent *e)
 {
 	/*LOG_FORMAT("keyrelease");*/
+	Client *c = selmon->sel;
 	unsigned int i;
 	KeySym keysym;
 	XKeyEvent *ev;
@@ -4267,6 +4270,9 @@ keyrelease(XEvent *e)
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
 	if(selmon->switcher && keysym == XK_Super_L)
 	{
+		if (selmon->sel && selmon->sel->containern > 1) {
+			XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
+		}
 		destroyswitcher(selmon);
 	}
 }
@@ -4294,6 +4300,18 @@ void
 killclient(const Arg *arg)
 {
 	killclientc(selmon->sel);
+}
+
+void
+killclientforce(const Arg *arg)
+{
+	if (selmon->sel) {
+		char pidstr[20];
+		sprintf(pidstr, "%d", selmon->sel->pid);
+		const char *killcmd[] = {"/usr/bin/kill",pidstr,NULL};
+		Arg killarg = {.v=killcmd};
+		spawn(&killarg);
+	}
 }
 
 int 

@@ -180,6 +180,7 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{MODKEY,			XK_F2, killclientforce, {0}},
 	{MODKEY,			XK_g, toggleswitchersticky, {0}},
 	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
@@ -377,6 +378,7 @@ static Key switcherkeys[] = {
 	{MODKEY, XK_Return, toggleswitchers, {0}},
 	{MODKEY, XK_grave, tile6maximize, {0}},
 
+	{ MODKEY,			XK_F2, killclientforce, {0}},
 	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
