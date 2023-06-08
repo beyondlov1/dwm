@@ -2960,14 +2960,14 @@ int
 angley(XY xy1, XY xy2)
 {
 	// 上下
-	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y)+0.1*distancexy(xy1, xy2);
+	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + distancexy(xy1, xy2);
 }
 
 int
 anglex(XY xy1, XY xy2)
 {
 	// 左右
-	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + 0.1 *distancexy(xy1, xy2);
+	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + distancexy(xy1, xy2);
 }
 
 int
