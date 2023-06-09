@@ -2505,6 +2505,7 @@ int getvalidtagn(int *validtagn, int tagi2t[])
 	}
 }
 
+// 确定tag块的位置
 void switchertagarrange_tag(int ww, int wh, int tagn, int tagsx[], int tagsy[], int tagsww[], int tagswh[], int *validtagn, int tagi2t[])
 {
 	
@@ -2568,6 +2569,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], 
 
     	XY tsxys[n];
 	int s2t[n]; // sxy->tagindex
+	memset(s2t, 0, sizeof(s2t));
 	for (j = 0; j < n; j++)
 	{
 		for (i = 0; i < tagn; i++)
@@ -2754,23 +2756,24 @@ void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 Client *
 sxy2client_tag(int rx, int ry)
 {
-	XSync(dpy, False);
 	LOG_FORMAT("sxy2client 1, rx:%d,ry:%d", rx, ry);
 	XY sxys[] = {{rx, ry}};
 	XY cxys[1];
 	int tagindexout[1];
 	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys, tagindexout);
 
+	Client *found = NULL;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
 	{
 		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
 		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
 		{
+			found = c;
 			break;
 		}
 	}
-	return c;
+	return found;
 }
 
 int 
@@ -6575,6 +6578,18 @@ void
 tag(const Arg *arg)
 {
 	if (selmon->sel && arg->ui & TAGMASK) {
+		Client *oldc = selmon->sel;
+		if (oldc->containern > 1) {
+			if (oldc->containerid == oldc->id && oldc->containerrefc) {
+				oldc->containerrefc->containerid = oldc->containerrefc->id;
+			}else{
+				oldc->containerid = oldc->id;
+			}
+			if (oldc->containerrefc) {
+				oldc->containerrefc->containerrefc = NULL;
+				oldc->containerrefc = NULL;
+			}
+		}
 		selmon->sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
