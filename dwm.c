@@ -2331,6 +2331,7 @@ clientswitchermoveverticalsticky(const Arg *arg)
 void
 clientswitcheraction(int rx, int ry)
 {
+	if (!selmon->switcher) return;
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
 	Client *c = selmon->switcheraction.sxy2client(rx, ry);
@@ -2753,6 +2754,8 @@ void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 Client *
 sxy2client_tag(int rx, int ry)
 {
+	XSync(dpy, False);
+	LOG_FORMAT("sxy2client 1, rx:%d,ry:%d", rx, ry);
 	XY sxys[] = {{rx, ry}};
 	XY cxys[1];
 	int tagindexout[1];
