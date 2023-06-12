@@ -654,7 +654,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 1;
+static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -4021,6 +4021,7 @@ pyswap(const Arg *arg)
 void
 swap(const Arg *arg)
 {
+	LOG_FORMAT("tracecontainer swap 0 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 	pyswap(arg);
 	/*Client *cnext;*/
 	/*do {*/
@@ -4606,14 +4607,11 @@ manage(Window w, XWindowAttributes *wa)
 		c->container->cs[c->container->cn] = c;
 		c->container->cn ++;
 		c->containerrefc = selmon->sel;
+		selmon->sel->containerrefc = c;
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
 	}else{
-		c->container = (Container *)malloc(sizeof(Container));
-		memset(c->container, 0, sizeof(Container));
-		c->container->id = c->id;
-		c->container->cs[c->container->cn] = c;
-		c->container->cn ++;
+		c->container = createcontainerc(c);
 		if(selmon->sel)
 			c->container->launchparent = selmon->sel->container;
 	}
@@ -5221,11 +5219,14 @@ clientxy2centered_container(XY cxy)
 		XY sxy = {0,0};
 		return sxy;
 	}
+
+	LOG_FORMAT("tracecontainer clientxy2centered_container 0 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 	XY currcentercxy = {selmon->sel->container->x + selmon->sel->container->w / 2, selmon->sel->container->y + selmon->sel->container->h / 2};
 	int currcenterblockw = selmon->sel->container->w;
 	int currcenterblockh = selmon->sel->container->h;
 	MXY curcentermatcoor = selmon->sel->matcoor;
 	LOG_FORMAT("clientxy2centered_container 0 currcentercxy:%d %d ", currcentercxy.x, currcentercxy.y);
+	LOG_FORMAT("clientxy2centered_container 0 curcentermatcoor:%d %d ", curcentermatcoor.row, curcentermatcoor.col);
 	return clientxy2centeredx(cxy, currcentercxy, currcenterblockw, currcenterblockh, curcentermatcoor);
 }
 
@@ -5307,13 +5308,16 @@ pysmoveclient(Client *target, int sx, int sy)
 			/*pyplace(targetindex, n, targetpos, clientids);*/
 
 			if(chosenc->container->cn >= 2) return;
+			LOG_FORMAT("tracecontainer swap 1 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 			freecontainerc(oldc->container, oldc);
 			oldc->container = chosenc->container;
 			oldc->container->cs[oldc->container->cn] = oldc;
 			oldc->container->cn ++;
 			oldc->containerrefc = chosenc;
 			chosenc->containerrefc = oldc;
+			LOG_FORMAT("tracecontainer swap 2 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 			arrange(selmon);
+			LOG_FORMAT("tracecontainer swap 3 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 		}
 	}else{
@@ -7568,6 +7572,7 @@ tile7(Monitor *m)
 	}
 
 	Container *tiledcs[n];
+	memset(tiledcs, 0, sizeof(tiledcs));
 	int ctn = 0;
 	for(i=0;i<n;i++)
 	{
@@ -7700,7 +7705,7 @@ tile7(Monitor *m)
 				c->w = perw;
 				c->h = tiledcs[i]->h;
 				c->matcoor = tiledcs[i]->matcoor;
-				LOG_FORMAT("tile7 10 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+				LOG_FORMAT("tile7 10 %d,%d,%d,%d %s containerid:%d", c->x, c->y, c->w, c->h, c->name, tiledcs[i]->id);
 			}
 		}
 	}
@@ -7721,13 +7726,19 @@ tile7(Monitor *m)
 		int offsety = - selcty;
 		LOG_FORMAT("tile7 8 %d,%d", offsetx, offsety);
 
+		for(i=0;i<ctn;i++)
+		{
+			container = tiledcs[i];
+			container->x = container->x + offsetx + gapx;
+			container->y = container->y + offsety + gapy;
+		}
+
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
-			c->container->x = c->container->x + offsetx + gapx;
-			c->container->y = c->container->y + offsety + gapy;
-			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
 			c->bw = 0;
 			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
+			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
 			/*c->placed = 1;*/
 		}
 	}
