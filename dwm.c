@@ -7547,7 +7547,7 @@ freecontainerc(Container *container, Client *c)
 void
 tile7(Monitor *m)
 {
-
+	if (selmon->sel && selmon->sel->isfloating) return;
 	LOG_FORMAT("tile7 1");
 	unsigned int i,j, n, h, mw,mx, my, ty;
 	Client *c;
