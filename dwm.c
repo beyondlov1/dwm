@@ -5308,6 +5308,7 @@ pysmoveclient(Client *target, int sx, int sy)
 			/*pyplace(targetindex, n, targetpos, clientids);*/
 
 			if(chosenc->container->cn >= 2) return;
+			if(chosenc == oldc) return;
 			LOG_FORMAT("tracecontainer swap 1 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 			freecontainerc(oldc->container, oldc);
 			oldc->container = chosenc->container;
