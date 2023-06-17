@@ -7553,8 +7553,10 @@ tile7(Monitor *m)
 	unsigned int i,j, n, h, mw,mx, my, ty;
 	Client *c;
 	Container *container;
-	int gapx = 7;
-	int gapy = 7;
+	/*int gapx = 7;*/
+	/*int gapy = 0;*/
+	int gapx = 0;
+	int gapy = 0;
 	if (tile6initwinfactor == 1) {
 		gapx = 0;
 		gapy = 0;
