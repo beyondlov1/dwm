@@ -654,7 +654,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
+static int islog = 1;
 
 void
 LOG(char *content, char * content2){
@@ -7430,7 +7430,7 @@ pyresort3(Container *cs[], int n, int resorted[])
 	for(i=0;i<n;i++)
 	{
 		Container *lp = cs[i]->launchparent;
-		char str[3];
+		char str[5];
 		int foundindex = -1;
 		int j;
 		for(j=0;j<n;j++)
@@ -7451,14 +7451,14 @@ pyresort3(Container *cs[], int n, int resorted[])
 	for(i=0;i<n;i++)
 	{
 		Container *c = cs[i];
-		char str[3];
+		char str[5];
 		sprintf(str, "%d", c->id);
 		strcat(params, str);
 		if(i!=n-1)
 			strcat(params, ",");
 	}
 
-	/*LOG_FORMAT("pysort3 %s", params);*/
+	LOG_FORMAT("pysort3 %s", params);
 	struct HttpResponse resp;
 	resp.content = malloc(1);
 	resp.size = 0;
@@ -7470,7 +7470,7 @@ pyresort3(Container *cs[], int n, int resorted[])
 	char *temp = strtok(resp.content,",");
 	while(temp)
 	{
-		/*LOG_FORMAT("pyresort3 %s", temp);*/
+		LOG_FORMAT("pyresort3 %s", temp);
 		sscanf(temp,"%d",&resorted[j]);
 		j++;
 		temp = strtok(NULL,",");
