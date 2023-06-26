@@ -182,7 +182,7 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{MODKEY,			XK_g, toggleswitchersticky, {0}},
-	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
+	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
@@ -379,7 +379,7 @@ static Key switcherkeys[] = {
 	{MODKEY, XK_grave, tile6maximize, {0}},
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
-	{ MODKEY,                       XK_f, spawn,          {.v = browsercmd} },
+	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },

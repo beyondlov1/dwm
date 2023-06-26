@@ -623,6 +623,8 @@ static const char **nexttempcmd;
 static long lastnexttemptime;
 static long lastmanagetime;
 static long lastspawntime;
+static volatile int isnextinner = 0;
+static long lastnextinnertime;
 static pid_t ispawnpids[] = {0};
 static long ispawntimes[] = {0};
 
@@ -3991,7 +3993,8 @@ pyswap(const Arg *arg)
 	if (!selmon->sel) return;
 	int cx = selmon->sel->x + selmon->sel->w/2 + 10;
 	int cy = selmon->sel->y + selmon->sel->h/2;
-	int times = selmon->sel->container->cn > 1?selmon->sel->container->cn:1;
+	/*int times = selmon->sel->container->cn > 1?selmon->sel->container->cn:1;*/
+	int times = 1;
 	if (arg->i == FOCUS_RIGHT) {
 		cx = selmon->sel->x + selmon->sel->w /2 + selmon->sel->w * times + 10;
 	}
@@ -4577,7 +4580,10 @@ manage(Window w, XWindowAttributes *wa)
 	lastmanagetime = getcurrusec(); 
 	isnexttemp = isnexttemp && (lastmanagetime - lastnexttemptime <= 1000000*5) && lastnexttemptime >= lastspawntime;
 
-	int isispawn = ischildof(getwindowpid(w), ispawnpids[0]) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0;
+	isnextinner = isnextinner && (lastmanagetime - lastnextinnertime <= 1000000*5);
+	int isispawn = isnextinner || (ischildof(getwindowpid(w), ispawnpids[0]) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0);
+	isnextinner = 0;
+
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)
@@ -5291,6 +5297,14 @@ pysmoveclient(Client *target, int sx, int sy)
 	if (chosenc) {
 		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
 		if (oldc) {
+			if (chosenc->container == oldc->container) {
+				// 交换位置
+				Container *ct = chosenc->container;
+				Client *tmp = ct->cs[0];
+				ct->cs[0] = ct->cs[1];
+				ct->cs[1] = tmp;
+				return;
+			}
 			LOG_FORMAT("movemouseswitcher sending, %d->%d", oldc->container->id, chosenc->container->id);
 			/*int n = 2;*/
 			/*int targetindex[n];*/
@@ -6410,7 +6424,8 @@ sspawn(const Arg *arg)
 	spawn(arg);
 }
 
-void tsspawn(const Arg *arg)
+void 
+tsspawn(const Arg *arg)
 {
 	isnexttemp = 1;
 	nexttempcmd = arg->v;
@@ -6423,6 +6438,8 @@ void tsspawn(const Arg *arg)
 void 
 ispawn(const Arg *arg)
 {
+	isnextinner = 1;
+	lastnextinnertime = getcurrusec();
 	pid_t pid = forkrun(arg);
 	ispawnpids[0] = pid;
 	ispawntimes[0] = getcurrusec();
