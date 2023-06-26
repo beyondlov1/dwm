@@ -654,7 +654,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
+static int islog = 1;
 
 void
 LOG(char *content, char * content2){
@@ -4693,8 +4693,8 @@ manage(Window w, XWindowAttributes *wa)
 	updatewmhints(c);
     	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
-	if (!c->isfloating)
-		c->isfloating = c->oldstate = trans != None || c->isfixed;
+	/*if (!c->isfloating)*/
+		/*c->isfloating = c->oldstate = trans != None || c->isfixed;*/
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
 	attach(c);
@@ -5263,7 +5263,7 @@ pysmoveclient(Client *target, int sx, int sy)
 		if (!oldc->containerrefc) {
 			return;
 		}
-		if (oldc->container->id == oldc->id && oldc->containerrefc) {
+		if (oldc->container->id == oldc->id) {
 			container = createcontainerc(oldc->containerrefc);
 			removeclientfromcontainer(oldc->container, oldc->containerrefc);
 			oldc->containerrefc = NULL;
@@ -5271,8 +5271,11 @@ pysmoveclient(Client *target, int sx, int sy)
 			Client *refc = oldc->containerrefc;
 			container = createcontainerc(oldc);
 			if (refc) {
+				LOG_FORMAT("pysmoveclient 1, oldc %s, containerid:%d, cid:%d", oldc->name, oldc->container->id, oldc->id);
+				LOG_FORMAT("pysmoveclient 1, refc %s, containerid:%d, cid:%d", refc->name, refc->container->id, refc->id);
 				removeclientfromcontainer(refc->container, refc->containerrefc);
 				refc->containerrefc = NULL;
+				LOG_FORMAT("pysmoveclient 2, oldc %s, containerid:%d, cid:%d, cn:%d", oldc->name, oldc->container->id, oldc->id,oldc->container->cn);
 			}
 		}
 		arrange(selmon);
@@ -7583,7 +7586,7 @@ tile7(Monitor *m)
 		int found = 0;
 		for(j=0;j<ctn;j++)
 		{
-			if(tiledcs[j] == c->container){
+			if(tiledcs[j]->id == c->container->id){
 				found = 1;
 				break;
 			}
