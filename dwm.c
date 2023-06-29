@@ -7725,9 +7725,11 @@ tile7(Monitor *m)
 			int perw = tiledcs[i]->w / tiledcs[i]->cn;
 			int j;
 			int nextx = 0;
+			int splited = tiledcs[i]->cn > 1;
 			for(j=0;j<tiledcs[i]->cn;j++){
 				c = tiledcs[i]->cs[j];
-				c->w = MIN(perw * (j==0?tiledcs[i]->masterfactor:(2-tiledcs[i]->masterfactor)), tiledcs[i]->w);
+				float cfactor = splited ? (j==0?tiledcs[i]->masterfactor:(2-tiledcs[i]->masterfactor)): 1;
+				c->w = perw * cfactor;
 				c->x = tiledcs[i]->x + nextx;
 				c->y = tiledcs[i]->y;
 				c->h = tiledcs[i]->h;
