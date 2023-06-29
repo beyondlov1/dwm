@@ -148,6 +148,7 @@ struct Container {
 	Client *cs[2];
 	int placed;
 	int x, y, w, h;
+	float masterfactor;
 };
 struct Client {
 	int id;
@@ -401,6 +402,7 @@ static void enqueuestack(Client *c);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
 static void empty(const Arg *arg);
+static void expand(const Arg *arg);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
@@ -7515,6 +7517,7 @@ createcontainerc(Client *c)
 	container->id = c->id;
 	container->cs[container->cn] = c;
 	container->cn ++;
+	container->masterfactor = 1;
 	c->container = container;
 	c->containerrefc = NULL;
 	return container;
@@ -7721,12 +7724,14 @@ tile7(Monitor *m)
 		if (tiledcs[i]->cn > 0) {
 			int perw = tiledcs[i]->w / tiledcs[i]->cn;
 			int j;
+			int nextx = 0;
 			for(j=0;j<tiledcs[i]->cn;j++){
 				c = tiledcs[i]->cs[j];
-				c->x = tiledcs[i]->x + j * perw;
+				c->w = MIN(perw * (j==0?tiledcs[i]->masterfactor:(2-tiledcs[i]->masterfactor)), tiledcs[i]->w);
+				c->x = tiledcs[i]->x + nextx;
 				c->y = tiledcs[i]->y;
-				c->w = perw;
 				c->h = tiledcs[i]->h;
+				nextx += c->w;
 				c->matcoor = tiledcs[i]->matcoor;
 				LOG_FORMAT("tile7 10 %d,%d,%d,%d %s containerid:%d", c->x, c->y, c->w, c->h, c->name, tiledcs[i]->id);
 			}
@@ -7775,6 +7780,17 @@ tile7(Monitor *m)
 	/*}*/
 
 	LOG_FORMAT("tile7 5");
+}
+
+void
+expand(const Arg *arg)
+{
+	float incr = arg->f;
+	selmon->sel->container->masterfactor += incr;
+	if(selmon->sel->container->masterfactor > 1.7) selmon->sel->container->masterfactor = 1.7;
+	if(selmon->sel->container->masterfactor < 0.5) selmon->sel->container->masterfactor = 0.5;
+	arrange(selmon);
+	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 }
 
 void
