@@ -5332,6 +5332,10 @@ pysmoveclient(Client *target, int sx, int sy)
 			freecontainerc(oldc->container, oldc);
 			oldc->container = chosenc->container;
 			oldc->container->cs[oldc->container->cn] = oldc;
+			if(oldc->x < chosenc->x){
+				oldc->container->cs[oldc->container->cn] = chosenc;
+				oldc->container->cs[0] = oldc;
+			}
 			oldc->container->cn ++;
 			oldc->containerrefc = chosenc;
 			chosenc->containerrefc = oldc;
