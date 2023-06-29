@@ -3999,9 +3999,13 @@ pyswap(const Arg *arg)
 	int times = 1;
 	if (arg->i == FOCUS_RIGHT) {
 		cx = selmon->sel->x + selmon->sel->w /2 + selmon->sel->w * times + 10;
+		if(selmon->sel->container->cn > 1 && selmon->sel->containerrefc && selmon->sel->x < selmon->sel->containerrefc->x) 
+			cx = selmon->sel->containerrefc->x + selmon->sel->containerrefc->w /2;
 	}
 	if (arg->i == FOCUS_LEFT) {
 		cx = selmon->sel->x + selmon->sel->w /2 - selmon->sel->w * times - 10;
+		if(selmon->sel->container->cn > 1 && selmon->sel->containerrefc && selmon->sel->x > selmon->sel->containerrefc->x) 
+			cx = selmon->sel->containerrefc->x + selmon->sel->containerrefc->w /2;
 	}
 	if (arg->i == FOCUS_UP) {
 		cy = selmon->sel->y + selmon->sel->h/2 - selmon->sel->h;
