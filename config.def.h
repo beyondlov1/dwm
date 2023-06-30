@@ -161,7 +161,7 @@ static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/b
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
 static const char *copyqcmd[] = {"copyq", "toggle", NULL };
 //static const char *browsercmd[] = {"firefox", NULL};
-static const char *browsercmd[] = {"ba", NULL};
+static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
