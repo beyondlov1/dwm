@@ -162,6 +162,8 @@ static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin
 static const char *copyqcmd[] = {"copyq", "toggle", NULL };
 //static const char *browsercmd[] = {"firefox", NULL};
 static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
+static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
+static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
@@ -184,6 +186,7 @@ static Key keys[] = {
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{MODKEY,			XK_g, toggleswitchersticky, {0}},
 	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },
+	{ MODKEY,                       XK_e, rispawn,          {.v = fmcmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
@@ -296,7 +299,6 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	// { MODKEY,                       XK_d,      setlayoutt,      {.v = &layouts[4]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
-	{ MODKEY,                       XK_e,      setlayout,      {.v = &layouts[9]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	//{ MODKEY,                       XK_m,      setlayout,      {0} },
 	{ MODKEY,                       XK_m,      tile6maximize,      {0} },
@@ -386,6 +388,8 @@ static Key switcherkeys[] = {
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
 	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },
+	{ MODKEY,                       XK_e, rispawn,          {.v = fmcmd} },
+	{ MODKEY,                       XK_slash, spawn,          {.v = fmclipcmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
@@ -440,7 +444,6 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
-	{ MODKEY,                       XK_e,      setlayout,      {.v = &layouts[9]} },
 	{ MODKEY,                       XK_m,      tile6maximize,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },

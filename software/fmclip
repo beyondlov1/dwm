@@ -1,0 +1,2 @@
+xte 'keydown Super_L' 'key e' 'keyup Super_L' && sleep 1 && xte 'key slash'  'keydown Control_L' 'key v' 'keyup Control_L' && sleep 0.2 && xte 'key Return'
+

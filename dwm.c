@@ -569,6 +569,12 @@ static void down(int **arr, int row ,int col, int x, int y, int result[2]);
 static void switcherxy2clientxy(XY sxys[], int n, XY cxys[]);
 static void clientxy2switcherxy(XY cxys[], int n, XY sxys[]);
 static XY clientxy2centered(XY xy);
+
+static void separatefromcontainer(Client *oldc);
+static void mergetocontainerof(Client *oldc, Client *chosenc);
+static void replacercincontainer(Client *oldc, Client *chosenc);
+static void rispawn(const Arg *arg);
+
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -629,6 +635,8 @@ static volatile int isnextinner = 0;
 static long lastnextinnertime;
 static pid_t ispawnpids[] = {0};
 static long ispawntimes[] = {0};
+static volatile int isnextreplace = 0;
+static long lastnextreplacetime;
 
 static int switchercurtagindex;
 
@@ -4590,6 +4598,10 @@ manage(Window w, XWindowAttributes *wa)
 	int isispawn = isnextinner || (ischildof(getwindowpid(w), ispawnpids[0]) && lastmanagetime - ispawntimes[0] <= 1000000*5 ? 1:0);
 	isnextinner = 0;
 
+	isnextreplace = isnextreplace && (lastmanagetime - lastnextreplacetime <= 1000000*5);
+	int isrispawn = isnextreplace;
+	isnextreplace = 0;
+
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)
@@ -4597,6 +4609,7 @@ manage(Window w, XWindowAttributes *wa)
 		hidescratchgroupv(scratchgroupptr, 0);
 
 	Client *c, *t = NULL;
+	Client *oldc = selmon->sel;
 	Window trans = None;
 	XWindowChanges wc;
 
@@ -4641,6 +4654,9 @@ manage(Window w, XWindowAttributes *wa)
 		c->container = createcontainerc(c);
 		if(selmon->sel)
 			c->container->launchparent = selmon->sel->container;
+		if (isrispawn) {
+			replacercincontainer(c, oldc->containerrefc);
+		}
 	}
 
 	updateicon(c);
@@ -4736,30 +4752,15 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	LOG_FORMAT("manage 6");
 
+
+
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
 	XRaiseWindow(dpy,c->win);
 	focus(c);
 
-    // no need and makes bugs
-	// Client *maxpc = NULL;
-	// Client *tmp = NULL;
-	// int maxp = 0;
-	// for (tmp = nexttiled(selmon->clients); tmp; tmp = nexttiled(tmp->next))
-	// {
-	// 	if(tmp->priority > maxp){
-	// 		maxpc = tmp;
-	// 		maxp = tmp->priority;
-	// 	}	
-	// }
-	// if (maxpc && maxpc != c)
-	// {
-	// 	pop(maxpc);
-	// 	LOG_FORMAT("manage 7");
-	// }
-	
-	isnexttemp = 0;
 
+	isnexttemp = 0;
 	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
 	if (c->istemp)
 	{
@@ -5268,6 +5269,54 @@ spiralsearch(XY centeredxy){
 	return -1;
 }
 
+void
+separatefromcontainer(Client *oldc){
+	if (!oldc->containerrefc) {
+		return;
+	}
+	if (oldc->container->id == oldc->id) {
+		createcontainerc(oldc->containerrefc);
+		removeclientfromcontainer(oldc->container, oldc->containerrefc);
+		oldc->containerrefc = NULL;
+	}else{
+		Client *refc = oldc->containerrefc;
+		createcontainerc(oldc);
+		if (refc) {
+			LOG_FORMAT("pysmoveclient 1, oldc %s, containerid:%d, cid:%d", oldc->name, oldc->container->id, oldc->id);
+			LOG_FORMAT("pysmoveclient 1, refc %s, containerid:%d, cid:%d", refc->name, refc->container->id, refc->id);
+			removeclientfromcontainer(refc->container, refc->containerrefc);
+			refc->containerrefc = NULL;
+			LOG_FORMAT("pysmoveclient 2, oldc %s, containerid:%d, cid:%d, cn:%d", oldc->name, oldc->container->id, oldc->id,oldc->container->cn);
+		}
+	}
+
+}
+
+void 
+mergetocontainerof(Client *oldc, Client *chosenc){
+	if(chosenc->container->cn >= 2) return;
+	if(chosenc == oldc) return;
+	freecontainerc(oldc->container, oldc);
+	oldc->container = chosenc->container;
+	oldc->container->cs[oldc->container->cn] = oldc;
+	if(oldc->x < chosenc->x){
+		oldc->container->cs[oldc->container->cn] = chosenc;
+		oldc->container->cs[0] = oldc;
+	}
+	oldc->container->cn ++;
+	oldc->containerrefc = chosenc;
+	chosenc->containerrefc = oldc;
+}
+
+void 
+replacercincontainer(Client *oldc, Client *chosenc){
+	if (chosenc->container->cn > 1) {
+		Client *oric = chosenc->containerrefc;
+		separatefromcontainer(chosenc);
+		mergetocontainerof(oldc, oric);
+	}
+}
+
 
 void
 pysmoveclient(Client *target, int sx, int sy)
@@ -5277,24 +5326,7 @@ pysmoveclient(Client *target, int sx, int sy)
 	Container *container;
 	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) 
 	{
-		if (!oldc->containerrefc) {
-			return;
-		}
-		if (oldc->container->id == oldc->id) {
-			container = createcontainerc(oldc->containerrefc);
-			removeclientfromcontainer(oldc->container, oldc->containerrefc);
-			oldc->containerrefc = NULL;
-		}else{
-			Client *refc = oldc->containerrefc;
-			container = createcontainerc(oldc);
-			if (refc) {
-				LOG_FORMAT("pysmoveclient 1, oldc %s, containerid:%d, cid:%d", oldc->name, oldc->container->id, oldc->id);
-				LOG_FORMAT("pysmoveclient 1, refc %s, containerid:%d, cid:%d", refc->name, refc->container->id, refc->id);
-				removeclientfromcontainer(refc->container, refc->containerrefc);
-				refc->containerrefc = NULL;
-				LOG_FORMAT("pysmoveclient 2, oldc %s, containerid:%d, cid:%d, cn:%d", oldc->name, oldc->container->id, oldc->id,oldc->container->cn);
-			}
-		}
+		separatefromcontainer(oldc);
 		arrange(selmon);
 		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 		return;
@@ -5319,38 +5351,8 @@ pysmoveclient(Client *target, int sx, int sy)
 				ct->cs[1] = tmp;
 				return;
 			}
-			LOG_FORMAT("movemouseswitcher sending, %d->%d", oldc->container->id, chosenc->container->id);
-			/*int n = 2;*/
-			/*int targetindex[n];*/
-			/*MXY targetpos[n];*/
-			/*int clientids[n];*/
-			/*targetindex[0] = oldc->launchindex;*/
-			/*targetpos[0] = chosenc->matcoor;*/
-			/*[>clientids[0] = oldc->id;<]*/
-			/*clientids[0] = oldc->container->id;*/
-
-			/*targetindex[1] = chosenc->launchindex;*/
-			/*targetpos[1] = oldc->matcoor;*/
-			/*[>clientids[1] = chosenc->id;<]*/
-			/*clientids[1] = chosenc->container->id;*/
-			/*pyplace(targetindex, n, targetpos, clientids);*/
-
-			if(chosenc->container->cn >= 2) return;
-			if(chosenc == oldc) return;
-			LOG_FORMAT("tracecontainer swap 1 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
-			freecontainerc(oldc->container, oldc);
-			oldc->container = chosenc->container;
-			oldc->container->cs[oldc->container->cn] = oldc;
-			if(oldc->x < chosenc->x){
-				oldc->container->cs[oldc->container->cn] = chosenc;
-				oldc->container->cs[0] = oldc;
-			}
-			oldc->container->cn ++;
-			oldc->containerrefc = chosenc;
-			chosenc->containerrefc = oldc;
-			LOG_FORMAT("tracecontainer swap 2 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
+			mergetocontainerof(oldc, chosenc);
 			arrange(selmon);
-			LOG_FORMAT("tracecontainer swap 3 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
 			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 		}
 	}else{
@@ -6473,6 +6475,13 @@ itspawn(const Arg *arg)
 	lastspawntime = lastnexttemptime;
 	ispawnpids[0] = pid;
 	ispawntimes[0] = getcurrusec();
+}
+
+void
+rispawn(const Arg *arg){
+	isnextreplace = 1;
+	lastnextreplacetime = getcurrusec();
+	ispawn(arg);
 }
 
 char *
