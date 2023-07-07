@@ -4602,6 +4602,7 @@ manage(Window w, XWindowAttributes *wa)
 	int isrispawn = isnextreplace;
 	isnextreplace = 0;
 
+
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)
@@ -4656,6 +4657,13 @@ manage(Window w, XWindowAttributes *wa)
 			c->container->launchparent = selmon->sel->container;
 		if (isrispawn) {
 			replacercincontainer(c, oldc->containerrefc);
+		}else{
+			if (oldc){
+				int isoldcreplaceable = strcmp(oldc->class, "St");
+				if (isoldcreplaceable == 0) {
+					replacercincontainer(c, oldc);
+				}
+			}
 		}
 	}
 
