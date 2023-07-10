@@ -158,6 +158,7 @@ struct Client {
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
+	int hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
@@ -586,7 +587,7 @@ static int statussig;
 static pid_t statuspid = -1;
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
-static int bh, blw = 0;      /* bar geometry */
+static int bh = 0, blw = 0;      /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
@@ -898,7 +899,9 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 	if (*w < bh)
 		*w = bh;
 	if (resizehints || c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
-		/* see last two sentences in ICCCM 4.1.2.3 */
+		if (!c->hintsvalid)
+			updatesizehints(c);		
+			/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
 		if (!baseismin) { /* temporarily remove base dimensions */
 			*w -= c->basew;
@@ -931,32 +934,6 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 	return *x != c->x || *y != c->y || *w != c->w || *h != c->h;
 }
 
-
-// not used
-// try to arrange all tag eagerly, but not good
-void 
-arrangealltag(Monitor *m)
-{
-	LOG_FORMAT("arrangealltag 1");
-	if (m)
-		showhidealltag(m->stack);
-	else
-		for (m = mons; m; m = m->next)
-			showhidealltag(m->stack);
-	LOG_FORMAT("arrangealltag 2");
-	if (m)
-	{
-		LOG_FORMAT("arrangealltag 3");
-		arrangemon(m);
-		LOG_FORMAT("arrangealltag 4");
-		restack(m);
-		LOG_FORMAT("arrangealltag 5");
-	}
-	else
-		for (m = mons; m; m = m->next)
-			arrangemon(m);
-}
-
 void
 arrange(Monitor *m)
 {
@@ -975,8 +952,8 @@ arrange(Monitor *m)
 	} else for (m = mons; m; m = m->next)
 		arrangemon(m);
 	
-	if (selmon->switcherstickywin) {
-		selmon->switcherstickyaction.drawfunc(selmon->switcherstickywin, selmon->switcherstickyww, selmon->switcherstickywh);
+	if (m && m->switcherstickywin) {
+		m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
 	}
 }
 
@@ -1240,6 +1217,7 @@ cleanup(void)
 		drw_cur_free(drw, cursor[i]);
 	for (i = 0; i < LENGTH(colors); i++)
 		free(scheme[i]);
+	free(scheme);
 	XDestroyWindow(dpy, wmcheckwin);
 	drw_free(drw);
 	XSync(dpy, False);
@@ -1378,6 +1356,7 @@ configurenotify(XEvent *e)
 		dirty = (sw != ev->width || sh != ev->height);
 		sw = ev->width;
 		sh = ev->height;
+		LOG_FORMAT("configurenotify");
 		if (updategeom() || dirty) {
 			drw_resize(drw, sw, bh);
 			updatebars();
@@ -1541,17 +1520,16 @@ drawbar(Monitor *m)
 	unsigned int i, occ = 0, urg = 0, n = 0, occt = 0;
 	Client *c;
 
-	if (m != selmon) 
-		return;
-
 	if (!m->showbar)
 		return;
 
 	if(showsystray && m == systraytomon(m) && !systrayonleft)
 		stw = getsystraywidth();
 
+	LOG_FORMAT("drawbar 1");
+
 	/* draw status first so it can be overdrawn by tags later */
-	if (m == selmon) { /* status is only drawn on selected monitor */
+	if (m == selmon) { // status is only drawn on selected monitor
 		char *text, *s, ch;
 		drw_setscheme(drw, scheme[SchemeNorm]);
 
@@ -1572,6 +1550,8 @@ drawbar(Monitor *m)
 		tw = statusw;
 	}
 
+	LOG_FORMAT("drawbar 2");
+
 	resizebarwin(m);
 	for (c = m->clients; c; c = c->next) {
 		if (ISVISIBLE(c))
@@ -1581,6 +1561,7 @@ drawbar(Monitor *m)
 		if (c->isurgent)
 			urg |= c->tags;
 	}
+	LOG_FORMAT("drawbar 3");
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
 		/* Do not draw vacant tags */
@@ -1618,6 +1599,7 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 	
+	LOG_FORMAT("drawbar 4");
 	for (i = 0; i < LENGTH(launchers); i++)
 	{
 		w = TEXTW(launchers[i].name);
@@ -1625,9 +1607,12 @@ drawbar(Monitor *m)
 		x += w;
 	}
 
+	LOG_FORMAT("drawbar 7 %ld %d %d %d %d", m->barwin, m->ww, tw, stw, x);
+
 	if ((w = m->ww - tw - stw - x) > bh) {
 		if (n > 0) {
-			tw = TEXTW(m->sel->name) + lrpad;
+			/*tw = TEXTW(m->sel->name) + lrpad;*/
+			tw = TEXTW("HHHHHHHHHHHH") + lrpad;
 			mw = (tw >= w || n == 1) ? 0 : (w - tw) / (n - 1);
 
 			i = 0;
@@ -1666,10 +1651,12 @@ drawbar(Monitor *m)
 				w -= tw;
 			}
 		}
+		LOG_FORMAT("drawbar 6 %ld", m->barwin);
 		drw_setscheme(drw, scheme[SchemeNorm]);
 		drw_rect(drw, x, 0, w, bh, 1, 1);
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
+	LOG_FORMAT("drawbar 5");
 }
 
 
@@ -3192,20 +3179,23 @@ drawswitcher(Monitor *m)
 
 	int prx, pry;
 	getrootptr(&prx, &pry);
+	LOG_FORMAT("prx,pry: %d %d", prx, pry);
 	XY cxys[] = {{selmon->sel->x + selmon->sel->w/2, selmon->sel->y + selmon->sel->h/2}};
 	XY sxys[1];
 	int curtagindex = getcurtagindex(selmon);
 	if(curtagindex < 0) return;
 	int tagindexin[] = {curtagindex};
 	m->switcheraction.xy2switcherxy(cxys, 1, sxys, tagindexin);
-	wx = prx - sxys[0].x;
-	wy = pry - sxys[0].y;
+	// 多屏校正
+	wx = prx - m->wx - sxys[0].x;
+	wy = pry - m->wy - sxys[0].y;
 	if (wx < 0) wx = 0;
 	if (wx > m->ww - m->switcherww) wx = m->ww - m->switcherww;
 	if (wy < 0) wy = 0;
 	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
-	m->switcherwx = wx;
-	m->switcherwy = wy;
+	// 多屏校正
+	m->switcherwx = wx + m->wx;
+	m->switcherwy = wy + m->wy;
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
@@ -3406,6 +3396,8 @@ enternotify(XEvent *e)
 		/*return;*/
 	/*}*/
 
+	LOG_FORMAT("enternotify 1");
+
 	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
 		return;
 	if (selmon->switcher) {
@@ -3423,22 +3415,23 @@ enternotify(XEvent *e)
 		return;
 	
 	Client *oldc = selmon->sel;
-	if (oldc->isfloating) {
+	if (oldc && oldc->isfloating) {
 		focus(c);
 		return;
 	}
-	if (c->isfloating) {
+	if (c && c->isfloating) {
 		focus(c);
 		return;
 	}
-	if (oldc->isdoubled && c->isdoubled) {
+	if (oldc && oldc->isdoubled && c->isdoubled) {
 		return;
 	}
 
 	int oldx = c->x;
 	int oldy = c->y;
 	focus(c);
-	LOG("enternotify", c->name);
+	/*LOG("enternotify", c?c->name:"");*/
+	LOG_FORMAT("enternotify 2");
 	/*LOG_FORMAT("enternotify 2 %d %d", ev->x_root, ev->y_root);*/
 	arrange(m);
 
@@ -3511,6 +3504,7 @@ focus(Client *c)
 		LOG_FORMAT("focus: c or c->win is NULL");
 		// return;
 	}
+	selmon->sel = c;
 	drawbars();
 	LOG_FORMAT("focus: over");
 }
@@ -5032,6 +5026,7 @@ motionnotify(XEvent *e)
 
 	if (ev->window != root)
 		return;
+
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
@@ -5536,7 +5531,7 @@ propertynotify(XEvent *e)
 			arrange(c->mon);
 			break;
 		case XA_WM_NORMAL_HINTS:
-			updatesizehints(c);
+			c->hintsvalid = 0;
 			break;
 		case XA_WM_HINTS:
 			updatewmhints(c);
@@ -5597,6 +5592,9 @@ recttomon(int x, int y, int w, int h)
 {
 	Monitor *m, *r = selmon;
 	int a, area = 0;
+	for (m = mons; m; m = m->next){
+		LOG_FORMAT("recttomon %p", m);
+	}
 
 	for (m = mons; m; m = m->next)
 		if ((a = INTERSECT(x, y, w, h, m)) > area) {
@@ -5848,8 +5846,9 @@ run(void)
 	/* main event loop */
 	XSync(dpy, False);
 	while (running && !XNextEvent(dpy, &ev))
-		if (handler[ev.type])
+		if (handler[ev.type]){
 			handler[ev.type](&ev); /* call handler */
+		}
 }
 
 void
@@ -7658,10 +7657,11 @@ tile7(Monitor *m)
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t sc;
-	sc.x = 0;
-	sc.y = 0;
+	sc.x = m->wx;
+	sc.y = m->wy;
 	sc.w = m->ww;
 	sc.h = m->wh;
+	LOG_FORMAT("sc.x %d sc.y %d", sc.x, sc.y);
 	int initn = 121;
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
@@ -7782,11 +7782,11 @@ tile7(Monitor *m)
 		int selcty = m->sel->container->y;
 		int selctw = m->sel->container->w;
 		int selcth = m->sel->container->h;
-		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, selmon->sel->container->id);
+		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, m->sel->container->id);
 		// cxy的座标系: 0,0处的窗口中心点 在座标 0,0处, 将所选的窗口移动到0,0处需要 -selctx, -selcty, (selctx,selcty为原座标系座标)
 		// 移动到左上角
-		int offsetx = - selctx;
-		int offsety = - selcty;
+		int offsetx = - selctx + sc.x;
+		int offsety = - selcty + sc.y;
 		LOG_FORMAT("tile7 8 %d,%d", offsetx, offsety);
 
 		for(i=0;i<ctn;i++)
@@ -8630,37 +8630,20 @@ unfocus(Client *c, int setfocus)
 void
 unmanage(Client *c, int destroyed)
 {
-	Client *tmpc;
-	for(tmpc = selmon->clients;tmpc;tmpc = tmpc->next)
-		if (tmpc->launchparent) 
-			tmpc->launchparent = NULL;
-
-	// Client *debugc;
-	// LOG_FORMAT("unmanage c, name:%s, p:%p", c->name, c);
-	removefromscratchgroupc(c);
-	// ScratchItem *tmp = NULL;
-	// for (tmp = scratchgroupptr->head->next; tmp && tmp != scratchgroupptr->tail; tmp = tmp->next){
-	// 	debugc = tmp->c;
-	// 	LOG_FORMAT("removefromscratchgroupc, name:%s, p:%p", debugc->name, debugc);
-	// }
-
-	removefromfocuschain(c);
-	// for (debugc = focuschain; debugc; debugc = debugc->lastfocus)
-	// {
-	// 	LOG_FORMAT("removefromfocuschain, name:%s, p:%p", debugc->name, debugc);
-	// }
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
-	// LOG_FORMAT("unmanage 1");
+	Client *tmpc;
+	for(tmpc = m->clients;tmpc;tmpc = tmpc->next)
+		if (tmpc->launchparent) 
+			tmpc->launchparent = NULL;
+
+	removefromscratchgroupc(c);
+	removefromfocuschain(c);
 	detach(c);
 	detachstack(c);
 	freeicon(c);
 	freeicons(c);
-	// LOG_FORMAT("unmanage 2");
-	// for(debugc = selmon->stack; debugc; debugc=debugc->snext){
-	// 	LOG_FORMAT("unmanage 3, name:%s, p:%p", debugc->name, debugc);
-	// }
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -8687,7 +8670,7 @@ unmanage(Client *c, int destroyed)
 		}
 	}
 
-	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
 }
 
 void
@@ -8724,9 +8707,6 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		if (m != selmon)
-			continue;
-
 		w = m->ww;
 		if (showsystray && m == systraytomon(m))
 			w -= getsystraywidth();
@@ -8905,6 +8885,7 @@ updatesizehints(Client *c)
 	} else
 		c->maxa = c->mina = 0.0;
 	c->isfixed = (c->maxw && c->maxh && c->maxw == c->minw && c->maxh == c->minh);
+	c->hintsvalid = 1;
 }
 
 void
@@ -8997,11 +8978,11 @@ updatesystray(void)
 	if (m->switcher) {
 		/*m->systrayrx = m->switcherbarwx + m->switcherbarww;*/
 		/*m->systrayy = m->switcherbarwy;*/
-		m->systrayrx = m->ww;
-		m->systrayy = m->by;
+		m->systrayrx = m->ww + m->wx;
+		m->systrayy = m->by + m->wy;
 	}else{
-		m->systrayrx = m->ww;
-		m->systrayy = m->by;
+		m->systrayrx = m->ww + m->wx;
+		m->systrayy = m->by + m->wy;
 	}
 
 	unsigned int x = m->systrayrx;
