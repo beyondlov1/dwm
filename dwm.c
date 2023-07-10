@@ -4729,7 +4729,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-    	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	/*if (!c->isfloating)*/
 		/*c->isfloating = c->oldstate = trans != None || c->isfixed;*/
@@ -5592,9 +5592,6 @@ recttomon(int x, int y, int w, int h)
 {
 	Monitor *m, *r = selmon;
 	int a, area = 0;
-	for (m = mons; m; m = m->next){
-		LOG_FORMAT("recttomon %p", m);
-	}
 
 	for (m = mons; m; m = m->next)
 		if ((a = INTERSECT(x, y, w, h, m)) > area) {
