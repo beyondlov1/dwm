@@ -1612,7 +1612,7 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - stw - x) > bh) {
 		if (n > 0) {
 			/*tw = TEXTW(m->sel->name) + lrpad;*/
-			tw = TEXTW("HHHHHHHHHHHH") + lrpad;
+			tw = TEXTW(m->sel?m->sel->name:"HHHHHHHHHHHH") + lrpad;
 			mw = (tw >= w || n == 1) ? 0 : (w - tw) / (n - 1);
 
 			i = 0;
