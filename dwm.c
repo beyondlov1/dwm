@@ -1541,6 +1541,9 @@ drawbar(Monitor *m)
 	unsigned int i, occ = 0, urg = 0, n = 0, occt = 0;
 	Client *c;
 
+	if (m != selmon) 
+		return;
+
 	if (!m->showbar)
 		return;
 
@@ -7601,7 +7604,7 @@ freecontainerc(Container *container, Client *c)
 void
 tile7(Monitor *m)
 {
-	if (selmon->sel && selmon->sel->isfloating) return;
+	if (m->sel && m->sel->isfloating) return;
 	LOG_FORMAT("tile7 1");
 	unsigned int i,j, n, h, mw,mx, my, ty;
 	Client *c;
@@ -7657,8 +7660,8 @@ tile7(Monitor *m)
 	rect_t sc;
 	sc.x = 0;
 	sc.y = 0;
-	sc.w = selmon->ww;
-	sc.h = selmon->wh;
+	sc.w = m->ww;
+	sc.h = m->wh;
 	int initn = 121;
 	int resorted[initn];
 	memset(resorted, -1, sizeof(resorted));
@@ -7689,8 +7692,8 @@ tile7(Monitor *m)
 			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
 			if(!ok)
 			{
-				r.x = (selmon->ww - neww) / 2;
-				r.y = (selmon->wh - newh) / 2;
+				r.x = (m->ww - neww) / 2;
+				r.y = (m->wh - newh) / 2;
 				r.w = neww;
 				r.h = newh;
 			}
@@ -7728,8 +7731,8 @@ tile7(Monitor *m)
 			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
 			if(!ok)
 			{
-				r.x = (selmon->ww - neww) / 2;
-				r.y = (selmon->wh - newh) / 2;
+				r.x = (m->ww - neww) / 2;
+				r.y = (m->wh - newh) / 2;
 				r.w = neww;
 				r.h = newh;
 			}
@@ -7773,12 +7776,12 @@ tile7(Monitor *m)
 	LOG_FORMAT("tile7 4");
 
 	// move the axis
-	if (!selmon->sel->isfloating) {
-		if(!selmon->sel->container) return;
-		int selctx = selmon->sel->container->x;
-		int selcty = selmon->sel->container->y;
-		int selctw = selmon->sel->container->w;
-		int selcth = selmon->sel->container->h;
+	if (!m->sel->isfloating) {
+		if(!m->sel->container) return;
+		int selctx = m->sel->container->x;
+		int selcty = m->sel->container->y;
+		int selctw = m->sel->container->w;
+		int selcth = m->sel->container->h;
 		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, selmon->sel->container->id);
 		// cxy的座标系: 0,0处的窗口中心点 在座标 0,0处, 将所选的窗口移动到0,0处需要 -selctx, -selcty, (selctx,selcty为原座标系座标)
 		// 移动到左上角
@@ -8721,6 +8724,9 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
+		if (m != selmon)
+			continue;
+
 		w = m->ww;
 		if (showsystray && m == systraytomon(m))
 			w -= getsystraywidth();
