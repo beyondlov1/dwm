@@ -2616,6 +2616,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], 
 			miny = MIN(c->y, miny);
 		}
 		float factor = MIN(1.0 * ww / (maxx - minx + maxw), 1.0 * wh / (maxy - miny + maxh));
+		LOG_FORMAT("switcherxy2clientxy_pertag ww,wh:%d %d %d %d %d %f",ww, wh,miny,maxy, maxh,  factor);
 		tfactor[i] = factor;
 		tminx[i] = minx;
 		tminy[i] = miny;
@@ -2632,6 +2633,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], 
 		}
 		cxys[i].x = tsxys[i].x / factor + minx;
 		cxys[i].y = tsxys[i].y / factor + miny;
+		LOG_FORMAT("switcherxy2clientxy_pertag tsxy: %d %d %d %d %d %d %f",tsxys[i].x, tsxys[i].y, minx, miny, cxys[i].x, cxys[i].y, factor);
 		tagindexout[i] = s2t[i];
 	}
 }
@@ -5200,27 +5202,23 @@ pyplace(int targetindex[], int n, MXY targetpos[], int clientids[])
  * currcentercxy: 當前中心的塊(client or container)cxy座標
  * currcenterblockw, currcenterblockh: 當前中心塊的大小
  * currcentermatcoor: 當前中心所在塊兒的矩陣位置
+ * return centerdxy 是相对于 spiral (0,0) 处方格的中心点位置。 即: spiral (0,0) 中心点处座标为0
 */
 XY
 clientxy2centeredx(XY cxy, XY currcentercxy, int currcenterblockw, int currcenterblockh, MXY curcentermatcoor)
 {
 	XY xy;
-	rect_t sc;
-	sc.x = 0;
-	sc.y = 0;
-	sc.w = selmon->ww;
-	sc.h = selmon->wh;
-	int offsetx = sc.w / 2 - currcentercxy.x;
-	int offsety = sc.h / 2 - currcentercxy.y;
 
-	
 	int w = currcenterblockw;
 	int h = currcenterblockh;
-	int centerx = curcentermatcoor.col * w - w / 2;
-	int centery = curcentermatcoor.row * h - h / 2;
 
-	xy.x = cxy.x - offsetx + centerx;
-	xy.y = cxy.y - offsety + centery;
+	// 现在spiral(0,0)的座标
+	int spiralzerox = (-curcentermatcoor.col * w + w/2) + currcentercxy.x;
+	int spiralzeroy = (-curcentermatcoor.row * h + h/2) + currcentercxy.y;
+
+	// cxy - 当前(0,0)座标得到相对(0,0)的座标
+	xy.x = cxy.x - spiralzerox;
+	xy.y = cxy.y - spiralzeroy;
 	return xy;
 }
 
@@ -5245,7 +5243,7 @@ clientxy2centered_container(XY cxy)
 	}
 
 	LOG_FORMAT("tracecontainer clientxy2centered_container 0 sel:%s %d %d,%d %d,%d", selmon->sel->name, selmon->sel->container->id, selmon->sel->x, selmon->sel->y, selmon->sel->container->x, selmon->sel->container->y);
-	XY currcentercxy = {selmon->sel->container->x + selmon->sel->container->w / 2, selmon->sel->container->y + selmon->sel->container->h / 2};
+	XY currcentercxy = {selmon->sel->container->x, selmon->sel->container->y};
 	int currcenterblockw = selmon->sel->container->w;
 	int currcenterblockh = selmon->sel->container->h;
 	MXY curcentermatcoor = selmon->sel->matcoor;
@@ -5255,6 +5253,7 @@ clientxy2centered_container(XY cxy)
 }
 
 // 将转化后的spiral 坐标进行搜索, 查找对应的位置
+// centerdxy 是相对于 spiral (0,0) 处方格的中心点位置
 int 
 spiralsearch(XY centeredxy){
 	int w = selmon->ww * tile6initwinfactor;
@@ -5342,6 +5341,7 @@ pysmoveclient(Client *target, int sx, int sy)
 	XY cxys[1];
 	int tagindexout[1];
 	selmon->switcheraction.switcherxy2xy(sxys,1,cxys, tagindexout);
+	LOG_FORMAT("movemouseswitcher 0 cxy:%d %d ", cxys[0].x, cxys[0].y);
 	XY centerxy = clientxy2centered_container(cxys[0]);
 	LOG_FORMAT("movemouseswitcher 0 centerxy:%d %d ", centerxy.x, centerxy.y);
 
