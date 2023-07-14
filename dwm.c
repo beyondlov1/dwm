@@ -3272,8 +3272,8 @@ drawswitchersticky(Monitor *m)
 	m->switcherstickyww = ww;
 	m->switcherstickywh = wh;
 
-	int wx = m->ww * tile6initwinfactor;
-	int wy = 0;
+	int wx = m->ww * tile6initwinfactor + m->wx;
+	int wy = m->wy;
 
 	m->switcherstickywx = wx;
 	m->switcherstickywy = wy;
