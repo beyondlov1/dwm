@@ -7793,13 +7793,36 @@ tile7(Monitor *m)
 			container->y = container->y + offsety + gapy;
 		}
 
+        // 单屏使用
+		// for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		// {
+		// 	c->bw = 0;
+		// 	resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
+		// 	LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+		// 	LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
+		// 	/*c->placed = 1;*/
+		// }
+
+
+		// 多屏兼容
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
-			c->bw = 0;
-			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
-			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
-			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
-			/*c->placed = 1;*/
+			c->x = c->x+offsetx + gapx;
+			c->y = c->y+offsety + gapy;
+			c->w = c->w - 2*gapx;
+			c->h = c->h - 2*gapy;
+			// 中间点在屏幕中才显示， 否则移动到看不到的地方。 有可能导致显示一个角的窗口看不到
+			if(c->x + c->w / 2 >= m->wx && c->x + c->w / 2 <= m->wx + m->ww
+			  &&  c->y + c->h / 2 >= m->wy && c->y + c->h / 2 <= m->wy + m->wh)
+			{
+				c->bw = 0;
+				resizeclient(c,c->x,c->y, c->w, c->h);
+				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
+				/*c->placed = 1;*/
+			}else{
+				XMoveResizeWindow(dpy, c->win, -c->w * 2, -c->h * 2, c->w, c->h);
+			}
 		}
 	}
 
