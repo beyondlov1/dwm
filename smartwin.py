@@ -2,19 +2,7 @@ import numpy as np
 import word2vecmain
 
 
-def create_adjacent_matrix(k):
-    mat = np.zeros((k,k))
-    mat[0,1] = mat[1,0] = 0.1
-    mat[0,2] = mat[2,0] = 0.2
-    mat[0,3] = mat[3,0] = 0.3
-    mat[0,4] = mat[4,0] = 0.8
-    mat[1,2] = mat[2,1] = 0.1
-    mat[1,3] = mat[3,1] = 0.3
-    mat[1,4] = mat[4,1] = 0.4
-    mat[2,3] = mat[3,2] = 0.3
-    mat[2,4] = mat[4,2] = 0.4
-    mat[3,4] = mat[4,3] = 0.7
-    return mat
+# utils
 
 def distance(v1, v2):
     return np.sqrt((v1[0] - v2[0])**2 + (v1[1] - v2[1]) **2)
@@ -30,6 +18,24 @@ def has_decimal_part(fval):
         return 1
     else:
         return 0
+
+# utils end
+
+# test
+
+def create_adjacent_matrix(k):
+    mat = np.zeros((k,k))
+    mat[0,1] = mat[1,0] = 0.1
+    mat[0,2] = mat[2,0] = 0.2
+    mat[0,3] = mat[3,0] = 0.3
+    mat[0,4] = mat[4,0] = 0.8
+    mat[1,2] = mat[2,1] = 0.1
+    mat[1,3] = mat[3,1] = 0.3
+    mat[1,4] = mat[4,1] = 0.4
+    mat[2,3] = mat[3,2] = 0.3
+    mat[2,4] = mat[4,2] = 0.4
+    mat[3,4] = mat[4,3] = 0.7
+    return mat
 
 def create_adjacent_matrix_from(sentences_tuple, models):
     m = len(sentences_tuple[0])
@@ -56,6 +62,8 @@ def create_adjacent_matrix_from(sentences_tuple, models):
         resultmat = np.multiply(resultmat, mat)
     return resultmat
 
+def train():
+    return word2vecmain.train()
 
 def resort(models, sentences_tuple):
     mat = create_adjacent_matrix_from(sentences_tuple,models)
@@ -124,6 +132,8 @@ def resort(models, sentences_tuple):
         arrindexlist.append(int(posmat[x,y]))
     print(arrindexlist)
     return arrindexlist
+
+# test end
 
 def create_adjacent_matrix_from2(launchparents):
 
@@ -261,8 +271,71 @@ def resort2(tag,launchparents, ids:list):
     return arrindexlist
 
 
-def train():
-    return word2vecmain.train()
+def resort3(tag, launchparents:list, ids:list, selindex:int):
+    # 创建每个窗口之间的相关性分数
+    mat = create_adjacent_matrix_from2(launchparents)
+    # print(mat)
+    k,_ = mat.shape
+
+    # n = int((np.sqrt(k)-1)/2) + 1 + has_decimal_part((np.sqrt(k)-1)/2)
+    n = 6; # nlevel
+    center = n-1
+    posmat = np.zeros((2*n-1,2*n-1)) - 1
+
+    remainindex = [i for i in range(k)]
+    if selindex != -1:
+        remainindex.remove(selindex)
+        remainindex.insert(0, selindex)
+    filled = [] #(index, i, j)  i j 为绝对坐标
+
+    for index in range(len(remainindex)):
+        # minscore = float("inf")
+        # minitem = (-1,-1,-1) #(index, i, j)
+        maxscore = float("-inf")
+        maxitem = (-1,-1,-1,-1) #(index, i, j)
+
+        filledlen = len(filled)
+        filledn = int((np.sqrt(filledlen)-1)/2) + 1 + has_decimal_part((np.sqrt(filledlen)-1)/2)
+        for level in range(0, filledn+1):
+            for k in range(0, level+1):
+                for g in range(0, level+1):
+                    for sign in [(-1,1), (-1,-1),(1,1),(1,-1)]:
+                        i = sign[0] * k
+                        j = sign[1] * g
+                        # print(i,j)
+                        mi,mj = center_itrans((i,j),center)
+                        # print(mi, mj)
+                        if posmat[mi,mj] < 0:
+                            for ri in remainindex:
+                                score = 0
+                                for filleditem in filled:
+                                    findex = filleditem[0]
+                                    fi = filleditem[1]
+                                    fj = filleditem[2]
+                                    score += (1/distance((mi,mj), (fi, fj))) * mat[ri,findex]
+                                if score > maxscore:
+                                    maxscore = score
+                                    maxitem = (ri,mi,mj,ids[ri])
+            # if maxscore != float("-inf"):
+            #     break     
+        filled.append(maxitem)
+        # print(minitem)
+        remainindex.remove(maxitem[0])
+        posmat[maxitem[1], maxitem[2]] = maxitem[0]
+    
+    print(posmat)
+    trace= [(0,0),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(1,2),(0,2),(-1,2),(-2,2),(-2,1),(-2,0),(-2,-1),(-2,-2),(-1,-2),(0,-2),(1,-2),(2,-2),(2,-1),(2,0),(2,1),(2,2),(2,3),(1,3),(0,3),(-1,3),(-2,3),(-3,3),(-3,2),(-3,1),(-3,0),(-3,-1),(-3,-2),(-3,-3),(-2,-3),(-1,-3),(0,-3),(1,-3),(2,-3),(3,-3),(3,-2),(3,-1),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4),(1,4),(0,4),(-1,4),(-2,4),(-3,4),(-4,4),(-4,3),(-4,2),(-4,1),(-4,0),(-4,-1),(-4,-2),(-4,-3),(-4,-4),(-3,-4),(-2,-4),(-1,-4),(0,-4),(1,-4),(2,-4),(3,-4),(4,-4),(4,-3),(4,-2),(4,-1),(4,0),(4,1),(4,2),(4,3),(4,4),(4,5),(3,5),(2,5),(1,5),(0,5),(-1,5),(-2,5),(-3,5),(-4,5),(-5,5),(-5,4),(-5,3),(-5,2),(-5,1),(-5,0),(-5,-1),(-5,-2),(-5,-3),(-5,-4),(-5,-5),(-4,-5),(-3,-5),(-2,-5),(-1,-5),(0,-5),(1,-5),(2,-5),(3,-5),(4,-5),(5,-5),(5,-4),(5,-3),(5,-2),(5,-1),(5,0),(5,1),(5,2),(5,3),(5,4),(5,5)]
+    arrindexlist = []
+    for atrace in trace:
+        x = atrace[0] + center
+        y = atrace[1] + center
+        if x >= posmat.shape[0] or y >= posmat.shape[1]:
+            break
+        arrindexlist.append(int(posmat[x,y]))
+    print(arrindexlist)
+    return arrindexlist
+
+
 
 def place(tag, pairs):
     n = 6; # nlevel
@@ -295,3 +368,4 @@ def place(tag, pairs):
 # resort(train(),(["windistance\n","dwm\n","C语言调用Python3实例_c调用python3_C5DX的博客-CSDN博客 — Mozilla Firefox\n","c-project\n"], ["St", "St", "firefox", "St"]))
 lastfilledlistdict = {}
 # resort2([-1,-1,-1,-1,-1,-1,-1,6])
+resort3(0,[-1,-1,-1,-1,-1,-1,-1,6], [0,1,2,3,4,5,6,7], 3)

@@ -35,8 +35,14 @@ class Resquest(BaseHTTPRequestHandler):
         ids = list(map(int, ids[0].split(",") ))
         tag = query.get("tag")
         tag = int(tag[0])
+        selindex = query.get("selindex")
+        if selindex:
+            selindex = int(selindex[0])
+        else:
+            selindex = -1
         print(launchparents)
         print(ids)
+        # resorted = smartwin.resort3(tag,launchparents, ids, selindex)
         resorted = smartwin.resort2(tag,launchparents, ids)
         buf = ",".join(list(map(str,resorted)))
 

@@ -3208,6 +3208,8 @@ drawswitcher(Monitor *m)
 	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 
+	XWarpPointer(dpy, None, root, 0, 0, 0, 0, m->switcherwx + sxys[0].x, m->switcherwy + sxys[0].y);
+
 	/*m->switcherbarww = ww;*/
 	/*m->switcherbarwh = bh;*/
 	/*m->switcherbarwx = wx;*/
@@ -7507,6 +7509,21 @@ pyresort3(Container *cs[], int n, int resorted[])
 		strcat(params, str);
 		if(i!=n-1)
 			strcat(params, ",");
+	}
+
+	if(selmon->sel){
+		strcat(params, "&");
+		strcat(params, "selindex=");
+		for (i = 0; i < n; i++)
+		{
+			Container *c = cs[i];
+			if (selmon->sel->container == c)
+			{
+				char str[5];
+				sprintf(str, "%d", i);
+				strcat(params, str);
+			}
+		}
 	}
 
 	LOG_FORMAT("pysort3 %s", params);
