@@ -145,10 +145,11 @@ struct Container {
 	int launchindex;
 	Container *launchparent;
 	int cn;
-	Client *cs[2];
+	Client *cs[5];
 	int placed;
 	int x, y, w, h;
 	float masterfactor;
+	void (*arrange)(Monitor *); 
 };
 struct Client {
 	int id;
@@ -182,8 +183,7 @@ struct Client {
 	MXY matcoor;
 	int launchindex;
 
-	Client *containerrefc;
-	//tmp
+	int indexincontainer;
 	Container *container;
 };
 
@@ -572,9 +572,11 @@ static void clientxy2switcherxy(XY cxys[], int n, XY sxys[]);
 static XY clientxy2centered(XY xy);
 
 static void separatefromcontainer(Client *oldc);
+static void separatefromcontainerx(Client *oldc, Container *sepcontainers[]);
 static void mergetocontainerof(Client *oldc, Client *chosenc);
 static void replacercincontainer(Client *oldc, Client *chosenc);
 static void rispawn(const Arg *arg);
+static void updateindexincontainer(Container *container);
 
 static void LOG(char *content,char *content2);
 
@@ -1526,8 +1528,6 @@ drawbar(Monitor *m)
 	if(showsystray && m == systraytomon(m) && !systrayonleft)
 		stw = getsystraywidth();
 
-	LOG_FORMAT("drawbar 1");
-
 	/* draw status first so it can be overdrawn by tags later */
 	if (m == selmon) { // status is only drawn on selected monitor
 		char *text, *s, ch;
@@ -1550,8 +1550,6 @@ drawbar(Monitor *m)
 		tw = statusw;
 	}
 
-	LOG_FORMAT("drawbar 2");
-
 	resizebarwin(m);
 	for (c = m->clients; c; c = c->next) {
 		if (ISVISIBLE(c))
@@ -1561,7 +1559,6 @@ drawbar(Monitor *m)
 		if (c->isurgent)
 			urg |= c->tags;
 	}
-	LOG_FORMAT("drawbar 3");
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
 		/* Do not draw vacant tags */
@@ -1599,15 +1596,12 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 	
-	LOG_FORMAT("drawbar 4");
 	for (i = 0; i < LENGTH(launchers); i++)
 	{
 		w = TEXTW(launchers[i].name);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, launchers[i].name, urg & 1 << i);
 		x += w;
 	}
-
-	LOG_FORMAT("drawbar 7 %ld %d %d %d %d", m->barwin, m->ww, tw, stw, x);
 
 	if ((w = m->ww - tw - stw - x) > bh) {
 		if (n > 0) {
@@ -1651,12 +1645,10 @@ drawbar(Monitor *m)
 				w -= tw;
 			}
 		}
-		LOG_FORMAT("drawbar 6 %ld", m->barwin);
 		drw_setscheme(drw, scheme[SchemeNorm]);
 		drw_rect(drw, x, 0, w, bh, 1, 1);
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
-	LOG_FORMAT("drawbar 5");
 }
 
 
@@ -4008,13 +4000,35 @@ pyswap(const Arg *arg)
 	int times = 1;
 	if (arg->i == FOCUS_RIGHT) {
 		cx = selmon->sel->x + selmon->sel->w /2 + selmon->sel->w * times + 10;
-		if(selmon->sel->container->cn > 1 && selmon->sel->containerrefc && selmon->sel->x < selmon->sel->containerrefc->x) 
-			cx = selmon->sel->containerrefc->x + selmon->sel->containerrefc->w /2;
+		Container *container = selmon->sel->container;
+		if(container->cn > 1 ) 
+		{
+			int i;
+			for(i=0;i<container->cn;i++)
+			{
+				if (selmon->sel->x < container->cs[i]->x)
+				{
+					cx = container->cs[i]->x + container->cs[i]->w / 2;
+					break;
+				}
+			}
+		}
 	}
 	if (arg->i == FOCUS_LEFT) {
 		cx = selmon->sel->x + selmon->sel->w /2 - selmon->sel->w * times - 10;
-		if(selmon->sel->container->cn > 1 && selmon->sel->containerrefc && selmon->sel->x > selmon->sel->containerrefc->x) 
-			cx = selmon->sel->containerrefc->x + selmon->sel->containerrefc->w /2;
+		Container *container = selmon->sel->container;
+		if(container->cn > 1 ) 
+		{
+			int i;
+			for(i=0;i<container->cn;i++)
+			{
+				if (selmon->sel->x > container->cs[i]->x)
+				{
+					cx = container->cs[i]->x + container->cs[i]->w / 2;
+					break;
+				}
+			}
+		}
 	}
 	if (arg->i == FOCUS_UP) {
 		cy = selmon->sel->y + selmon->sel->h/2 - selmon->sel->h;
@@ -4628,7 +4642,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->launchparent = selmon->sel;
 	global_client_id ++;
 	c->id = global_client_id;
-	c->containerrefc = NULL;
+	c->indexincontainer = 0;
 	
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -4638,18 +4652,14 @@ manage(Window w, XWindowAttributes *wa)
 		for(tmpc = selmon->clients;tmpc;tmpc=tmpc->next)
 			if(tmpc->istemp) {
 				killclientc(tmpc);
-				if (selmon->sel->container->cn > 1 && selmon->sel->containerrefc == tmpc) {
+				if (selmon->sel->container->cn > 1 && selmon->sel->container->cs[selmon->sel->indexincontainer] == tmpc) {
 					freecontainerc(selmon->sel->container, tmpc);
 				}
 			}
 	 } else c->istemp = 0;
 
 	if (isispawn && selmon->sel && selmon->sel->container->cn <= 1) {
-		c->container = selmon->sel->container;
-		c->container->cs[c->container->cn] = c;
-		c->container->cn ++;
-		c->containerrefc = selmon->sel;
-		selmon->sel->containerrefc = c;
+		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
 	}else{
@@ -4657,14 +4667,8 @@ manage(Window w, XWindowAttributes *wa)
 		if(selmon->sel)
 			c->container->launchparent = selmon->sel->container;
 		if (isrispawn) {
-			replacercincontainer(c, oldc->containerrefc);
-		/*}else{*/
-			/*if (oldc){*/
-				/*int isoldcreplaceable = strcmp(oldc->class, "St");*/
-				/*if (isoldcreplaceable == 0) {*/
-					/*replacercincontainer(c, oldc);*/
-				/*}*/
-			/*}*/
+			// 替换, FIXME, 多个refc确定替换哪个
+			// replacercincontainer(c, oldc->containerrefc);
 		}
 	}
 
@@ -5277,32 +5281,73 @@ spiralsearch(XY centeredxy){
 }
 
 void
-separatefromcontainer(Client *oldc){
-	if (!oldc->containerrefc) {
+updateindexincontainer(Container *container)
+{
+	if(!container) return;
+	int i;
+	for(i=0;i<container->cn;i++)
+	{
+		container->cs[i]->indexincontainer = i;
+	}
+}
+
+void
+separatefromcontainerx(Client *oldc, Container *result[]){
+	if (oldc->indexincontainer < 0) {
 		return;
 	}
-	if (oldc->container->id == oldc->id) {
-		createcontainerc(oldc->containerrefc);
-		removeclientfromcontainer(oldc->container, oldc->containerrefc);
-		oldc->containerrefc = NULL;
-	}else{
-		Client *refc = oldc->containerrefc;
-		createcontainerc(oldc);
-		if (refc) {
-			LOG_FORMAT("pysmoveclient 1, oldc %s, containerid:%d, cid:%d", oldc->name, oldc->container->id, oldc->id);
-			LOG_FORMAT("pysmoveclient 1, refc %s, containerid:%d, cid:%d", refc->name, refc->container->id, refc->id);
-			removeclientfromcontainer(refc->container, refc->containerrefc);
-			refc->containerrefc = NULL;
-			LOG_FORMAT("pysmoveclient 2, oldc %s, containerid:%d, cid:%d, cn:%d", oldc->name, oldc->container->id, oldc->id,oldc->container->cn);
+	Container *oldcontainer = oldc->container;
+	Container *newcontainer = NULL;
+	Client *newc = NULL;
+	int i;
+	if (oldcontainer->id == oldc->id) {
+		// refcs 第一个创建新 container
+		for(i=0;i<oldcontainer->cn;i++){
+			Client *c = oldcontainer->cs[i];
+			if(c == oldc) continue;
+			removeclientfromcontainer(oldcontainer, c);
+			createcontainerc(c);
+			newcontainer = c->container;
+			newc = c;
+			break;
 		}
+		// 除了要分出来的c, 其他都放入新的container中
+		for(i=0;i<oldcontainer->cn;i++){
+			Client *c = oldcontainer->cs[i];
+			if(c == oldc) continue;
+			removeclientfromcontainer(oldcontainer, c);
+			mergetocontainerof(newc, c);
+		}
+	}else{
+		removeclientfromcontainer(oldcontainer, oldc);
+		createcontainerc(oldc);
+		newcontainer = oldc->container;
 	}
+	updateindexincontainer(newcontainer);
+	updateindexincontainer(oldcontainer);
+	result[0] = oldc->container;
+	if(newcontainer == oldc->container){
+		result[1] = oldcontainer;
+	}else{
+		result[1] = newcontainer;
+	}
+}
 
+void 
+separatefromcontainer(Client *oldc)
+{
+	Container *result[2] = {NULL,NULL};
+	separatefromcontainerx(oldc, result);
 }
 
 void 
 mergetocontainerof(Client *oldc, Client *chosenc){
-	if(chosenc->container->cn >= 2) return;
+	if(chosenc->container->cn >= 5) return;
 	if(chosenc == oldc) return;
+	LOG_FORMAT("mergetocontainerof -1");
+	Container *container1 = oldc->container;
+	Container *container2 = chosenc->container;
+	LOG_FORMAT("mergetocontainerof 0");
 	freecontainerc(oldc->container, oldc);
 	oldc->container = chosenc->container;
 	oldc->container->cs[oldc->container->cn] = oldc;
@@ -5311,14 +5356,23 @@ mergetocontainerof(Client *oldc, Client *chosenc){
 		oldc->container->cs[0] = oldc;
 	}
 	oldc->container->cn ++;
-	oldc->containerrefc = chosenc;
-	chosenc->containerrefc = oldc;
+	LOG_FORMAT("mergetocontainerof 1");
+	updateindexincontainer(container1);
+	updateindexincontainer(container2);
 }
 
 void 
 replacercincontainer(Client *oldc, Client *chosenc){
 	if (chosenc->container->cn > 1) {
-		Client *oric = chosenc->containerrefc;
+		Container *targetcontainer = chosenc->container;
+		Client *oric = NULL;
+		int i;
+		for(i=0;i<targetcontainer->cn;i++)
+		{
+			if(targetcontainer->cs[i] == chosenc) continue;
+			oric = targetcontainer->cs[i];
+		}
+		if(!oric) return;
 		separatefromcontainer(chosenc);
 		mergetocontainerof(oldc, oric);
 	}
@@ -5375,35 +5429,24 @@ pysmoveclient(Client *target, int sx, int sy)
 			if (foundspiralindex >= 0) {
 				/*clientids[0] = oldc->id;*/
 				if(oldc->container->cn > 1){
-					Client *containerrefc = oldc->containerrefc;
-
 					MXY oldmxy = oldc->matcoor;
 					MXY newmxy = spiral_index[foundspiralindex];
 
 					// 拆
-					if (oldc->container->id == oldc->id && oldc->containerrefc) {
-						container = createcontainerc(oldc->containerrefc);
-						removeclientfromcontainer(oldc->container, oldc->containerrefc);
-						oldc->containerrefc = NULL;
-					}else{
-						Client *refc = oldc->containerrefc;
-						container = createcontainerc(oldc);
-						if (refc) {
-							removeclientfromcontainer(refc->container, refc->containerrefc);
-							refc->containerrefc = NULL;
-						}
-					}
+					Container *sepcontainers[2];
+					memset(sepcontainers, 0, sizeof(sepcontainers));
+					separatefromcontainerx(oldc, sepcontainers);
 					arrange(selmon);
 
 					// 移
 					LOG_FORMAT("movemouseswitcher 3");
-					targetindex[0] = oldc->container->launchindex;
+					targetindex[0] =sepcontainers[0]->launchindex;
 					targetpos[0] = newmxy;
-					clientids[0] = oldc->container->id;
+					clientids[0] = sepcontainers[0]->id;
 
-					targetindex[1] = containerrefc->container->launchindex;
+					targetindex[1] = sepcontainers[1]->launchindex;
 					targetpos[1] = oldmxy;
-					clientids[1] = containerrefc->container->id;
+					clientids[1] = sepcontainers[1]->id;
 					LOG_FORMAT("movemouseswitcher 3.5 newmxy:%d,%d", newmxy.row, newmxy.col);
 					pyplace(targetindex, 2, targetpos, clientids);
 					LOG_FORMAT("movemouseswitcher 4");
@@ -6657,21 +6700,8 @@ tag(const Arg *arg)
 	if (selmon->sel && arg->ui & TAGMASK) {
 		Client *oldc = selmon->sel;
 		if (oldc->container->cn > 1) {
-				// 拆
-				Container *container;
-				if (oldc->container->id == oldc->id && oldc->containerrefc) {
-					container = createcontainer();
-					container->id = oldc->containerrefc->id;
-					oldc->containerrefc->container = container;
-				}else{
-					container = createcontainer();
-					container->id = oldc->id;
-					oldc->container = container;
-				}
-				if (oldc->containerrefc) {
-					oldc->containerrefc->containerrefc = NULL;
-					oldc->containerrefc = NULL;
-				}
+			// 拆
+			separatefromcontainer(oldc);
 		}
 		selmon->sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
@@ -7565,7 +7595,7 @@ createcontainerc(Client *c)
 	container->cn ++;
 	container->masterfactor = 1.3;
 	c->container = container;
-	c->containerrefc = NULL;
+	c->indexincontainer = 0;
 	return container;
 }
 
@@ -7586,10 +7616,7 @@ removeclientfromcontainer(Container *container, Client *c)
 	if (!found) return;
 
 	LOG_FORMAT("removeclientfromcontainer 1");
-	if (c->containerrefc) {
-		c->containerrefc->containerrefc = NULL;
-		c->containerrefc = NULL;
-	}
+	c->indexincontainer = -1;
 	
 	if (i == container->cn-1) {
 		container->cn --;
@@ -7600,6 +7627,7 @@ removeclientfromcontainer(Container *container, Client *c)
 	for(j=i;j<(container->cn-1);j++)
 	{
 		container->cs[j] = container->cs[j+1];
+		container->cs[j]->indexincontainer = j;
 	}
 	container->cn --;
 	LOG_FORMAT("removeclientfromcontainer 3");
@@ -7808,6 +7836,7 @@ tile7(Monitor *m)
 			container = tiledcs[i];
 			container->x = container->x + offsetx + gapx;
 			container->y = container->y + offsety + gapy;
+			updateindexincontainer(container);
 		}
 
         // 单屏使用
