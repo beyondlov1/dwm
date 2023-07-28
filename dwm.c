@@ -671,7 +671,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
+static int islog = 1;
 
 void
 LOG(char *content, char * content2){
@@ -4661,7 +4661,7 @@ manage(Window w, XWindowAttributes *wa)
 			}
 	 } else c->istemp = 0;
 
-	if (isispawn && selmon->sel && selmon->sel->container->cn <= CONTAINER_MAX_N) {
+	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N) {
 		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
@@ -7887,12 +7887,14 @@ container_layout_tile(Container *container)
 	int splited = container->cn > 1;
 	if(!splited)
 	{
+		LOG_FORMAT("container_layout_tile 3");
 		c = container->cs[0];
 		c->x = container->x;
 		c->y = container->y;
 		c->w = container->w;
 		c->h = container->h;
 		c->matcoor = container->matcoor;
+		LOG_FORMAT("container_layout_tile 4");
 	}
 	else
 	{
@@ -7927,6 +7929,7 @@ container_layout_tile(Container *container)
 			c->matcoor = container->matcoor;
 			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id);
 		}
+		LOG_FORMAT("container_layout_tile 3");
 	}
 	
 }
