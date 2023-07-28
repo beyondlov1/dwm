@@ -7855,7 +7855,7 @@ tile7(Monitor *m)
 			if(c->x + c->w / 2 >= m->wx && c->x + c->w / 2 <= m->wx + m->ww
 			  &&  c->y + c->h / 2 >= m->wy && c->y + c->h / 2 <= m->wy + m->wh)
 			{
-				c->bw = 0;
+				// c->bw = 0;
 				resizeclient(c,c->x,c->y, c->w, c->h);
 				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
 				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
@@ -7894,6 +7894,7 @@ container_layout_tile(Container *container)
 		c->w = container->w;
 		c->h = container->h;
 		c->matcoor = container->matcoor;
+		c->bw = 0;
 		LOG_FORMAT("container_layout_tile 4");
 	}
 	else
@@ -7922,6 +7923,22 @@ container_layout_tile(Container *container)
 			c->h = ismaster ? masterh : slaveh;
 			c->x = container->x + (ismaster ? 0 : masterw);
 			c->y = container->y + (ismaster ? masternexty : slavenexty);
+			
+			c->w = c->w - c->mon->gap->gappx / 2;
+			c->h = c->h - c->mon->gap->gappx;
+			c->x = c->x + c->mon->gap->gappx / 4;
+			c->y = c->y + c->mon->gap->gappx / 2;
+
+			if(selmon->sel == c)
+				c->bw = borderpx;
+			else
+				c->bw = 0;
+
+			XWindowChanges wc;
+			wc.border_width = c->bw;
+			XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+			updateborder(c);
+
 			if(ismaster)
 				masternexty += masterw;
 			else

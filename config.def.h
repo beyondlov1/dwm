@@ -30,12 +30,12 @@ static const char col_white[]        = "#FFFFFF";
 static const char *colors[][3] = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = {col_gray3, col_gray1, col_gray2},
-	[SchemeSel] = {col_gray4, col_cyan, "#00BFFF"},
+	[SchemeSel] = {col_gray4, col_cyan, "#ffcd05"},
 	[SchemeScr] = {col_gray4, col_cyan, "#cf110b"},
 	[SchemeInvalidNormal] = {col_gray2, col_gray1, col_gray2},
 	[SchemeInvalidSel] = {col_gray2, col_cyan, "#00BFFF"},
 	[SchemeDoublePageMarked] = {col_gray2, col_cyan, "#ff9300"},
-	[SchemeTiled] = {"#ff9300",col_gray1, col_gray2},
+	[SchemeTiled] = {"#ff9300", col_gray1, col_gray2},
 };
 
 /* tagging */
