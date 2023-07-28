@@ -89,6 +89,7 @@
 #define FOCUS_UP 2
 #define FOCUS_DOWN -2
 
+#define CONTAINER_MAX_N 5
 
 static FILE *logfile;
 static FILE *actionlogfile;
@@ -145,11 +146,11 @@ struct Container {
 	int launchindex;
 	Container *launchparent;
 	int cn;
-	Client *cs[5];
+	Client *cs[CONTAINER_MAX_N];
 	int placed;
 	int x, y, w, h;
 	float masterfactor;
-	void (*arrange)(Monitor *); 
+	void (*arrange)(Container *container); 
 };
 struct Client {
 	int id;
@@ -515,6 +516,7 @@ static void tile4(Monitor *);
 static void tile5(Monitor *);
 static void tile6(Monitor *);
 static void tile7(Monitor *);
+static void container_layout_tile(Container *container);
 static void tile6zoom(const Arg *arg);
 static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
@@ -4643,7 +4645,8 @@ manage(Window w, XWindowAttributes *wa)
 	global_client_id ++;
 	c->id = global_client_id;
 	c->indexincontainer = 0;
-	
+	c->container = createcontainerc(c);
+
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
 		c->istemp = 1;
@@ -4658,12 +4661,11 @@ manage(Window w, XWindowAttributes *wa)
 			}
 	 } else c->istemp = 0;
 
-	if (isispawn && selmon->sel && selmon->sel->container->cn <= 1) {
+	if (isispawn && selmon->sel && selmon->sel->container->cn <= CONTAINER_MAX_N) {
 		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
 	}else{
-		c->container = createcontainerc(c);
 		if(selmon->sel)
 			c->container->launchparent = selmon->sel->container;
 		if (isrispawn) {
@@ -5342,7 +5344,7 @@ separatefromcontainer(Client *oldc)
 
 void 
 mergetocontainerof(Client *oldc, Client *chosenc){
-	if(chosenc->container->cn >= 5) return;
+	if(chosenc->container->cn > CONTAINER_MAX_N) return;
 	if(chosenc == oldc) return;
 	LOG_FORMAT("mergetocontainerof -1");
 	Container *container1 = oldc->container;
@@ -5352,8 +5354,13 @@ mergetocontainerof(Client *oldc, Client *chosenc){
 	oldc->container = chosenc->container;
 	oldc->container->cs[oldc->container->cn] = oldc;
 	if(oldc->x < chosenc->x){
+		int i;
+		for(i=0;i<oldc->container->cn;i++)
+		{
+			if(oldc->container->cs[i] == chosenc) break;
+		}
 		oldc->container->cs[oldc->container->cn] = chosenc;
-		oldc->container->cs[0] = oldc;
+		oldc->container->cs[i] = oldc;
 	}
 	oldc->container->cn ++;
 	LOG_FORMAT("mergetocontainerof 1");
@@ -7594,6 +7601,7 @@ createcontainerc(Client *c)
 	container->cs[container->cn] = c;
 	container->cn ++;
 	container->masterfactor = 1.3;
+	container->arrange = container_layout_tile;
 	c->container = container;
 	c->indexincontainer = 0;
 	return container;
@@ -7797,21 +7805,7 @@ tile7(Monitor *m)
 	for(i=0;i<ctn;i++)
 	{
 		if (tiledcs[i]->cn > 0) {
-			int perw = tiledcs[i]->w / tiledcs[i]->cn;
-			int j;
-			int nextx = 0;
-			int splited = tiledcs[i]->cn > 1;
-			for(j=0;j<tiledcs[i]->cn;j++){
-				c = tiledcs[i]->cs[j];
-				float cfactor = splited ? (j==0?tiledcs[i]->masterfactor:(2-tiledcs[i]->masterfactor)): 1;
-				c->w = perw * cfactor;
-				c->x = tiledcs[i]->x + nextx;
-				c->y = tiledcs[i]->y;
-				c->h = tiledcs[i]->h;
-				nextx += c->w;
-				c->matcoor = tiledcs[i]->matcoor;
-				LOG_FORMAT("tile7 10 %d,%d,%d,%d %s containerid:%d", c->x, c->y, c->w, c->h, c->name, tiledcs[i]->id);
-			}
+			tiledcs[i]->arrange(tiledcs[i]);
 		}
 	}
 
@@ -7867,6 +7861,7 @@ tile7(Monitor *m)
 				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
 				/*c->placed = 1;*/
 			}else{
+				LOG_FORMAT("tile7 10");
 				XMoveResizeWindow(dpy, c->win, -c->w * 2, -c->h * 2, c->w, c->h);
 			}
 		}
@@ -7881,6 +7876,59 @@ tile7(Monitor *m)
 	/*}*/
 
 	LOG_FORMAT("tile7 5");
+}
+
+void
+container_layout_tile(Container *container)
+{
+	Client *c;
+	int j;
+
+	int splited = container->cn > 1;
+	if(!splited)
+	{
+		c = container->cs[0];
+		c->x = container->x;
+		c->y = container->y;
+		c->w = container->w;
+		c->h = container->h;
+		c->matcoor = container->matcoor;
+	}
+	else
+	{
+		LOG_FORMAT("container_layout_tile 1");
+		int masterw = container->w;
+		int slavew = container->w;
+		int masterh = container->h;
+		int slaveh = container->h;
+		int ishsplit = container->cn <= nmaster ? 0:1;
+		if(ishsplit) 
+		{
+			masterw = container->w * container->masterfactor/(container->masterfactor + 1);
+			slavew = container->w - masterw;
+		}
+		masterh = container->h / MIN(container->cn, nmaster);
+		slaveh = container->h / MAX(1, container->cn - nmaster);
+
+		int masternexty = 0;
+		int slavenexty = 0;
+		for (j = 0; j < container->cn; j++)
+		{
+			int ismaster = j < nmaster ? 1:0;
+			c = container->cs[j];
+			c->w = ismaster ? masterw : slavew;
+			c->h = ismaster ? masterh : slaveh;
+			c->x = container->x + (ismaster ? 0 : masterw);
+			c->y = container->y + (ismaster ? masternexty : slavenexty);
+			if(ismaster)
+				masternexty += masterw;
+			else
+				slavenexty += slaveh;
+			c->matcoor = container->matcoor;
+			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id);
+		}
+	}
+	
 }
 
 void
