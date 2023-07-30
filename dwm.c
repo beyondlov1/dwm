@@ -517,6 +517,7 @@ static void tile5(Monitor *);
 static void tile6(Monitor *);
 static void tile7(Monitor *);
 static void container_layout_tile(Container *container);
+static void container_layout_tile_v(Container *container);
 static void tile6zoom(const Arg *arg);
 static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
@@ -648,6 +649,7 @@ static int switchercurtagindex;
 /*static float tile6initwinfactor = 0.9;*/
 static float tile6initwinfactor = 1;
 static float lasttile6initwinfactor = 0.9;
+static int showstickyswitcher = 0;
 static int global_client_id = 1;
 
 /* configuration, allows nested code to access above variables */
@@ -3999,38 +4001,13 @@ pyswap(const Arg *arg)
 	int cx = selmon->sel->x + selmon->sel->w/2 + 10;
 	int cy = selmon->sel->y + selmon->sel->h/2;
 	/*int times = selmon->sel->container->cn > 1?selmon->sel->container->cn:1;*/
+
 	int times = 1;
 	if (arg->i == FOCUS_RIGHT) {
 		cx = selmon->sel->x + selmon->sel->w /2 + selmon->sel->w * times + 10;
-		Container *container = selmon->sel->container;
-		if(container->cn > 1 ) 
-		{
-			int i;
-			for(i=0;i<container->cn;i++)
-			{
-				if (selmon->sel->x < container->cs[i]->x)
-				{
-					cx = container->cs[i]->x + container->cs[i]->w / 2;
-					break;
-				}
-			}
-		}
 	}
 	if (arg->i == FOCUS_LEFT) {
 		cx = selmon->sel->x + selmon->sel->w /2 - selmon->sel->w * times - 10;
-		Container *container = selmon->sel->container;
-		if(container->cn > 1 ) 
-		{
-			int i;
-			for(i=0;i<container->cn;i++)
-			{
-				if (selmon->sel->x > container->cs[i]->x)
-				{
-					cx = container->cs[i]->x + container->cs[i]->w / 2;
-					break;
-				}
-			}
-		}
 	}
 	if (arg->i == FOCUS_UP) {
 		cy = selmon->sel->y + selmon->sel->h/2 - selmon->sel->h;
@@ -4038,6 +4015,26 @@ pyswap(const Arg *arg)
 	if (arg->i == FOCUS_DOWN) {
 		cy = selmon->sel->y + selmon->sel->h/2 + selmon->sel->h;
 	}
+
+	Container *container = selmon->sel->container;
+	if (container->cn > 1)
+	{
+		XY xys[container->cn];
+		int i;
+		for (i = 0; i < container->cn; i++)
+		{
+			xys[i].x = container->cs[i]->x + container->cs[i]->w/2;
+			xys[i].y = container->cs[i]->y + container->cs[i]->h/2;
+		}
+		int closest = nextclosestanglexy(arg, container->cn, xys, selmon->sel->indexincontainer);
+		if (closest >= 0)
+		{
+			cx = xys[closest].x;
+			cy = xys[closest].y;
+		}
+	}
+	
+
 	XY cxys[] = {{cx, cy}};
 	XY sxys[1];
 	int curtagindex = getcurtagindex(selmon);
@@ -5415,9 +5412,9 @@ pysmoveclient(Client *target, int sx, int sy)
 			if (chosenc->container == oldc->container) {
 				// 交换位置
 				Container *ct = chosenc->container;
-				Client *tmp = ct->cs[0];
-				ct->cs[0] = ct->cs[1];
-				ct->cs[1] = tmp;
+				Client *tmp = ct->cs[chosenc->indexincontainer];
+				ct->cs[chosenc->indexincontainer] = ct->cs[oldc->indexincontainer];
+				ct->cs[oldc->indexincontainer] = tmp;
 				return;
 			}
 			mergetocontainerof(oldc, chosenc);
@@ -7494,10 +7491,12 @@ tile6maximize(const Arg *arg)
 	if (tile6initwinfactor == 1) {
 		tile6initwinfactor = lasttile6initwinfactor;
 		drawswitchersticky(selmon);
+		showstickyswitcher = 1;
 	}else{
 		lasttile6initwinfactor = tile6initwinfactor;
 		tile6initwinfactor = 1.0;
 		destroyswitchersticky(selmon);
+		showstickyswitcher = 0;
 	}
 	arrange(selmon);
 }
@@ -7601,7 +7600,7 @@ createcontainerc(Client *c)
 	container->cs[container->cn] = c;
 	container->cn ++;
 	container->masterfactor = 1.3;
-	container->arrange = container_layout_tile;
+	container->arrange = container_layout_tile_v;
 	c->container = container;
 	c->indexincontainer = 0;
 	return container;
@@ -7728,8 +7727,9 @@ tile7(Monitor *m)
 			container = tiledcs[resorteindex];
 			/*c = tiledcs[i];*/
 			int neww = sc.w * tile6initwinfactor;
-			/*int newh = sc.h * tile6initwinfactor;*/
-			int newh = sc.h;
+			int newh = sc.h * tile6initwinfactor;
+			if(showstickyswitcher)
+				newh = sc.h;
 
 			if(container->placed) 
 			{
@@ -7767,8 +7767,9 @@ tile7(Monitor *m)
 		{
 			container = tiledcs[i];
 			int neww = sc.w * tile6initwinfactor;
-			/*int newh = sc.h * tile6initwinfactor;*/
-			int newh = sc.h;
+			int newh = sc.h * tile6initwinfactor;
+			if(showstickyswitcher)
+				newh = sc.h;
 
 			if(container->placed) 
 			{
@@ -7820,9 +7821,15 @@ tile7(Monitor *m)
 		int selcth = m->sel->container->h;
 		LOG_FORMAT("tile7 7 %d,%d,%d,%d %d", selctx, selcty, selctw, selcth, m->sel->container->id);
 		// cxy的座标系: 0,0处的窗口中心点 在座标 0,0处, 将所选的窗口移动到0,0处需要 -selctx, -selcty, (selctx,selcty为原座标系座标)
-		// 移动到左上角
-		int offsetx = - selctx + sc.x;
-		int offsety = - selcty + sc.y;
+		// 移动到中间: - selctx + sc.x + (sc.w - selctw)/2;
+		int offsetx = - selctx + sc.x + (sc.w - selctw)/2;
+		int offsety = - selcty + sc.y + (sc.h - selcth)/2;
+		// 移动到左上角:  - selctx + sc.x
+		if(showstickyswitcher)
+		{
+			offsetx = - selctx + sc.x;
+			offsety = - selcty + sc.y;
+		}
 		LOG_FORMAT("tile7 8 %d,%d", offsetx, offsety);
 
 		for(i=0;i<ctn;i++)
@@ -7834,37 +7841,37 @@ tile7(Monitor *m)
 		}
 
         // 单屏使用
-		// for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-		// {
-		// 	c->bw = 0;
-		// 	resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
-		// 	LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
-		// 	LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
-		// 	/*c->placed = 1;*/
-		// }
+		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		{
+			c->bw = 0;
+			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
+			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
+			/*c->placed = 1;*/
+		}
 
 
 		// 多屏兼容
-		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-		{
-			c->x = c->x+offsetx + gapx;
-			c->y = c->y+offsety + gapy;
-			c->w = c->w - 2*gapx;
-			c->h = c->h - 2*gapy;
-			// 中间点在屏幕中才显示， 否则移动到看不到的地方。 有可能导致显示一个角的窗口看不到
-			if(c->x + c->w / 2 >= m->wx && c->x + c->w / 2 <= m->wx + m->ww
-			  &&  c->y + c->h / 2 >= m->wy && c->y + c->h / 2 <= m->wy + m->wh)
-			{
-				// c->bw = 0;
-				resizeclient(c,c->x,c->y, c->w, c->h);
-				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
-				LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
-				/*c->placed = 1;*/
-			}else{
-				LOG_FORMAT("tile7 10");
-				XMoveResizeWindow(dpy, c->win, -c->w * 2, -c->h * 2, c->w, c->h);
-			}
-		}
+		// for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		// {
+		// 	c->x = c->x+offsetx + gapx;
+		// 	c->y = c->y+offsety + gapy;
+		// 	c->w = c->w - 2*gapx;
+		// 	c->h = c->h - 2*gapy;
+		// 	// 中间点在屏幕中才显示， 否则移动到看不到的地方。 有可能导致显示一个角的窗口看不到
+		// 	if(c->x + c->w / 2 >= m->wx && c->x + c->w / 2 <= m->wx + m->ww
+		// 	  &&  c->y + c->h / 2 >= m->wy && c->y + c->h / 2 <= m->wy + m->wh)
+		// 	{
+		// 		// c->bw = 0;
+		// 		resizeclient(c,c->x,c->y, c->w, c->h);
+		// 		LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
+		// 		LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
+		// 		/*c->placed = 1;*/
+		// 	}else{
+		// 		LOG_FORMAT("tile7 10");
+		// 		XMoveResizeWindow(dpy, c->win, -c->w * 2, -c->h * 2, c->w, c->h);
+		// 	}
+		// }
 	}
 
 	/*for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){*/
@@ -7876,6 +7883,81 @@ tile7(Monitor *m)
 	/*}*/
 
 	LOG_FORMAT("tile7 5");
+}
+
+void
+container_layout_tile_v(Container *container)
+{
+	Client *c;
+	int j;
+
+	int splited = container->cn > 1;
+	if(!splited)
+	{
+		LOG_FORMAT("container_layout_tile 3");
+		c = container->cs[0];
+		c->x = container->x;
+		c->y = container->y;
+		c->w = container->w;
+		c->h = container->h;
+		c->matcoor = container->matcoor;
+		c->bw = 0;
+		LOG_FORMAT("container_layout_tile 4");
+	}
+	else
+	{
+		LOG_FORMAT("container_layout_tile 1");
+		int masterw = container->w;
+		int slavew = container->w;
+		int masterh = container->h;
+		int slaveh = container->h;
+		int isvsplit = container->cn <= nmaster ? 0:1;
+		if(isvsplit) 
+		{
+			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
+			slaveh = container->h - masterh;
+		}
+		masterw = container->w / MIN(container->cn, nmaster);
+		slavew = container->w / MAX(1, container->cn - nmaster);
+
+		int masternexty = 0;
+		int slavenexty = 0;
+		int masternextx = 0;
+		int slavenextx = 0;
+		for (j = 0; j < container->cn; j++)
+		{
+			int ismaster = j < nmaster ? 1:0;
+			c = container->cs[j];
+			c->w = ismaster ? masterw : slavew;
+			c->h = ismaster ? masterh : slaveh;
+			c->y = container->y + (ismaster ? 0 : masterh);
+			c->x = container->x + (ismaster ? masternextx : slavenextx);
+			
+			c->w = c->w - c->mon->gap->gappx / 2;
+			c->h = c->h - c->mon->gap->gappx / 2;
+			c->x = c->x + c->mon->gap->gappx / 4;
+			c->y = c->y + c->mon->gap->gappx / 4;
+
+			if(selmon->sel == c)
+				c->bw = borderpx;
+			else
+				c->bw = 0;
+
+			XWindowChanges wc;
+			wc.border_width = c->bw;
+			XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+			updateborder(c);
+
+			if(ismaster)
+				masternextx += masterw;
+			else
+				slavenextx += slavew;
+			c->matcoor = container->matcoor;
+			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id);
+		}
+		LOG_FORMAT("container_layout_tile 3");
+	}
+	
 }
 
 void
@@ -7925,9 +8007,9 @@ container_layout_tile(Container *container)
 			c->y = container->y + (ismaster ? masternexty : slavenexty);
 			
 			c->w = c->w - c->mon->gap->gappx / 2;
-			c->h = c->h - c->mon->gap->gappx;
+			c->h = c->h - c->mon->gap->gappx / 2;
 			c->x = c->x + c->mon->gap->gappx / 4;
-			c->y = c->y + c->mon->gap->gappx / 2;
+			c->y = c->y + c->mon->gap->gappx / 4;
 
 			if(selmon->sel == c)
 				c->bw = borderpx;
@@ -7940,7 +8022,7 @@ container_layout_tile(Container *container)
 			updateborder(c);
 
 			if(ismaster)
-				masternexty += masterw;
+				masternexty += masterh;
 			else
 				slavenexty += slaveh;
 			c->matcoor = container->matcoor;
@@ -7956,8 +8038,10 @@ expand(const Arg *arg)
 {
 	float incr = arg->f;
 	selmon->sel->container->masterfactor += incr;
-	if(selmon->sel->container->masterfactor > 1.7) selmon->sel->container->masterfactor = 1.7;
-	if(selmon->sel->container->masterfactor < 0.5) selmon->sel->container->masterfactor = 0.5;
+	float minfactor = 0.3;
+	float maxfactor = 3.0;
+	if(selmon->sel->container->masterfactor > maxfactor) selmon->sel->container->masterfactor = maxfactor;
+	if(selmon->sel->container->masterfactor < minfactor) selmon->sel->container->masterfactor = minfactor;
 	arrange(selmon);
 	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 }
