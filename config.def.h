@@ -298,7 +298,7 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	//{ 0,                       XK_Super_L,      empty,      {0} },
 	{ 0,                       XK_Super_L,      toggleswitchers,      {0} },
-	{ MODKEY,                       XK_grave,      tile6maximize,      {0} },
+	{ MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
@@ -389,7 +389,7 @@ static Key switcherkeys[] = {
 	{0, XK_Escape, toggleswitchers, {0}},
 	{0, XK_Super_L, toggleswitchers, {0}},
 	{MODKEY, XK_Return, toggleswitchers, {0}},
-	{MODKEY, XK_grave, tile6maximize, {0}},
+	{MODKEY, XK_grave, tile6maximizewithsticky, {0}},
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
 	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },

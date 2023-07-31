@@ -519,6 +519,7 @@ static void tile7(Monitor *);
 static void container_layout_tile(Container *container);
 static void container_layout_tile_v(Container *container);
 static void tile6zoom(const Arg *arg);
+static void tile6maximizewithsticky(const Arg *arg);
 static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
 static void togglebar(const Arg *arg);
@@ -7486,7 +7487,7 @@ tile6zoom(const Arg *arg)
 }
 
 void
-tile6maximize(const Arg *arg)
+tile6maximizewithsticky(const Arg *arg)
 {
 	if (tile6initwinfactor == 1) {
 		tile6initwinfactor = lasttile6initwinfactor;
@@ -7498,6 +7499,22 @@ tile6maximize(const Arg *arg)
 		destroyswitchersticky(selmon);
 		showstickyswitcher = 0;
 	}
+	arrange(selmon);
+}
+
+void 
+tile6maximize(const Arg *arg)
+{
+	if (tile6initwinfactor == 1)
+	{
+		tile6initwinfactor = lasttile6initwinfactor;
+	}
+	else
+	{
+		lasttile6initwinfactor = tile6initwinfactor;
+		tile6initwinfactor = 1.0;
+	}
+	showstickyswitcher = 0;
 	arrange(selmon);
 }
 
