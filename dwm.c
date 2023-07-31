@@ -550,6 +550,7 @@ static void updatewmhints(Client *c);
 static void updateicon(Client *c);
 static void updateicons(Client *c);
 static void updateswitchersticky(Monitor *m);
+static void updateborder(Client *c);
 static void view(const Arg *arg);
 static void viewi(int tagindex);
 static void viewui(unsigned int tagui);
@@ -674,7 +675,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 1;
+static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -7860,7 +7861,7 @@ tile7(Monitor *m)
         // 单屏使用
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
-			c->bw = 0;
+			// c->bw = 0;
 			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
 			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s", c->x, c->y, c->w, c->h, c->name);
 			LOG_FORMAT("tile7 9 %d,%d,%d,%d %s containerid:%d", c->container->x, c->container->y, c->container->w, c->container->h, c->name, c->container->id);
@@ -7891,13 +7892,13 @@ tile7(Monitor *m)
 		// }
 	}
 
-	/*for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){*/
-		/*[>c->bw = borderpx;<]*/
-		/*XWindowChanges wc;*/
-		/*wc.border_width = c->bw;*/
-		/*XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);*/
-		/*updateborder(c);*/
-	/*}*/
+	// for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
+	// 	c->bw = borderpx;
+	// 	XWindowChanges wc;
+	// 	wc.border_width = c->bw;
+	// 	XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+	// 	updateborder(c);
+	// }
 
 	LOG_FORMAT("tile7 5");
 }
@@ -7970,7 +7971,7 @@ container_layout_tile_v(Container *container)
 			else
 				slavenextx += slavew;
 			c->matcoor = container->matcoor;
-			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id);
+			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id, c->bw);
 		}
 		LOG_FORMAT("container_layout_tile 3");
 	}
@@ -8043,7 +8044,7 @@ container_layout_tile(Container *container)
 			else
 				slavenexty += slaveh;
 			c->matcoor = container->matcoor;
-			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id);
+			LOG_FORMAT("container_layout_tile 2 %d,%d,%d,%d,%s,%d,%d,%d", c->x, c->y, c->w, c->h, c->name, c->id, c->container->id, c->bw);
 		}
 		LOG_FORMAT("container_layout_tile 3");
 	}
