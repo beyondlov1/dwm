@@ -367,6 +367,7 @@ static Key keys[] = {
 
 static Key switcherkeys[] = {
 	
+	{MODKEY|ShiftMask,XK_b,togglebar,{0} },
 	{MODKEY, XK_g, toggleswitchersticky, {0}},
 	{0, XK_Left, switchermove, {.i = -1}},
 	{0, XK_Right, switchermove, {.i = 1}},
