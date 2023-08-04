@@ -7617,7 +7617,7 @@ createcontainerc(Client *c)
 	container->id = c->id;
 	container->cs[container->cn] = c;
 	container->cn ++;
-	container->masterfactor = 1.3;
+	container->masterfactor = 1.9;
 	container->arrange = container_layout_tile_v;
 	c->container = container;
 	c->indexincontainer = 0;
