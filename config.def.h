@@ -114,7 +114,8 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 #include "gapgridsortedneat.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",      tile7 },
+	// { "[]=",      tile7 },
+	{ "[]=",      tile5 },
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "HHH",      gapgridsortedneat },
@@ -498,9 +499,9 @@ static Button buttons[] = {
 	{ ClkStatusText,        0,              Button1,        sigstatusbar,   {.i = 1} },
 	{ ClkStatusText,        0,              Button2,        sigstatusbar,   {.i = 2} },
 	{ ClkStatusText,        0,              Button3,        sigstatusbar,   {.i = 3} },
-	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
+	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
-	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
+	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button3,        resizemouse,    {0} },
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },

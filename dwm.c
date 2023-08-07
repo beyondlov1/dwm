@@ -518,6 +518,7 @@ static void tile6(Monitor *);
 static void tile7(Monitor *);
 static void container_layout_tile(Container *container);
 static void container_layout_tile_v(Container *container);
+static void container_layout_mosaic(Container *container);
 static void tile6zoom(const Arg *arg);
 static void tile6maximizewithsticky(const Arg *arg);
 static void tile6maximize(const Arg *arg);
@@ -582,6 +583,8 @@ static void mergetocontainerof(Client *oldc, Client *chosenc);
 static void replacercincontainer(Client *oldc, Client *chosenc);
 static void rispawn(const Arg *arg);
 static void updateindexincontainer(Container *container);
+
+static int fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
 
 static void LOG(char *content,char *content2);
 
@@ -4740,8 +4743,8 @@ manage(Window w, XWindowAttributes *wa)
 	updatewmhints(c);
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
-	/*if (!c->isfloating)*/
-		/*c->isfloating = c->oldstate = trans != None || c->isfixed;*/
+	// if (!c->isfloating)
+	// 	c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
 	attach(c);
@@ -5139,11 +5142,14 @@ movemouse(const Arg *arg)
 				ny = selmon->wy;
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
-			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
-			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
-				togglefloating(NULL);
-			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
-				resize(c, nx, ny, c->w, c->h, 1);
+
+			// 去掉切换 floating
+			// if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
+			// && (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
+			// 	togglefloating(NULL);
+			// if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
+			// 	resize(c, nx, ny, c->w, c->h, 1);
+			resize(c, nx, ny, c->w, c->h, 1);
 			LOG("movemouse.motionNotify", c->name);
 			break;
 		}
@@ -5795,15 +5801,17 @@ resizemouse(const Arg *arg)
 
 			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
 			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
-			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
-			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
-			{
-				if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
-				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
-					togglefloating(NULL);
-			}
-			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
-				resize(c, c->x, c->y, nw, nh, 1);
+			// 去掉切换 floating
+			// if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
+			// && c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
+			// {
+			// 	if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
+			// 	&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
+			// 		togglefloating(NULL);
+			// }
+			// if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
+			// 	resize(c, c->x, c->y, nw, nh, 1);
+			resize(c, c->x, c->y, nw, nh, 1);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
@@ -7134,8 +7142,8 @@ tile5(Monitor *m)
 
 		if(c->placed) 
 		{
-			neww = c->w + 2*gapx;
-			newh = c->h + 2*gapy;
+			neww = c->w;
+			newh = c->h;
 		}
 
 		rect_t r;
@@ -7144,7 +7152,18 @@ tile5(Monitor *m)
 		int ok = 0;
 		int radioi;
 		for(radioi = 0;radioi<radiostepn;radioi++){
-			ok = fill2x(sc, neww, newh, stepw, steph, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
+			int centeri = fillblockn/2;
+			int centerj = fillblockn/2;
+			if (c->launchparent) {
+				int j;
+				for(j=0;j<i;j++){
+					if(tiledcs[j] == c->launchparent){
+						centeri = (ts[j].x+MAX(0, ts[j].w/2 - c->w/2)) / stepw;
+						centerj = (ts[j].y+MAX(0, ts[j].h/2 - c->h/2)) / steph;
+					}
+				}
+			}
+			ok = fill2x(sc, centeri, centerj ,c->w + 2*gapx,c->h + 2*gapy, stepw, steph, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
 			if(ok) break;
 		}
 		if(!ok)
@@ -7155,15 +7174,15 @@ tile5(Monitor *m)
 			r.h = newh;
 		}
 
-		c->x = r.x;
-		c->y = r.y;
-		c->w = r.w;
-		c->h = r.h;
+		c->x = r.x + gapx;
+		c->y = r.y + gapy;
+		c->w = r.w-2*gapx;
+		c->h = r.h-2*gapy;
 
-		ts[i].x = c->x;
-		ts[i].y = c->y;
-		ts[i].w = c->w;
-		ts[i].h = c->h;
+		ts[i].x = r.x;
+		ts[i].y = r.y;
+		ts[i].w = r.w;
+		ts[i].h = r.h;
 
 		/*LOG_FORMAT("tile5 c->x,y,name %d %d %d %d, %s",c->x, c->y,c->w,c->h, c->name);*/
 
@@ -7176,8 +7195,59 @@ tile5(Monitor *m)
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
-			resizeclient(c,c->x+offsetx + gapx,c->y+offsety+gapy, c->w - 2*gapx, c->h-2*gapy);
-			/*c->placed = 1;*/
+			c->x = c->x + offsetx;
+			c->y = c->y + offsety;
+		}
+
+		for (c = m->clients; c; c = c->next)
+		{
+			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
+			{
+				c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
+				c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+			}
+		}
+	}else{
+		
+		for (c = m->clients; c; c = c->next)
+		{
+			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
+			{
+				c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
+				c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+			}
+		}
+
+		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		{
+			c->x = c->x + offsetx;
+			c->y = c->y + offsety;
+		}
+
+		for (c = m->clients; c; c = c->next)
+		{
+			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
+			{
+				c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
+				c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+			}
+		}
+	}
+
+
+	for (c = m->clients; c; c = c->next)
+	{
+		if(ISVISIBLE(c) && !c->istemp)
+		{
+			resizeclient(c, c->x, c->y, c->w, c->h);
+		}
+	}
+
+	for (c = m->clients; c; c = c->next){
+		if(ISVISIBLE(c) && c->isfloating){
+			XRaiseWindow(dpy, c->win);
 		}
 	}
 
@@ -7619,6 +7689,7 @@ createcontainerc(Client *c)
 	container->cn ++;
 	container->masterfactor = 1.9;
 	container->arrange = container_layout_tile_v;
+	// container->arrange = container_layout_mosaic;
 	c->container = container;
 	c->indexincontainer = 0;
 	return container;
@@ -8050,6 +8121,124 @@ container_layout_tile(Container *container)
 	}
 	
 }
+
+struct MosaicItem
+{
+	rect_t r;
+	Client *c;
+	int movable;
+	int placed;
+};
+typedef struct MosaicItem MosaicItem;
+
+void
+container_layout_mosaic(Container *container)
+{	
+	int tsn = container->cn;
+	if(tsn == 0) return;
+
+
+	// 先从划分出的空网格中选择一个作为中心点
+	// 直接放置, 
+	// 如果和其他client有交集, 先调整自己的位置,
+	//		如果能规避, 自我调整, 规避
+	//		如果不能规避, 调整有交集的client, 如果调整完交集client, 与其他出现交集, 则调整另一个, 直到没有client可以调整
+	
+	// MosaicItem items[tsn+4];
+	// memset(items, 0 , sizeof(items));
+	// int i;
+	// for(i=0;i<tsn;i++)
+	// {
+	// 	items[i].c = container->cs[i];
+	// 	items[i].r.w = items[i].c->w;
+	// 	items[i].r.h = items[i].c->h;
+	// 	items[i].movable = 1;
+	// }
+
+	// int fakew = container->w;
+	// int fakeh = container->h;
+	// items[tsn].r.x = 0 - fakew;
+	// items[tsn].r.y = 0;
+	// items[tsn].r.w = fakew;
+	// items[tsn].r.h = fakeh;
+	// items[tsn].placed = 1;
+	// items[tsn].movable = 0;
+	// items[tsn+1].r.x = 0 ;
+	// items[tsn+1].r.y = fakeh;
+	// items[tsn+1].r.w = fakew;
+	// items[tsn+1].r.h = fakeh;
+	// items[tsn+1].placed = 1;
+	// items[tsn+1].movable = 0;
+	// items[tsn+2].r.x = fakew;
+	// items[tsn+2].r.y = 0;
+	// items[tsn+2].r.w = fakew;
+	// items[tsn+2].r.h = fakeh;
+	// items[tsn+2].placed = 1;
+	// items[tsn+2].movable = 0;
+	// items[tsn+3].r.x = 0;
+	// items[tsn+3].r.y = - fakeh;
+	// items[tsn+3].r.w = fakew;
+	// items[tsn+3].r.h = fakeh;
+	// items[tsn+3].placed = 1;
+	// items[tsn+3].movable = 0;
+
+	// for (i = 0; i < tsn; i++)
+	// {
+
+	// }
+
+	rect_t ts[tsn];
+	memset(ts, 0, sizeof(ts));
+	rect_t sc;
+	// sc.x = selmon->gap->gappx + 10;
+	// sc.y = selmon->gap->gappx + 10;
+
+	// 这里故意偏差1px, 为了不让scratchgroup中的窗口与全屏的窗口x,y重合, 导致键盘focus选不中
+	sc.x = container->x + 1;
+	sc.y = container->y + 1;
+	sc.w = container->w - 1;
+	sc.h = container->h - 1;
+	int i = 0;
+	for (i = 0; i < container->cn; i++)
+	{
+		Client * c = container->cs[i];
+		if(!c) continue;
+
+		int neww = selmon->ww * 0.45;
+		int newh = selmon->wh * 0.6;
+		// int neww = selmon->ww * 0.3;
+		// int newh = selmon->wh * 0.3;
+		
+		rect_t r;
+		int radiostepn = 4;
+		double maxintersectradiostep[] = {0.0, 0.3, 0.6, 0.8};
+		int ok = 0;
+		int radioi;
+		for(radioi = 0;radioi<radiostepn;radioi++){
+			ok = fill2(sc, c->w, c->h, 9, ts, i, &r, maxintersectradiostep[radioi]);
+			if(ok) break;
+		}
+		if(!ok)
+		{
+			r.x = selmon->ww / 2 - neww / 2;
+			r.y = selmon->wh / 2 - newh / 2;
+			r.w = neww;
+			r.h = newh;
+		}
+
+		c->x = r.x;
+		c->y = r.y;
+		c->w = r.w;
+		c->h = r.h;
+		c->matcoor = container->matcoor;
+		
+		ts[i].x = r.x;
+		ts[i].y = r.y;
+		ts[i].w = r.w;
+		ts[i].h = r.h;
+	}
+}
+
 
 void
 expand(const Arg *arg)
@@ -8656,15 +8845,15 @@ calcy(rect_t sc, int j, int steph, int h)
  * @return int 
  */
 int
-fill2x(rect_t sc, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+fill2x(rect_t sc, int centeri, int centerj, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
 	// todo: center iterator
 	// LOG_FORMAT("tsn:%d, w:%d, h:%d", tsn, w, h);
 	int radioi;
 	/*int stepw = (sc.w - w) /(n-1);*/
 	/*int steph = (sc.h - h) /(n-1);*/
-	int centeri = n/2;
-	int centerj = n/2;
+	// int centeri = n/2;
+	// int centerj = n/2;
 	int k;
 	for(k = 0;;k++)
 	{
