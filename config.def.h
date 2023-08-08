@@ -155,6 +155,7 @@ static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
 static const char *querycmd[] = {"/home/beyond/software/queryclip.sh", "http://cn.bing.com/search?q=%s", NULL};
 static const char *querybrowsercmd[] = {"/home/beyond/software/browserclip.sh", "https://cn.bing.com/search?q=%s", NULL};
+static const char *rofiwebsearchcmd[] = {"/home/beyond/software/rofiwebsearch.sh",  NULL};
 //static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
@@ -165,6 +166,8 @@ static const char *copyqcmd[] = {"copyq", "toggle", NULL };
 static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
 static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
 static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
+
+static const char *rofiscriptcmd[] = {"/home/beyond/software/rofiscript", NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
@@ -184,6 +187,8 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{Mod1Mask,                       XK_q, spawn,          { .v = rofiwebsearchcmd } },
+	{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{MODKEY,			XK_g, toggleswitchersticky, {0}},
 	{ MODKEY,                       XK_f, ispawn,          {.v = browsercmd} },
@@ -367,7 +372,9 @@ static Key keys[] = {
 
 
 static Key switcherkeys[] = {
-	
+	{Mod1Mask,XK_q, spawn,  { .v = rofiwebsearchcmd } },
+	{Mod1Mask, XK_space, spawn, { .v = rofiscriptcmd } },
+
 	{MODKEY|ShiftMask,XK_b,togglebar,{0} },
 	{MODKEY, XK_g, toggleswitchersticky, {0}},
 	{0, XK_Left, switchermove, {.i = -1}},

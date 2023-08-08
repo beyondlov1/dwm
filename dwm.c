@@ -2978,13 +2978,15 @@ int
 angley(XY xy1, XY xy2)
 {
 	// 上下
-	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + distancexy(xy1, xy2);
+	if(abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 1.2) return 2.5*distancexy(xy1, xy2);
+	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + 1.5*distancexy(xy1, xy2);
 }
 
 int
 anglex(XY xy1, XY xy2)
 {
 	// 左右
+	if(abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1) return 3*distancexy(xy1, xy2);
 	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + distancexy(xy1, xy2);
 }
 
@@ -3002,7 +3004,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i!=curi && xy.x < curxy.x)
 			{
 				int dist = anglex(xy, curxy);
-				if (min > anglex(xy,curxy)) {
+				if (min > dist) {
 					closest = i;
 					min = dist;
 				}
@@ -3018,7 +3020,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.x > curxy.x)
 			{
 				int dist = anglex(xy, curxy);
-				if (min > anglex(xy, curxy))
+				if (min > dist)
 				{
 					closest = i;
 					min = dist;
@@ -3036,7 +3038,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.y < curxy.y)
 			{
 				int dist = angley(xy, curxy);
-				if (min > angley(xy, curxy))
+				if (min > dist)
 				{
 					closest = i;
 					min = dist;
@@ -3054,7 +3056,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.y > curxy.y)
 			{
 				int dist = angley(xy, curxy);
-				if (min > angley(xy, curxy))
+				if (min > dist)
 				{
 					closest = i;
 					min = dist;
@@ -3525,6 +3527,8 @@ focusin(XEvent *e)
 	}
 	if (selmon->sel && ev->window != selmon->sel->win)
 		setfocus(selmon->sel);
+		// 用 rofi 通知时, 切换窗口不能正确随focus移动位置问题, 这里增加arrange
+		arrange(selmon);
 }
 
 void
@@ -5040,7 +5044,7 @@ motionnotify(XEvent *e)
 		return;
 
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
-		unfocus(selmon->sel, 1);
+	unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
 	}
@@ -7816,7 +7820,8 @@ tile7(Monitor *m)
 			container = tiledcs[resorteindex];
 			/*c = tiledcs[i];*/
 			int neww = sc.w * tile6initwinfactor;
-			int newh = sc.h * tile6initwinfactor;
+			// int newh = sc.h * tile6initwinfactor;
+			int newh = sc.h;
 			if(showstickyswitcher)
 				newh = sc.h;
 
