@@ -187,6 +187,32 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+
+	// for tile5
+	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
+	{ MODKEY|ShiftMask,                       XK_Down,      tile5move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_Up,      tile5move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_Right,      tile5move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_Left,      tile5move,       {.i = -1} },
+	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Left,      tile5expandx,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = -0.1} },
+
+	{ Mod1Mask,                       XK_equal,      tile5expand,       {.f=0.1} },
+	{ Mod1Mask,                       XK_minus,      tile5expand,       {.f=-0.1} },
+	{ MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
+	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
+	{ Mod1Mask,                       XK_grave,      tile5viewcomplete,       {0} },
+	
+
 	{Mod1Mask,                       XK_q, spawn,          { .v = rofiwebsearchcmd } },
 	{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
@@ -250,14 +276,15 @@ static Key keys[] = {
 	//{ MODKEY|ShiftMask,                       XK_j,      resizey,       {.f = +0.05} },
 	//{ MODKEY|ShiftMask,                       XK_k,      resizey,       {.f = -0.05} },
 	
-	{ MODKEY|ShiftMask,                       XK_j,      swap,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_k,      swap,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_l,      swap,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_h,      swap,       {.i = -1} },
-	{ MODKEY|ShiftMask,                       XK_Down,      swap,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_Up,      swap,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_Right,      swap,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_Left,      swap,       {.i = -1} },
+	// for tile7
+	// { MODKEY|ShiftMask,                       XK_j,      swap,       {.i = -2} },
+	// { MODKEY|ShiftMask,                       XK_k,      swap,       {.i = +2} },
+	// { MODKEY|ShiftMask,                       XK_l,      swap,       {.i = +1} },
+	// { MODKEY|ShiftMask,                       XK_h,      swap,       {.i = -1} },
+	// { MODKEY|ShiftMask,                       XK_Down,      swap,       {.i = -2} },
+	// { MODKEY|ShiftMask,                       XK_Up,      swap,       {.i = +2} },
+	// { MODKEY|ShiftMask,                       XK_Right,      swap,       {.i = +1} },
+	// { MODKEY|ShiftMask,                       XK_Left,      swap,       {.i = -1} },
 
     { MODKEY|ControlMask,                       XK_l,      expand,       {.f = 0.2} },
 	{ MODKEY|ControlMask,                       XK_h,      expand,       {.f = -0.2} },
@@ -372,6 +399,28 @@ static Key keys[] = {
 
 
 static Key switcherkeys[] = {
+
+	// for tile5
+	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
+	{ MODKEY|ShiftMask,                       XK_Down,      tile5move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_Up,      tile5move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_Right,      tile5move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_Left,      tile5move,       {.i = -1} },
+	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Left,      tile5expandx,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = -0.1} },
+
+
+	{MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
+	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
 	{Mod1Mask,XK_q, spawn,  { .v = rofiwebsearchcmd } },
 	{Mod1Mask, XK_space, spawn, { .v = rofiscriptcmd } },
 

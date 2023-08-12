@@ -216,6 +216,7 @@ struct SwitcherAction{
 	void *(*pointerfunc)(int rx, int ry);
 	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[], int tagindexin[]);
 	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[], int tagindexout[]);
+	void (*switcherfactors)(float factor[], int tagcx[], int tagcy[], int tagsx[], int tagsy[], int tagsww[], int tagswh[]);
 };
 
 typedef struct Pertag Pertag;
@@ -245,6 +246,7 @@ struct Monitor {
 	const Layout *lt[2];
 	Pertag *pertag;
 	int systrayrx, systrayy;
+	int camera_center_x, camera_center_y;
 };
 
 typedef struct {
@@ -405,6 +407,9 @@ static void enternotify(XEvent *e);
 static void expose(XEvent *e);
 static void empty(const Arg *arg);
 static void expand(const Arg *arg);
+static void tile5expand(const Arg *arg);
+static void tile5expandx(const Arg *arg);
+static void tile5expandy(const Arg *arg);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
@@ -583,8 +588,16 @@ static void mergetocontainerof(Client *oldc, Client *chosenc);
 static void replacercincontainer(Client *oldc, Client *chosenc);
 static void rispawn(const Arg *arg);
 static void updateindexincontainer(Container *container);
+static void tile5cameramove(Arg *arg);
+static void centertocamera(int cx, int cy);
+static void tile5viewcomplete(Arg *arg);
+static void tile5move(Arg *arg);
 
 static int fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
+static int isintersectp(rect_t g, rect_t ts[], int tsn, double maxintersectradio);
+static double intersectpercent(rect_t g, rect_t t);
+static double intersectpercentwithrect(rect_t g, rect_t t, rect_t *interrect);
+static void switcherfactors_tag(float factor[],int minx[], int miny[], int tagsx[], int tagsy[],int tagsww[], int tagswh[]);
 
 static void LOG(char *content,char *content2);
 
@@ -2379,16 +2392,12 @@ void clientxy2switcherxy_pertag_one(XY cxys[], int n, XY sxys[], int s2t[], int 
 		{
 			continue;
 		}
-		tmaxx = MAX(c->x, tmaxx);
-		if (tmaxx == c->x)
-			tmaxw = c->w;
-		tmaxy = MAX(c->y, tmaxy);
-		if (tmaxy == c->y)
-			tmaxh = c->h;
+		tmaxx = MAX(c->x + c->w, tmaxx);
+		tmaxy = MAX(c->y+c->h, tmaxy);
 		tminx = MIN(c->x, tminx);
 		tminy = MIN(c->y, tminy);
 	}
-	float tfactor = MIN(1.0 * ww / (tmaxx - tminx + tmaxw), 1.0 * wh / (tmaxy - tminy + tmaxh));
+	float tfactor = MIN(1.0 * ww / (tmaxx - tminx), 1.0 * wh / (tmaxy - tminy));
 	int toffsetx = -tfactor * tminx;
 	int toffsety = -tfactor * tminy;
 	int i;
@@ -2453,16 +2462,12 @@ void clientxy2switcherxy_pertag(XY cxys[], int n, XY sxys[], int s2t[], int tagn
 			{
 				continue;
 			}
-			tmaxx = MAX(c->x, tmaxx);
-			if (tmaxx == c->x)
-				tmaxw = c->w;
-			tmaxy = MAX(c->y, tmaxy);
-			if (tmaxy == c->y)
-				tmaxh = c->h;
+			tmaxx = MAX(c->x+c->w, tmaxx);
+			tmaxy = MAX(c->y+c->h, tmaxy);
 			tminx = MIN(c->x, tminx);
 			tminy = MIN(c->y, tminy);
 		}
-		float tfactor = MIN(1.0 * ww / (tmaxx - tminx + tmaxw), 1.0 * wh / (tmaxy - tminy + tmaxh));
+		float tfactor = MIN(1.0 * ww / (tmaxx - tminx), 1.0 * wh / (tmaxy - tminy));
 		int toffsetx = -tfactor * tminx;
 		int toffsety = -tfactor * tminy;
 
@@ -2562,6 +2567,76 @@ void clientxy2switcherxy_tag(XY cxys[], int n, XY sxys[], int tagindexin[])
 	int tagi2t[validtagn];
 	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	clientxy2switcherxy_pertag(cxys, n, sxys, tagindexin, tagn, tagsx, tagsy, tagsww, tagswh);
+}
+
+// 将client装入ww,wh 的空间, 计算比例边界等
+void scaleclientsinto(
+		int ww,
+		int wh,
+		float factor[], // sw / cw 
+		int minx[], int miny[], // tag 最左边界和最上边界的 c 座标
+		int tagsx[], int tagsy[], // tag 最左边界和最右边界的 s 座标
+		int tagsww[], int tagswh[] 	
+		)
+{
+	int tagn = LENGTH(tags);
+	/*int tagsx[tagn];*/
+	/*int tagsy[tagn];*/
+	/*int tagsww[tagn];*/
+	/*int tagswh[tagn];*/
+	int validtagn = tagn;
+	int tagi2t[validtagn];
+	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
+
+	/*float factor[tagn];*/
+	/*int minx[tagn];*/
+	/*int miny[tagn];*/
+	int k;
+	for (k = 0; k < tagn; k++)
+	{
+		int tagindex = k;
+		int ww = tagsww[k];
+		int wh = tagswh[k];
+		int tmaxw = 0;
+		int tmaxh = 0;
+		int tmaxx = INT_MIN;
+		int tminx = INT_MAX;
+		int tmaxy = INT_MIN;
+		int tminy = INT_MAX;
+		unsigned int tags = 1 << tagindex;
+		Client *c;
+		for (c = selmon->clients; c; c = c->next)
+		{
+			if ((c->tags & tags) == 0)
+			{
+				continue;
+			}
+			tmaxx = MAX(c->x + c->w, tmaxx);
+			tmaxy = MAX(c->y + c->h, tmaxy);
+			tminx = MIN(c->x, tminx);
+			tminy = MIN(c->y, tminy);
+		}
+		float tfactor = MIN(1.0 * ww / (tmaxx - tminx), 1.0 * wh / (tmaxy - tminy));
+		int toffsetx = -tfactor * tminx;
+		int toffsety = -tfactor * tminy;
+
+		factor[k] = tfactor;
+		minx[k] = tminx;
+		miny[k] = tminy;
+	}
+}
+
+// 求 switcher 每个tag的 sw/cw 的比例
+void switcherfactors_tag(
+		float factor[], // sw / cw 
+		int minx[], int miny[], // tag 最左边界和最上边界的 c 座标
+		int tagsx[], int tagsy[], // tag 最左边界和最右边界的 s 座标
+		int tagsww[], int tagswh[] 	
+		)
+{
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	scaleclientsinto(ww, wh,factor, minx, miny, tagsx, tagsy, tagsww, tagswh);
 }
 
 // switcher 中的相对坐标转化为实际坐标
@@ -3112,6 +3187,179 @@ clientswitchermove_tag2(const Arg *arg)
 }
 // ------------------ switcher tag client end --------------------
 
+int tile5lastsx = 0;
+int tile5lastsy = 0;
+
+void 
+tile5switcherxy2xy(XY sxys[], int n, XY cxys[], int tagindexout[])
+{
+	int tagn = LENGTH(tags);
+	float factor[tagn];
+	int tagx[tagn];
+	int tagy[tagn];
+	int tagsx[tagn];
+	int tagsy[tagn];
+	int tagsww[tagn];
+	int tagswh[tagn];
+	selmon->switcheraction.switcherfactors(factor, tagx, tagy, tagsx, tagsy, tagsww, tagswh);
+
+	int i;
+	int j;
+    	XY tsxys[n]; // sxy 相对自己tag的相对位置
+	int s2t[n]; // sxy->tagindex
+	memset(s2t, 0, sizeof(s2t));
+	for (j = 0; j < n; j++)
+	{
+		for (i = 0; i < tagn; i++)
+		{
+			if(sxys[j].x > tagsx[i] && sxys[j].x <= tagsx[i]+tagsww[i] && sxys[j].y > tagsy[i] && sxys[j].y <= tagsy[i]+tagswh[i])
+			{
+				tsxys[j].x = sxys[j].x - tagsx[i];
+				tsxys[j].y = sxys[j].y - tagsy[i];
+				s2t[j] = i;
+				tagindexout[j] = i;
+				break;
+			}
+		}
+	}
+
+
+	Client *firstcs[tagn]; // 每一个tag的第一个client
+	memset(firstcs, 0, sizeof(firstcs));
+	Client *c;
+	for ( c = selmon->clients; c; c = c->next)
+	{
+		int tagindex = gettagindex(c->tags);
+		firstcs[tagindex] = c;
+	}
+
+	for(i=0;i<n;i++)
+	{
+		Client *firstc = firstcs[s2t[i]];
+		if (firstc) {
+			int tfirstsx = (firstc->x + firstc->w/2 - tagx[s2t[i]]) * factor[s2t[i]];
+			int tfirstsy = (firstc->y + firstc->h/2 - tagy[s2t[i]]) * factor[s2t[i]];
+			cxys[i].x = (tsxys[i].x - tfirstsx)/factor[s2t[i]] + firstc->x + firstc->w/2;
+			cxys[i].y = (tsxys[i].y - tfirstsy)/factor[s2t[i]] + firstc->y + firstc->h/2;
+		}
+	}
+}
+
+void 
+tile5switcherpointfunc(int sx, int sy)
+{
+	if (!selmon->switcher) return;
+	// 防止过多刷新, 不过实测貌似不需要
+	// if (abs(sx - tile5lastsx) < 10 && abs(sy - tile5lastsy) < 10) {
+	// 	return;
+	// }
+	// tile5lastsx = sx;
+	// tile5lastsy = sy;
+
+	XY sxys[] = {{sx, sy}};
+	XY cxys[1];
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys,1,cxys, tagindexout);
+
+	Client *firstc;
+	Client *tmpc;
+	for ( tmpc = nexttiled(selmon->clients); tmpc; tmpc = nexttiled(tmpc->next))
+	{
+		firstc = tmpc;
+	}
+
+	// 连续变化
+	/*selmon->camera_center_x = - cxys[0].x + firstc->x + firstc->w/2;*/
+	/*selmon->camera_center_y = - cxys[0].y + firstc->y + firstc->h/2;*/
+
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	Client *c = selmon->switcheraction.sxy2client(sx, sy);
+	if (c && c != selmon->sel) {
+		if(c->tags != selmon->tagset[selmon->seltags]) 
+			viewui(c->tags);
+		focus(c);
+
+		// 离散变化 居中
+		/*centertocamera(c->x+c->w/2, c->y+c->h/2);*/
+
+		// 离散变化 靠边完整显示
+		tile5viewcomplete(0);
+
+		// 尝试在focus时居中选中的窗口, 但是效果不好
+		// XY centercxys[1] = {{c->x+c->w/2, c->y+c->h/2}};
+		// XY centersxys[1];
+		// int tagindexin[] = {getcurtagindex(selmon)};
+		// selmon->switcheraction.xy2switcherxy(centercxys,1,centersxys, tagindexin);
+		// XWarpPointer(dpy,None,root, 0, 0, 0, 0, selmon->switcherwx + centersxys[0].x, selmon->switcherwy + centersxys[0].y);
+
+		selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+		XMapWindow(dpy, selmon->switcher);
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+	}
+	arrange(selmon);
+}
+
+
+void
+tile5switcherfocuschangefunc(Arg *arg)
+{
+
+	int n = 0;
+	Client *c;
+	for(c = selmon->clients;c;c=c->next)
+	{
+		if(!c->isfloating) n++;
+	}
+
+	int i=0;
+
+	XY cxys[n];
+	XY sxys[n];
+	int tagindexin[n];
+	int curi = 0;
+	for(i = 0, c = selmon->clients;c;c=c->next)
+	{
+		if(!c->isfloating){
+			if(selmon->sel == c) curi = i;
+			cxys[i].x = c->x + c->w/2;
+			cxys[i].y = c->y + c->h/2;
+			tagindexin[i] = gettagindex(c->tags);
+			i++;
+		}
+	}
+
+
+	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
+	int closest = nextclosestanglexy(arg, n, sxys, curi);
+	if (closest < 0) return;
+	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
+	if (closestc) {
+		if((closestc->tags & selmon->sel->tags) == 0)
+			viewui(closestc->tags);
+
+		Client *firstc;
+		Client *tmpc;
+		for ( tmpc = selmon->clients; tmpc; tmpc = tmpc->next)
+		{
+			firstc = tmpc;
+		}
+		// 移动camera到closestc中间
+		/*selmon->camera_center_x = - closestc->x - closestc->w/2 + firstc->x + firstc->w/2;*/
+		/*selmon->camera_center_y = - closestc->y - closestc->h/2 + firstc->y + firstc->h/2;*/
+		focus(closestc);
+		// 移动camera到closestc靠边
+		tile5viewcomplete(0);
+		arrange(selmon);
+	}
+	int ww = selmon->switcherww;
+	int wh = selmon->switcherwh;
+	selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
+	XMapWindow(dpy, selmon->switcher);
+	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+
+}
+
 void
 drawswitcher(Monitor *m)
 {
@@ -3128,20 +3376,32 @@ drawswitcher(Monitor *m)
 	
 	XClassHint ch = {"dwm", "dwm"};
 
-	m->switcheraction.pointerfunc = clientswitcheraction;
-	m->switcheraction.drawfunc = drawclientswitcherwin;
 
+	/*m->switcheraction.pointerfunc = clientswitcheraction;*/
+	/*m->switcheraction.drawfunc = drawclientswitcherwin;*/
 	// m->switcheraction.xy2switcherxy = clientxy2switcherxy;
 	// m->switcheraction.switcherxy2xy = switcherxy2clientxy;
 	// m->switcheraction.drawfuncx = drawclientswitcherwinx;
 	// m->switcheraction.sxy2client = sxy2client;
 	// m->switcheraction.movefunc = clientswitchermove;
 
+	/*m->switcheraction.pointerfunc = clientswitcheraction;*/
+	/*m->switcheraction.drawfunc = drawclientswitcherwin;*/
+	/*m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;*/
+	/*m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;*/
+	/*m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;*/
+	/*m->switcheraction.sxy2client = sxy2client_tag;*/
+	/*m->switcheraction.movefunc = clientswitchermove_tag2;*/
+	/*m->switcheraction.switcherfactors = switcherfactors_tag;*/
+
+	m->switcheraction.pointerfunc = tile5switcherpointfunc;
+	m->switcheraction.drawfunc = drawclientswitcherwin;
 	m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;
-	m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;
+	m->switcheraction.switcherxy2xy = tile5switcherxy2xy;
 	m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
 	m->switcheraction.sxy2client = sxy2client_tag;
-	m->switcheraction.movefunc = clientswitchermove_tag2;
+	m->switcheraction.movefunc = tile5switcherfocuschangefunc;
+	m->switcheraction.switcherfactors = switcherfactors_tag;
 
 	int ww = m->ww/2;
 	int wh = m->wh/2;
@@ -3437,6 +3697,18 @@ enternotify(XEvent *e)
 	int oldx = c->x;
 	int oldy = c->y;
 	focus(c);
+
+	int offsetx = 0;
+	int offsety = 0;
+	if(c){
+		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww - borderpx;
+		if(c->x < 0) offsetx = c->x + borderpx;
+		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh - borderpx;
+		if(c->y < 0) offsety = c->y + borderpx;
+		if(offsetx != 0 || offsety != 0)
+			centertocamera(selmon->wx + selmon->ww/2 + offsetx, selmon->wy + selmon->wh/2 + offsety);
+	}
+
 	/*LOG("enternotify", c?c->name:"");*/
 	LOG_FORMAT("enternotify 2");
 	/*LOG_FORMAT("enternotify 2 %d %d", ev->x_root, ev->y_root);*/
@@ -4319,6 +4591,18 @@ keyrelease(XEvent *e)
 		}
 		destroyswitcher(selmon);
 	}
+
+	int offsetx = 0;
+	int offsety = 0;
+	if(c){
+		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww - borderpx;
+		if(c->x < 0) offsetx = c->x + borderpx;
+		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh - borderpx;
+		if(c->y < 0) offsety = c->y + borderpx;
+		if(offsetx != 0 || offsety != 0)
+			centertocamera(selmon->wx + selmon->ww/2 + offsetx, selmon->wy + selmon->wh/2 + offsety);
+	}
+	arrange(selmon);
 }
 
 void 
@@ -4745,6 +5029,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
+	
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	// if (!c->isfloating)
@@ -4779,6 +5064,7 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	XRaiseWindow(dpy,c->win);
 	focus(c);
+	centertocamera(c->x + c->w/2, c->y + c->h/2);
 
 
 	isnexttemp = 0;
@@ -5040,11 +5326,32 @@ motionnotify(XEvent *e)
 		return;
 	}
 
+	// 尝试移动到边缘移动
+	/*if (CLEANMASK(ev->state) == CLEANMASK(Mod1Mask)) {*/
+		/*if (ev->x_root == 0) {*/
+			/*Arg arg = {.i=-1};*/
+			/*tile5cameramove(&arg);*/
+		/*}*/
+		/*if (ev->x_root >= selmon->ww-1) {*/
+			/*Arg arg = {.i=1};*/
+			/*tile5cameramove(&arg);*/
+		/*}*/
+		/*if (ev->y_root == 0) {*/
+			/*Arg arg = {.i=-2};*/
+			/*tile5cameramove(&arg);*/
+		/*}*/
+		/*if (ev->y_root >= selmon->wh-1) {*/
+			/*Arg arg = {.i=2};*/
+			/*tile5cameramove(&arg);*/
+		/*}*/
+		/*return;*/
+	/*}*/
+
 	if (ev->window != root)
 		return;
 
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
-	unfocus(selmon->sel, 1);
+		unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
 	}
@@ -5154,6 +5461,7 @@ movemouse(const Arg *arg)
 			// if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 			// 	resize(c, nx, ny, c->w, c->h, 1);
 			resize(c, nx, ny, c->w, c->h, 1);
+			c->placed = 1;
 			LOG("movemouse.motionNotify", c->name);
 			break;
 		}
@@ -5484,9 +5792,118 @@ pysmoveclient(Client *target, int sx, int sy)
 }
 
 void
+centertocamera(int cx, int cy)
+{
+	Client *firstc;
+	Client *tmpc;
+	for ( tmpc = nexttiled(selmon->clients); tmpc; tmpc = nexttiled(tmpc->next))
+		firstc = tmpc;
+	int oldcamerax = selmon->camera_center_x;
+	int oldcameray = selmon->camera_center_y;
+	selmon->camera_center_x = - cx + firstc->x + firstc->w/2;
+	selmon->camera_center_y = - cy + firstc->y + firstc->h/2;
+	
+	LOG_FORMAT("centertocamera %d,%d", selmon->camera_center_x, selmon->camera_center_y);
+}
+
+void
+tile5cameramove(Arg *arg)
+{
+	if (arg->i == FOCUS_LEFT) {
+		selmon->camera_center_x = selmon->camera_center_x + 300;
+	}
+	else if (arg->i == FOCUS_RIGHT) {
+		selmon->camera_center_x = selmon->camera_center_x - 300;
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		selmon->camera_center_y = selmon->camera_center_y + 200;
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		selmon->camera_center_y = selmon->camera_center_y - 200;
+	}
+	arrange(selmon);
+}
+
+void
+tile5viewcomplete(Arg *arg)
+{
+	Client *c = selmon->sel;
+	int offsetx = 0;
+	int offsety = 0;
+	if(c){
+		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww;
+		if(c->x < 0) offsetx = c->x;
+		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh;
+		if(c->y < 0) offsety = c->y;
+		if(offsetx != 0 || offsety != 0)
+			centertocamera(selmon->wx + selmon->ww/2 + offsetx, selmon->wy + selmon->wh/2 + offsety);
+	}
+	arrange(selmon);
+}
+
+void 
+tile5switchermove(Client *c, int sx, int sy)
+{
+	LOG_FORMAT("tile5switchermove sx:%d, sy:%d", sx, sy);
+	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) 
+	{
+		return;
+	}
+
+	XY sxys[] = {{sx, sy}};
+	XY cxys[1];
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys,1,cxys, tagindexout);
+	LOG_FORMAT("tile5switchermove 0 cxy:%d %d ", cxys[0].x, cxys[0].y);
+	c->x = cxys[0].x;
+	c->y = cxys[0].y;
+	c->placed = 1;
+
+	// 尝试在移动时, 如果和别的client交叉, 则把其他placed 改成0. 但是因为在tile5中, 是排过序的, 所以, 先出现的client一定先放置
+	/*Monitor *m = c->mon;*/
+	/*int tsn = 0;*/
+	/*Client *tmpc;*/
+	/*for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))*/
+	/*{*/
+		/*if (tmpc != c) tsn++;*/
+	/*}*/
+
+	/*int i = 0;*/
+	/*rect_t ts[tsn];*/
+	/*Client *cs[tsn];*/
+	/*for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))*/
+	/*{*/
+		/*if (tmpc != c) {*/
+			/*ts[i].x = tmpc->x;*/
+			/*ts[i].y = tmpc->y;*/
+			/*ts[i].w = tmpc->w;*/
+			/*ts[i].h = tmpc->h;*/
+			/*cs[i] = tmpc;*/
+			/*i++;*/
+		/*}*/
+	/*}*/
+
+	/*rect_t r = {c->x, c->y, c->w, c->h};*/
+	/*for(i = 0; i<tsn; i++)*/
+	/*{*/
+		/*rect_t t = ts[i];*/
+		/*if(intersectpercent(r,t) > 0){*/
+			/*LOG_FORMAT("tile5switchermove 1");*/
+			/*cs[i]->placed = 0;*/
+			/*c->placed = 0;*/
+		/*}*/
+	/*}*/
+
+	arrange(c->mon);
+	c->mon->switcheraction.drawfunc(c->mon->switcher, c->mon->switcherww, c->mon->switcherwh );
+}
+
+void
 movemouseswitcher(const Arg *arg)
 {
-	int x, y, ocx, ocy, px, py;
+	int x, y, ocx, ocy, px, py, catchingpx = 0, catchingpy = 0;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -5523,17 +5940,30 @@ movemouseswitcher(const Arg *arg)
 			lasttime = ev.xmotion.time;
 			px = ev.xmotion.x - selmon->switcherwx;
 			py = ev.xmotion.y - selmon->switcherwy;
+			if(catchingpx == 0) catchingpx = px;
+			if(catchingpy == 0) catchingpy = py;
 			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 			drw_setscheme(drw, scheme[SchemeSel]);
-			drw_rect(drw, px, py, selmon->switcherww/7, selmon->switcherwh/7, 1, 1);
+			
+			XY cxys[] = {{oldc->x, oldc->y}, {oldc->x+oldc->w, oldc->y+oldc->h}};
+			XY sxys[2];
+			int curtagindex = getcurtagindex(selmon);
+			if(curtagindex < 0) return;
+			int tagindexin[] = {curtagindex, curtagindex};
+			selmon->switcheraction.xy2switcherxy(cxys, 2, sxys, tagindexin);
+			px = px - (catchingpx - sxys[0].x);
+			py = py - (catchingpy - sxys[0].y);
+			drw_rect(drw, px, py, sxys[1].x - sxys[0].x, sxys[1].y - sxys[0].y, 1, 1);
 			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
 
-	pysmoveclient(oldc, px, py);
-
+	if(selmon->lt[selmon->sellt]->arrange == tile7)
+		pysmoveclient(oldc, px, py);
+	if(selmon->lt[selmon->sellt]->arrange == tile5)
+		tile5switchermove(oldc, px, py);
 }
 
 Client *
@@ -7102,14 +7532,37 @@ tile4(Monitor *m)
 	}
 }
 
+void 
+tile5move(Arg *arg)
+{
+	if(!selmon->sel) return;
+	if (arg->i == FOCUS_LEFT) {
+		selmon->sel->x = selmon->sel->x - 100;
+	}
+	else if (arg->i == FOCUS_RIGHT) {
+		selmon->sel->x = selmon->sel->x + 100;
+	}
+	else if (arg->i == FOCUS_UP)
+	{
+		selmon->sel->y = selmon->sel->y - 60;
+	}
+	else if (arg->i == FOCUS_DOWN)
+	{
+		selmon->sel->y = selmon->sel->y + 60;
+	}
+	centertocamera(selmon->sel->x+selmon->sel->w/2,selmon->sel->y+selmon->sel->h/2);
+	arrange(selmon);
+}
+
+
 void
 tile5(Monitor *m)
 {
 
 	unsigned int i, n, h, mw,mx, my, ty;
 	Client *c;
-	int gapx = 7;
-	int gapy = 7;
+	int gapx = 0;
+	int gapy = 0;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -7119,35 +7572,61 @@ tile5(Monitor *m)
 	Client *tiledcs[n];
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		tiledcs[n-i-1] = c;
+
+	XY firstcxy;
+	Client *firstc = NULL;
+	if(n >= 1) {
+		firstc = tiledcs[0];
+		firstcxy.x = firstc->x + firstc->w/2;
+		firstcxy.y = firstc->y + firstc->h/2;
+	}
+
 	int tsn = n;
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t sc;
-	sc.x = 1;
-	sc.y = 1;
-	sc.w = selmon->ww - 1;
-	sc.h = selmon->wh - 1;
+	sc.x = 0;
+	sc.y = 0;
+	sc.w = selmon->ww;
+	sc.h = selmon->wh;
 	/*for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)*/
 	for(i = 0;i<n;i++)
 	{
 		c = tiledcs[i];
-		int fillblockn = 5;
-		float radio = 0.8;
+		/*int fillblockn = 5;*/
+		/*float radio = 0.8;*/
 		// 下面三个式子联合先求出initblock, 然后算出其他
 		/*neww = stepw * initblock;*/
 		/*stepw = (sc.w - neww) / (n-1)*/
 		/*radio = initblock * stepw / sc.w*/
 	        
-		int initblock = (radio * (fillblockn-1)) / (1-radio);
-		int stepw = sc.w  / (fillblockn-1 + initblock);
-		int steph = sc.h  / (fillblockn-1 + initblock);
-		int neww = initblock*stepw;
-		int newh = initblock*steph;
+		/*int initblock = (radio * (fillblockn-1)) / (1-radio);*/
+		/*int stepw = sc.w  / (fillblockn-1 + initblock);*/
+		/*int steph = sc.h  / (fillblockn-1 + initblock);*/
+		/*int neww = initblock*stepw;*/
+		/*int newh = initblock*steph;*/
+
+		int fillblockn = 20;
+		int initn = fillblockn * 0.8;
+		int stepw = sc.w / fillblockn;
+		int steph = sc.h / fillblockn;
+		int neww = initn*stepw;
+		int newh = initn*steph;
 
 		if(c->placed) 
 		{
 			neww = c->w;
 			newh = c->h;
+
+			if(firstc && firstc!=c){
+				ts[i].x = c->x + c->w/2 - firstcxy.x + firstc->x + firstc->w/2 - c->w/2;
+				ts[i].y = c->y + c->h/2 - firstcxy.y + firstc->y + firstc->h/2 - c->h/2;
+				ts[i].w = c->w;
+				ts[i].h = c->h;
+				c->x = ts[i].x;
+				c->y = ts[i].y;
+				continue;
+			}		
 		}
 
 		rect_t r;
@@ -7158,16 +7637,21 @@ tile5(Monitor *m)
 		for(radioi = 0;radioi<radiostepn;radioi++){
 			int centeri = fillblockn/2;
 			int centerj = fillblockn/2;
+			int centerw = 0;
+			int centerh = 0;
 			if (c->launchparent) {
 				int j;
 				for(j=0;j<i;j++){
 					if(tiledcs[j] == c->launchparent){
-						centeri = (ts[j].x+MAX(0, ts[j].w/2 - c->w/2)) / stepw;
-						centerj = (ts[j].y+MAX(0, ts[j].h/2 - c->h/2)) / steph;
+						centeri = (ts[j].x+ts[j].w/2) / stepw;
+						centerj = (ts[j].y+ts[j].h/2) / steph;
+						centerw = ts[j].w;
+						centerh = ts[j].h;
+						break;
 					}
 				}
 			}
-			ok = fill2x(sc, centeri, centerj ,c->w + 2*gapx,c->h + 2*gapy, stepw, steph, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
+			ok = fill3x(sc, centeri, centerj, centerw, centerh ,c->w + 2*gapx,c->h + 2*gapy, stepw, steph, fillblockn, ts, i, &r, maxintersectradiostep[radioi]);
 			if(ok) break;
 		}
 		if(!ok)
@@ -7194,8 +7678,39 @@ tile5(Monitor *m)
 
 	// move the axis
 	if (!selmon->sel->isfloating) {
-		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
-		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+		//  int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+		//  int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+		/*int offsetx = sc.w / 2 + selmon->camera_center_x;*/
+		/*int offsety = sc.h / 2 + selmon->camera_center_y;*/
+
+		// 尝试: 如果有窗口超出了屏幕大小, 调整camera, 并缩放
+		/*int tagn = LENGTH(tags);*/
+		/*float factor[tagn];*/
+		/*int tagx[tagn];*/
+		/*int tagy[tagn];*/
+		/*int tagsx[tagn];*/
+		/*int tagsy[tagn];*/
+		/*int tagsww[tagn];*/
+		/*int tagswh[tagn];*/
+		/*scaleclientsinto(sc.w, sc.h, factor, tagx, tagy, tagsx, tagsy, tagsww, tagswh);*/
+		/*int tagindex = getcurtagindex(selmon);*/
+		/*float scale = factor[tagindex];*/
+		/*LOG_FORMAT("tile5 scale %f", scale);*/
+		/*for (c = nexttiled(m->clients); c; c = nexttiled(c->next))*/
+		/*{*/
+			/*c->x = c->x * scale;*/
+			/*c->y = c->y * scale;*/
+			/*c->w = c->w * scale;*/
+			/*c->h = c->h * scale;*/
+		/*}*/
+		/*scaleclientsinto(sc.w, sc.h, factor, tagx, tagy, tagsx, tagsy, tagsww, tagswh);*/
+		/*LOG_FORMAT("tile5 scale %d,%d", tagsww[tagindex], tagswh[tagindex]);*/
+		/*centertocamera(tagx[tagindex]+ tagsww[tagindex]/2, tagy[tagindex] + tagswh[tagindex]/2);*/
+
+		// 如何设置 selmon->camera_center_x: 用 -cxys[0].y + firstc->y + firstc->h/2 可以将点cxy 移动到视野中间
+		int offsetx =  selmon->camera_center_x;
+		int offsety =  selmon->camera_center_y;
+
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
@@ -7246,6 +7761,7 @@ tile5(Monitor *m)
 		if(ISVISIBLE(c) && !c->istemp)
 		{
 			resizeclient(c, c->x, c->y, c->w, c->h);
+			c->placed = 1;
 		}
 	}
 
@@ -8258,6 +8774,371 @@ expand(const Arg *arg)
 	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 }
 
+
+// 只处理了膨胀的情况, 未处理收缩
+void 
+pushorpull(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi)
+{
+	LOG_FORMAT("pushorpull 1");
+	LOG_FORMAT("pushorpull 5 old: %d %d %d %d", oldr.x, oldr.y, oldr.w, oldr.h);
+	LOG_FORMAT("pushorpull 5 new: %d %d %d %d", newr.x, newr.y, newr.w, newr.h);
+	int oldx = oldr.x;
+	int oldy = oldr.y;
+	int oldw = oldr.w;
+	int oldh = oldr.h;
+	int deltaw_left = newr.x - oldr.x;
+	int deltaw_right = newr.x + newr.w - oldr.x- oldr.w;
+	int deltah_up = newr.y - oldr.y;
+	int deltah_down = newr.y + newr.h - oldr.y- oldr.h;
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		if (tsi == i) continue;
+		rect_t t = ts[i];
+		rect_t oldr_next = t;
+
+		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
+		// 只判断扩展的那一条矩形
+		rect_t left = {oldx+deltaw_left, oldy, abs(deltaw_left), oldh};
+		rect_t right = {oldx+oldw, oldy, abs(deltaw_right), oldh};
+		rect_t up = {oldx, oldy+deltah_up, oldw, abs(deltah_up)};
+		rect_t down = {oldx, oldy+oldh, oldw, abs(deltah_down)};
+
+		rect_t interrectleft;
+		double interpercentleft = intersectpercentwithrect(left,t,&interrectleft);
+		rect_t interrectright;
+		double interpercentright = intersectpercentwithrect(right,t,&interrectright);
+		rect_t interrectup;
+		double interpercentup = intersectpercentwithrect(up,t,&interrectup);
+		rect_t interrectdown;
+		double interpercentdown = intersectpercentwithrect(down,t,&interrectdown);
+
+		if(deltaw_left < 0 && interpercentleft > 0 && interrectleft.w < interrectleft.h){
+			// left
+			ts[i].x = ts[tsi].x - ts[i].w;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
+		if(deltaw_right > 0 && interpercentright > 0 && interrectright.w < interrectright.h){
+			// right
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			LOG_FORMAT("pushorpull 6 old: %d %d %d %d", oldr_next.x, oldr_next.y, oldr_next.w, oldr_next.h);
+			LOG_FORMAT("pushorpull 6 new: %d %d %d %d", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
+			LOG_FORMAT("pushorpull 6 i: %d tsi: %d",i, tsi);
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		LOG_FORMAT("pushorpull 7 %d %d %d %d", up.x, up.y, up.w, up.h);
+		LOG_FORMAT("pushorpull 8 old: %d %d %d %d", t.x, t.y, t.w, t.h);
+		LOG_FORMAT("pushorpull 8 new: %d %d %d %d", t.x, ts[tsi].y - ts[i].h, t.w, t.h);
+		if(deltah_up < 0 && interpercentup > 0 && interrectup.w >= interrectup.h){
+			// up
+			ts[i].y = ts[tsi].y - ts[i].h;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		if(deltah_down > 0 && interpercentdown > 0 && interrectdown.w >= interrectdown.h){
+			// down
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+	}
+	LOG_FORMAT("pushorpull 2");
+}
+
+
+// 处理了膨胀和收缩(万象天引)
+void 
+pushorpull2(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi)
+{
+	LOG_FORMAT("pushorpull 1");
+	LOG_FORMAT("pushorpull 5 old: %d %d %d %d", oldr.x, oldr.y, oldr.w, oldr.h);
+	LOG_FORMAT("pushorpull 5 new: %d %d %d %d", newr.x, newr.y, newr.w, newr.h);
+	int oldx = oldr.x;
+	int oldy = oldr.y;
+	int oldw = oldr.w;
+	int oldh = oldr.h;
+	int deltaw_left = newr.x - oldr.x;
+	int deltaw_right = newr.x + newr.w - oldr.x- oldr.w;
+	int deltah_up = newr.y - oldr.y;
+	int deltah_down = newr.y + newr.h - oldr.y- oldr.h;
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		if (tsi == i) continue;
+		rect_t t = ts[i];
+		rect_t oldr_next = t;
+
+		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
+	
+		rect_t left = {oldx-abs(deltaw_left), oldy, abs(deltaw_left), oldh};
+		rect_t right = {oldx+oldw, oldy, abs(deltaw_right), oldh};
+		rect_t up = {oldx, oldy-abs(deltah_up), oldw, abs(deltah_up)};
+		rect_t down = {oldx, oldy+oldh, oldw, abs(deltah_down)};
+
+		rect_t interrectleft;
+		double interpercentleft = intersectpercentwithrect(left,t,&interrectleft);
+		rect_t interrectright;
+		double interpercentright = intersectpercentwithrect(right,t,&interrectright);
+		rect_t interrectup;
+		double interpercentup = intersectpercentwithrect(up,t,&interrectup);
+		rect_t interrectdown;
+		double interpercentdown = intersectpercentwithrect(down,t,&interrectdown);
+
+		if(interpercentleft > 0 && interrectleft.w < interrectleft.h){
+			// left
+			ts[i].x = ts[tsi].x - ts[i].w;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
+		if( interpercentright > 0 && interrectright.w < interrectright.h){
+			// right
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			LOG_FORMAT("pushorpull 6 old: %d %d %d %d", oldr_next.x, oldr_next.y, oldr_next.w, oldr_next.h);
+			LOG_FORMAT("pushorpull 6 new: %d %d %d %d", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
+			LOG_FORMAT("pushorpull 6 i: %d tsi: %d",i, tsi);
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		if( interpercentup > 0 && interrectup.w >= interrectup.h){
+			// up
+			ts[i].y = ts[tsi].y - ts[i].h;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+		if( interpercentdown > 0 && interrectdown.w >= interrectdown.h){
+			// down
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			pushorpull(oldr_next, ts[i], ts, tsn, i);
+			continue;
+		}
+	}
+	LOG_FORMAT("pushorpull 2");
+}
+
+
+// 处理了膨胀和收缩
+// 处理角落中, 和谁都不相交的情况
+// 收缩的时候可以做到拉火车的效果
+void 
+pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[], int tsin)
+{
+	tsis[tsin] = tsi;
+	tsin++;
+	LOG_FORMAT("pushorpull 1");
+	LOG_FORMAT("pushorpull 5 old: %d %d %d %d", oldr.x, oldr.y, oldr.w, oldr.h);
+	LOG_FORMAT("pushorpull 5 new: %d %d %d %d", newr.x, newr.y, newr.w, newr.h);
+	int oldx = oldr.x;
+	int oldy = oldr.y;
+	int oldw = oldr.w;
+	int oldh = oldr.h;
+	int deltaw_left = newr.x - oldr.x;
+	int deltaw_right = newr.x + newr.w - oldr.x- oldr.w;
+	int deltah_up = newr.y - oldr.y;
+	int deltah_down = newr.y + newr.h - oldr.y- oldr.h;
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		int found = 0;
+		int j;
+		for(j=0;j<tsin;j++)
+		{
+			if(tsis[j] == i) found = 1;
+		}
+		if (found) continue;
+		rect_t t = ts[i];
+		rect_t oldr_next = t;
+
+		// if(intersectpercent(newr, t) == 0) continue;
+
+		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
+
+		rect_t left = {oldx-abs(deltaw_left), oldy, abs(deltaw_left), oldh};
+		rect_t right = {oldx+oldw, oldy, abs(deltaw_right), oldh};
+		rect_t up = {oldx, oldy-abs(deltah_up), oldw, abs(deltah_up)};
+		rect_t down = {oldx, oldy+oldh, oldw, abs(deltah_down)};
+		rect_t lefttop = {oldx-abs(deltaw_left), oldy-abs(deltah_up), abs(deltaw_left), abs(deltah_up)};
+		rect_t righttop = {oldx+oldw, oldy-abs(deltah_up), abs(deltaw_right), abs(deltah_up)};
+		rect_t leftbuttom = {oldx-abs(deltaw_left), oldy+oldh, abs(deltaw_left), abs(deltah_down)};
+		rect_t rightbuttom = {oldx+oldw, oldy+oldh, abs(deltaw_right), abs(deltah_down)};
+
+		LOG_FORMAT("pushorpull 7 i: %d t: %d %d %d %d",i, t.x, t.y,t.w,t.h);
+		LOG_FORMAT("pushorpull 7 i: %d left: %d %d %d %d", i, left.x, left.y, left.w, left.h);
+		LOG_FORMAT("pushorpull 7 i: %d right: %d %d %d %d",i, right.x, right.y, right.w, right.h);
+		LOG_FORMAT("pushorpull 7 i: %d down: %d %d %d %d",i, down.x, down.y, down.w, down.h);
+		LOG_FORMAT("pushorpull 7 i: %d up: %d %d %d %d",i, up.x, up.y, up.w, up.h);
+
+		rect_t interrectleft;
+		double interpercentleft = intersectpercentwithrect(left,t,&interrectleft);
+		rect_t interrectright;
+		double interpercentright = intersectpercentwithrect(right,t,&interrectright);
+		rect_t interrectup;
+		double interpercentup = intersectpercentwithrect(up,t,&interrectup);
+		rect_t interrectdown;
+		double interpercentdown = intersectpercentwithrect(down,t,&interrectdown);
+
+		LOG_FORMAT("pushorpull 7 i: %d %f %f %f %f", i, interpercentleft, interpercentright, interpercentup, interrectdown);
+
+		if(interpercentleft > 0 && interrectleft.w < interrectleft.h){
+			// left
+			if(ts[tsi].x < t.x) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
+		if( interpercentright > 0 && interrectright.w < interrectright.h){
+			// right
+			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			LOG_FORMAT("pushorpull 6 old: %d %d %d %d", oldr_next.x, oldr_next.y, oldr_next.w, oldr_next.h);
+			LOG_FORMAT("pushorpull 6 new: %d %d %d %d", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
+			LOG_FORMAT("pushorpull 6 i: %d tsi: %d",i, tsi);
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		if( interpercentup > 0 && interrectup.w >= interrectup.h){
+			// up
+			if(ts[tsi].y < t.y ) continue;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		if( interpercentdown > 0 && interrectdown.w >= interrectdown.h){
+			// down
+			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+
+
+		// 处理角落中的, 如果不处理, 有可能会出现偶尔的相交
+		if(intersectpercent(lefttop,t) > 0){
+			if(ts[tsi].x < t.x) continue;
+			if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		if( intersectpercent(righttop,t) > 0){
+			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		if(intersectpercent(leftbuttom,t) > 0){
+			if(ts[tsi].x < t.x) continue;
+			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+		if(intersectpercent(rightbuttom,t) > 0){
+			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
+			continue;
+		}
+	}
+	LOG_FORMAT("pushorpull 2");
+}
+
+void 
+tile5expandv(float scalex, float scaley)
+{
+	if(!selmon->sel) return;
+	Client *cc = selmon->sel;
+	int deltaw = cc->w * scalex/2;
+	int deltah = cc->h * scaley/2;
+	int oldx = cc->x;
+	int oldy = cc->y;
+	int oldw = cc->w;
+	int oldh = cc->h;
+	cc->placed = 1;
+
+
+	Monitor *m = cc->mon;
+	int tsn = 0;
+	Client *tmpc;
+	for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next)) tsn++;
+
+	int i = 0;
+	rect_t ts[tsn];
+	Client *cs[tsn];
+	for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))
+	{
+		ts[i].x = tmpc->x;
+		ts[i].y = tmpc->y;
+		ts[i].w = tmpc->w;
+		ts[i].h = tmpc->h;
+		cs[i] = tmpc;
+		i++;
+	}
+
+	int tsi = -1;
+	for(i=0,tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next),i++)
+	{
+		if(tmpc == cc) tsi = i;
+	}
+
+	rect_t oldr = {cc->x,cc->y,cc->w,cc->h};
+	rect_t newr = {cc->x - deltaw,cc->y - deltah, cc->w + deltaw*2,cc->h + deltah*2};
+	ts[tsi].x = newr.x;
+	ts[tsi].y = newr.y;
+	ts[tsi].w = newr.w;
+	ts[tsi].h = newr.h;
+	int tsis[tsn];
+	int tsin = 0;
+	pushorpull3(oldr, newr, ts, tsn, tsi, tsis, tsin);
+
+	for(i = 0; i<tsn; i++)
+	{
+		cs[i]->x = ts[i].x;
+		cs[i]->y = ts[i].y;
+		cs[i]->w = ts[i].w;
+		cs[i]->h = ts[i].h;
+		cs[i]->placed = 1;
+	}
+	arrange(selmon);
+	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
+}
+
+void
+tile5expandx(const Arg *arg)
+{
+	float scalex = arg->f;
+	float scaley = 0;
+	tile5expandv(scalex, scaley);
+}
+
+
+void
+tile5expandy(const Arg *arg)
+{
+	float scalex = 0;
+	float scaley = arg->f;
+	tile5expandv(scalex, scaley);
+}
+
+
+void
+tile5expand(const Arg *arg)
+{
+	float scalex = arg->f;
+	float scaley = arg->f;
+	tile5expandv(scalex, scaley);
+}
+
 void
 tiledualclient(Client *c1,Client *c2)
 {
@@ -8746,6 +9627,31 @@ intersectpercent(rect_t g, rect_t t)
 	return 0;
 }
 
+double
+intersectpercentwithrect(rect_t g, rect_t t, rect_t *interrect)
+{
+	int maxx = MAXX(g, t);
+	int minx = MINX(g, t);
+	int maxy = MAXY(g, t);
+	int miny = MINY(g, t);
+	int interw = (g.w + t.w - (maxx - minx));
+	int interh = (g.h + t.h - (maxy - miny));
+	if (interw > 0 && interh > 0) {
+		if(minx == g.x)
+			interrect->x = g.x + g.w - interw;
+		if(miny == g.y)
+			interrect->y = g.y + g.h - interh;
+		if(minx == t.x)
+			interrect->x = t.x + t.w - interw;
+		if(miny == t.y)
+			interrect->y = t.y + t.h - interh;
+		interrect->w = interw;
+		interrect->h = interh;
+		return (1.0*interw*interh) / MIN((abs(g.w)*abs(g.h)),(abs(t.w)*abs(t.h)));
+	}
+	return 0;
+}
+
 int 
 isintersect(rect_t g, rect_t ts[], int tsn)
 {
@@ -8823,6 +9729,24 @@ tryfillone(int x, int y, int w, int h, rect_t ts[], int tsn, rect_t *r,double ma
 	return 0;
 }
 
+int 
+tryfillone_center(int x, int y, int w, int h, rect_t ts[], int tsn, rect_t *r,double maxintersectradio)
+{
+	rect_t rect;
+	rect.x = x - w/2;
+	rect.y = y - h/2;
+	rect.w = w;
+	rect.h = h;
+	if(!isintersectp(rect, ts, tsn, maxintersectradio)){
+		r->x = rect.x;
+		r->y = rect.y;
+		r->w = rect.w;
+		r->h = rect.h;
+		return 1;
+	}
+	return 0;
+}
+
 int
 calcx(rect_t sc, int i, int stepw, int w)
 {
@@ -8865,7 +9789,7 @@ fill2x(rect_t sc, int centeri, int centerj, int w, int h, int stepw, int steph, 
 		int i;
 		int j;
 		if(k == 0)
-			if(tryfillone(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+			if(tryfillone_center(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 
 		/*float interactradiox = {0.7,0.3,0.0};*/
 		/*float interactradioy = {0.7,0.3,0.0};*/
@@ -8874,14 +9798,14 @@ fill2x(rect_t sc, int centeri, int centerj, int w, int h, int stepw, int steph, 
 		for(j=centerj;j<centerj+k;j++)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+			if(tryfillone_center(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		j = centerj + k;
 		for(i=centeri;i<centeri+k;i++)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+			if(tryfillone_center(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 
@@ -8889,23 +9813,187 @@ fill2x(rect_t sc, int centeri, int centerj, int w, int h, int stepw, int steph, 
 		for(i=centeri;i>centeri-k;i--)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+			if(tryfillone_center(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		i = centeri + k;
 		for(j=centerj;j>centerj-k;j--)
 		{
 			/*if(i>=n || i <0 || j>=n || j <0 ) continue;*/
-			if(tryfillone(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+			if(tryfillone_center(calcx(sc,i,stepw, w), calcy(sc, j, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 		}
 
 		
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
-		if(tryfillone(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone_center(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone_center(calcx(sc,centeri-k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone_center(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj+k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+		if(tryfillone_center(calcx(sc,centeri+k,stepw, w), calcy(sc, centerj-k, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
 	}
 	
+	return 0;
+}
+
+
+struct BlockItem
+{
+	int x;
+	int y;
+	int w;
+	int h;
+	double score;
+};
+typedef struct BlockItem BlockItem;
+
+int 
+BlockItemCmp(const void *a,const void *b)
+{
+	struct BlockItem *c = (BlockItem *)a; 
+	struct BlockItem *d = (BlockItem *)b; 
+	return c->score - d->score;
+}
+
+/**
+ * @brief 把sc-(w*h)分为(n-1)*(n-1)块, 从中心开始尝试放入, 向外扩散转圈, 直到有一个满足与其他窗口(ts)交叉比例(maxintersectradio), 得到的结果放入r
+ * 
+ * @param sc 
+ * @param w 
+ * @param h 
+ * @param n 
+ * @param ts 
+ * @param tsn 
+ * @param r 
+ * @param maxintersectradio 
+ * @return int 
+ */
+int
+fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+{
+
+	w = w/stepw + (w%stepw==0?0:1);
+	w = w * stepw;
+	h = h/steph + (h%steph==0?0:1);
+	h = h * steph;
+	LOG_FORMAT("fill3x 0");
+	int itern = 720;
+	BlockItem items[itern];
+	memset(items, 0, sizeof(items));
+	int m = 0;
+	int radioi;
+	int k=0,a;
+	if (centerw > 0 && centerh > 0) {
+		k = MIN(centerw/stepw/2, centerh/steph/2);
+	}
+	for(;;k++)
+	{
+		int i;
+		int j;
+		if(k == 0)
+			if(tryfillone_center(calcx(sc,centeri,stepw, w), calcy(sc, centerj, steph, h), w, h, ts, tsn, r, maxintersectradio)) return 1;
+
+		i = centeri - k;
+		for(j=centerj;j<centerj+k;j++)
+		{
+			if(m >= itern) break;
+			items[m].x = calcx(sc, i, stepw, w);
+			items[m].y = calcy(sc, j, steph, h);
+			items[m].w = w;
+			items[m].h = h;
+			m++;
+		}
+
+		j = centerj + k;
+		for(i=centeri;i<centeri+k;i++)
+		{
+			if(m >= itern) break;;
+			items[m].x = calcx(sc, i, stepw, w);
+			items[m].y = calcy(sc, j, steph, h);
+			items[m].w = w;
+			items[m].h = h;
+			m++;
+		}
+
+
+		j = centerj - k;
+		for(i=centeri;i>centeri-k;i--)
+		{
+			if(m >= itern) break;
+			items[m].x = calcx(sc, i, stepw, w);
+			items[m].y = calcy(sc, j, steph, h);
+			items[m].w = w;
+			items[m].h = h;
+			m++;
+		}
+
+		i = centeri + k;
+		for(j=centerj;j>centerj-k;j--)
+		{
+			if(m >= itern) break;
+			items[m].x = calcx(sc, i, stepw, w);
+			items[m].y = calcy(sc, j, steph, h);
+			items[m].w = w;
+			items[m].h = h;
+			m++;
+		}
+
+		if(m >= itern) break;
+		items[m].x = calcx(sc,centeri-k,stepw, w);
+		items[m].y = calcy(sc, centerj-k, steph, h);
+		items[m].w = w;
+		items[m].h = h;
+		m++;
+
+		if(m >= itern) break;
+		items[m].x = calcx(sc,centeri-k,stepw, w);
+		items[m].y = calcy(sc, centerj+k, steph, h);
+		items[m].w = w;
+		items[m].h = h;
+		m++;
+
+		if(m >= itern) break;
+		items[m].x = calcx(sc,centeri+k,stepw, w);
+		items[m].y = calcy(sc, centerj+k, steph, h);
+		items[m].w = w;
+		items[m].h = h;
+		m++;
+
+		if(m >= itern) break;
+		items[m].x = calcx(sc,centeri+k,stepw, w);
+		items[m].y = calcy(sc, centerj-k, steph, h);
+		items[m].w = w;
+		items[m].h = h;
+		m++;
+	}
+
+	LOG_FORMAT("fill3x 2");
+	for(a=0;a<m;a++)
+	{
+		// 这里先正则化一下, 把长宽大致弄成一样, 避免每次都会在上下方向上放置
+		double totaldistance = 0.0;
+		XY targetxy = {items[a].x, items[a].y*stepw/steph};
+		XY centerijxy = {calcx(sc, centeri, stepw, w), calcy(sc, centerj, steph, h)*stepw/steph};
+		int distancetocenterij = distancexy(centerijxy, targetxy);
+		totaldistance += distancetocenterij;
+
+		int b;
+		for(b=0;b<tsn;b++)
+		{
+			int tcenterx = ts[b].x + ts[b].w/2;
+			int tcentery = ts[b].y + ts[b].h/2;
+			XY tcenterxy = {tcenterx, tcentery*stepw/steph};
+			int distance = distancexy(tcenterxy, targetxy);
+			totaldistance += distance * 0.2;
+		}
+		items[a].score = totaldistance;
+	}
+
+	LOG_FORMAT("fill3x m:%d", m);
+	qsort(items, m, sizeof(BlockItem), BlockItemCmp);
+	for(a=0;a<m;a++)
+	{
+		/*LOG_FORMAT("fill3x %d,%d", items[a].x, items[a].y);*/
+		/*LOG_FORMAT("fill3x score:%f", items[a].score);*/
+		if(tryfillone_center(items[a].x, items[a].y, items[a].w, items[a].h, ts,tsn,r, maxintersectradio)) return 1;
+	}
 	return 0;
 }
 
@@ -9088,6 +10176,8 @@ unmanage(Client *c, int destroyed)
 	freecontainerc(c->container, c);
 	free(c);
 	focus(NULL);
+	if (selmon->sel) 
+		centertocamera(selmon->sel->x+selmon->sel->w/2,selmon->sel->y+selmon->sel->h/2);
 	updateclientlist();
 	arrange(m);
 
