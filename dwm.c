@@ -7737,8 +7737,12 @@ tile5(Monitor *m)
 			}
 		}
 
-		int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
-		int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+		// int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+		// int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+
+		int offsetx =  selmon->camera_center_x;
+		int offsety =  selmon->camera_center_y;
+
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
 			c->x = c->x + offsetx;
@@ -8984,7 +8988,7 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 
 		if(interpercentleft > 0 && interrectleft.w < interrectleft.h){
 			// left
-			if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].x < t.x) continue;
 			ts[i].x = ts[tsi].x - ts[i].w;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
@@ -8992,7 +8996,7 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
 		if( interpercentright > 0 && interrectright.w < interrectright.h){
 			// right
-			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
 			ts[i].x = ts[tsi].x + ts[tsi].w;
 			LOG_FORMAT("pushorpull 6 old: %d %d %d %d", oldr_next.x, oldr_next.y, oldr_next.w, oldr_next.h);
 			LOG_FORMAT("pushorpull 6 new: %d %d %d %d", ts[i].x, ts[i].y, ts[i].w, ts[i].h);
@@ -9002,14 +9006,14 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 		}
 		if( interpercentup > 0 && interrectup.w >= interrectup.h){
 			// up
-			if(ts[tsi].y < t.y ) continue;
+			// if(ts[tsi].y < t.y ) continue;
 			ts[i].y = ts[tsi].y - ts[i].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
 		}
 		if( interpercentdown > 0 && interrectdown.w >= interrectdown.h){
 			// down
-			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
 			ts[i].y = ts[tsi].y + ts[tsi].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
@@ -9018,32 +9022,32 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 
 		// 处理角落中的, 如果不处理, 有可能会出现偶尔的相交
 		if(intersectpercent(lefttop,t) > 0){
-			if(ts[tsi].x < t.x) continue;
-			if(ts[tsi].y < t.y ) continue;
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y < t.y ) continue;
 			ts[i].x = ts[tsi].x - ts[i].w;
 			ts[i].y = ts[tsi].y - ts[i].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
 		}
 		if( intersectpercent(righttop,t) > 0){
-			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
-			if(ts[tsi].y < t.y ) continue;
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y < t.y ) continue;
 			ts[i].x = ts[tsi].x + ts[tsi].w;
 			ts[i].y = ts[tsi].y - ts[i].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
 		}
 		if(intersectpercent(leftbuttom,t) > 0){
-			if(ts[tsi].x < t.x) continue;
-			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
 			ts[i].x = ts[tsi].x - ts[i].w;
 			ts[i].y = ts[tsi].y + ts[tsi].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);
 			continue;
 		}
 		if(intersectpercent(rightbuttom,t) > 0){
-			if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
-			if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
 			ts[i].x = ts[tsi].x + ts[tsi].w;
 			ts[i].y = ts[tsi].y + ts[tsi].h;
 			pushorpull3(oldr_next, ts[i], ts, tsn, i, tsis, tsin);

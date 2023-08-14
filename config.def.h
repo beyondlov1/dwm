@@ -201,10 +201,10 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_Left,      tile5expandx,       {.f = -0.1} },
-	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = 0.1} },
-	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = -0.1} },
-	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = 0.1} },
-	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = 0.1} },
 
 	{ Mod1Mask,                       XK_equal,      tile5expand,       {.f=0.1} },
 	{ Mod1Mask,                       XK_minus,      tile5expand,       {.f=-0.1} },
@@ -401,7 +401,7 @@ static Key keys[] = {
 static Key switcherkeys[] = {
 
 	// for tile5
-	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
+    { MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
 	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
 	{ MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
 	{ MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
@@ -413,10 +413,10 @@ static Key switcherkeys[] = {
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_Left,      tile5expandx,       {.f = -0.1} },
-	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = 0.1} },
-	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = -0.1} },
-	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = 0.1} },
-	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_j,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = 0.1} },
+	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = -0.1} },
+	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = 0.1} },
 
 
 	{MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
