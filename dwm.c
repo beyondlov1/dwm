@@ -7728,6 +7728,12 @@ tile5(Monitor *m)
 		}
 	}else{
 		
+		// int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
+		// int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
+
+		int offsetx =  selmon->camera_center_x;
+		int offsety =  selmon->camera_center_y;
+
 		for (c = m->clients; c; c = c->next)
 		{
 			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
@@ -7737,11 +7743,14 @@ tile5(Monitor *m)
 			}
 		}
 
-		// int offsetx = sc.w / 2 - (selmon->sel->w / 2 + selmon->sel->x);
-		// int offsety = sc.h / 2 - (selmon->sel->h / 2 + selmon->sel->y);
-
-		int offsetx =  selmon->camera_center_x;
-		int offsety =  selmon->camera_center_y;
+		for (c = m->clients; c; c = c->next)
+		{
+			if(c->isfloating && ISVISIBLE(c) && !c->launchparent)
+			{
+				c->x = - offsetx + sc.w/2;
+				c->y = - offsety + sc.h/2;
+			}
+		}
 
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
