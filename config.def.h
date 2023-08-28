@@ -168,6 +168,7 @@ static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
 static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
 
 static const char *rofiscriptcmd[] = {"/home/beyond/software/rofiscript", NULL};
+static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NULL};
 
 static const TaskGroup taskgroup1 = {
 	2,
