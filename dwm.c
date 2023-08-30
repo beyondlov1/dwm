@@ -3466,11 +3466,11 @@ drawswitcher(Monitor *m)
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XSetClassHint(dpy, m->switcher, &ch);
 	XDefineCursor(dpy, m->switcher, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcher);
 	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
 	XMapRaised(dpy, m->switcher);
-	XSetClassHint(dpy, m->switcher, &ch);
 	XSetInputFocus(dpy, m->switcher, RevertToPointerRoot, 0);
 
 	XWarpPointer(dpy, None, root, 0, 0, 0, 0, m->switcherwx + sxys[0].x, m->switcherwy + sxys[0].y);
@@ -5066,7 +5066,8 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	XRaiseWindow(dpy,c->win);
 	focus(c);
-	centertocamera(c->x + c->w/2, c->y + c->h/2);
+	// centertocamera(c->x + c->w/2, c->y + c->h/2);
+	tile5viewcomplete(0);
 
 
 	isnexttemp = 0;
@@ -9880,7 +9881,7 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 	h = h/steph + (h%steph==0?0:1);
 	h = h * steph;
 	LOG_FORMAT("fill3x 0");
-	int itern = 20;
+	int itern = 720*2;
 	BlockItem items[itern];
 	memset(items, 0, sizeof(items));
 	int m = 0;
@@ -9904,8 +9905,7 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 			items[m].y = calcy(sc, j, steph, h);
 			items[m].w = w;
 			items[m].h = h;
-			if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-				m++;
+			m++;
 		}
 
 		j = centerj + k;
@@ -9916,8 +9916,7 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 			items[m].y = calcy(sc, j, steph, h);
 			items[m].w = w;
 			items[m].h = h;
-			if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-				m++;
+			m++;
 		}
 
 
@@ -9929,8 +9928,7 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 			items[m].y = calcy(sc, j, steph, h);
 			items[m].w = w;
 			items[m].h = h;
-			if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-				m++;
+			m++;
 		}
 
 		i = centeri + k;
@@ -9941,8 +9939,7 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 			items[m].y = calcy(sc, j, steph, h);
 			items[m].w = w;
 			items[m].h = h;
-			if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-				m++;
+			m++;
 		}
 
 		if(m >= itern) break;
@@ -9950,32 +9947,28 @@ fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int
 		items[m].y = calcy(sc, centerj-k, steph, h);
 		items[m].w = w;
 		items[m].h = h;
-		if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-			m++;
+		m++;
 
 		if(m >= itern) break;
 		items[m].x = calcx(sc,centeri-k,stepw, w);
 		items[m].y = calcy(sc, centerj+k, steph, h);
 		items[m].w = w;
 		items[m].h = h;
-		if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-			m++;
+		m++;
 
 		if(m >= itern) break;
 		items[m].x = calcx(sc,centeri+k,stepw, w);
 		items[m].y = calcy(sc, centerj+k, steph, h);
 		items[m].w = w;
 		items[m].h = h;
-		if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-			m++;
+		m++;
 
 		if(m >= itern) break;
 		items[m].x = calcx(sc,centeri+k,stepw, w);
 		items[m].y = calcy(sc, centerj-k, steph, h);
 		items[m].w = w;
 		items[m].h = h;
-		if(tryfillone_center(items[m].x, items[m].y, items[m].w, items[m].h, ts,tsn,r, maxintersectradio)) 
-			m++;
+		m++;
 	}
 
 	LOG_FORMAT("fill3x 2");
@@ -10191,7 +10184,8 @@ unmanage(Client *c, int destroyed)
 	free(c);
 	focus(NULL);
 	if (selmon->sel) 
-		centertocamera(selmon->sel->x+selmon->sel->w/2,selmon->sel->y+selmon->sel->h/2);
+		// centertocamera(selmon->sel->x+selmon->sel->w/2,selmon->sel->y+selmon->sel->h/2);
+		tile5viewcomplete(0);
 	updateclientlist();
 	arrange(m);
 

@@ -189,6 +189,8 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
 
+	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
+
 	// for tile5
 	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
 	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
