@@ -164,6 +164,7 @@ struct Client {
 	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
+	int zlevel;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -530,6 +531,8 @@ static void tile6maximize(const Arg *arg);
 static void tiledual(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
+static void tile5togglefloating(const Arg *arg);
+static void tile5toggleshift(const Arg *arg);
 static void togglescratch(const Arg *arg);
 static void togglescratchgroup(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -691,7 +694,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 1;
+static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -2729,6 +2732,15 @@ void switcherxy2clientxy_tag(XY sxys[], int n, XY cxys[], int tagindexout[])
 	switcherxy2clientxy_pertag(sxys, n, cxys,tagindexout,tagn, tagsx, tagsy, tagsww, tagswh);
 }
 
+int 
+ClientZlevelCmp(const void *a,const void *b)
+{
+	Client *c = *((Client **)a); 
+	Client *d = *((Client **)b); 
+	return c->zlevel - d->zlevel;
+}
+
+
 void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
 {
 	unsigned int tags = 1<<tagindex;
@@ -2743,6 +2755,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			continue;
 		n++;
 	}
+	Client *cs[n];
 	XY cxys[n];
 	XY cxyse[n];
 	int s2t[n];
@@ -2751,22 +2764,29 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 	{
 		if ((c->tags & tags) == 0)
 			continue;
+		cs[i] = c;
+		i++;
+	}
+	// qsort(cs, n,  sizeof(Client *), ClientZlevelCmp);
+
+
+	for (i = 0; i<n; i++)
+	{
+		c = cs[i] ;
 		cxys[i].x = c->x;
 		cxys[i].y = c->y;
 		cxyse[i].x = c->x + c->w;
 		cxyse[i].y = c->y + c->h;
 		s2t[i] = tagindex;
-		i++;
 	}
 
 	XY sxys[n];
 	XY sxyse[n];
 	clientxy2switcherxy_pertag_one(cxys, n, sxys, s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
 	clientxy2switcherxy_pertag_one(cxyse, n, sxyse,s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
-	for (c = selmon->clients, i = 0; c; c = c->next)
+	for (i = 0; i<n; i++)
 	{
-		if ((c->tags & tags) == 0)
-			continue;
+		c = cs[i];
 		int x, y, w, h;
 		x = sxys[i].x;
 		y = sxys[i].y;
@@ -2808,7 +2828,6 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		drw_line(drw, x, y+h, x+w, y+h, 0);
 		drw_line(drw, x, y, x,y+h, 0);
 		drw_line(drw, x+w, y, x+w,y+h, 0);
-		i++;
 	}
 }
 
@@ -3396,9 +3415,9 @@ drawswitcher(Monitor *m)
 
 	m->switcheraction.pointerfunc = tile5switcherpointfunc; // 鼠标切换focus
 	m->switcheraction.drawfunc = drawclientswitcherwin;
+	m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
 	m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;
 	m->switcheraction.switcherxy2xy = tile5switcherxy2xy;
-	m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
 	m->switcheraction.sxy2client = sxy2client_tag;
 	m->switcheraction.movefunc = tile5switcherfocuschangefunc; // 上下左右切换focus
 	m->switcheraction.switcherfactors = switcherfactors_tag;
@@ -4938,6 +4957,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->id = global_client_id;
 	c->indexincontainer = 0;
 	c->container = createcontainerc(c);
+	c->zlevel = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -6291,7 +6311,7 @@ restack(Monitor *m)
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
 		for (c = m->stack; c; c = c->snext)
-			if (!c->isfloating && ISVISIBLE(c)) {
+			if (!c->isfloating && ISVISIBLE(c) && c->zlevel == 0) {
 				XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 				wc.sibling = c->win;
 			}
@@ -7721,12 +7741,20 @@ tile5(Monitor *m)
 			c->y = c->y + offsety;
 		}
 
+		// for (c = m->clients; c; c = c->next)
+		// {
+		// 	if(c->isfloating && ISVISIBLE(c) && c->launchparent)
+		// 	{
+		// 		c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
+		// 		c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+		// 	}
+		// }
 		for (c = m->clients; c; c = c->next)
 		{
 			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
 			{
-				c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
-				c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+				c->x = c->x;
+				c->y = c->y;
 			}
 		}
 	}else{
@@ -7747,8 +7775,10 @@ tile5(Monitor *m)
 		{
 			if(c->isfloating && ISVISIBLE(c) && c->launchparent)
 			{
-				c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
-				c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+				// c->x = c->launchparent->x + c->launchparent->w/2 - c->w/2;
+				// c->y = c->launchparent->y + c->launchparent->h/2 - c->h/2;
+				c->x = c->x;
+				c->y = c->y;
 			}
 
 			if(c->isfloating && ISVISIBLE(c) && !c->launchparent)
@@ -7767,14 +7797,22 @@ tile5(Monitor *m)
 		{
 			resizeclient(c, c->x, c->y, c->w, c->h);
 			c->placed = 1;
+			// LOG_FORMAT("zlevel %s,%d", c->name, c->zlevel);
 		}
 	}
 
-	for (c = m->clients; c; c = c->next){
-		if(ISVISIBLE(c) && c->isfloating){
-			XRaiseWindow(dpy, c->win);
-		}
-	}
+	// for (c = m->clients; c; c = c->next){
+	// 	if(ISVISIBLE(c) && c->zlevel > 0){
+	// 		XRaiseWindow(dpy, c->win);
+	// 		// LOG_FORMAT("zlevel 1 %s,%d", c->name, c->zlevel);
+	// 	}
+	// }
+
+	// for (c = m->clients; c; c = c->next){
+	// 	if(ISVISIBLE(c) && c->isfloating){
+	// 		XRaiseWindow(dpy, c->win);
+	// 	}
+	// }
 
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
 		c->bw = borderpx;
@@ -9208,6 +9246,28 @@ togglefloating(const Arg *arg)
 	if (selmon->sel->isfloating)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
+	arrange(selmon);
+}
+
+void
+tile5togglefloating(const Arg *arg)
+{
+	if (!selmon->sel)
+		return;
+	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
+		return;
+	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
+	arrange(selmon);
+}
+
+void
+tile5toggleshift(const Arg *arg)
+{
+	if (!selmon->sel)
+		return;
+	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
+		return;
+	selmon->sel->zlevel = selmon->sel->zlevel > 0 ? 0: 1;
 	arrange(selmon);
 }
 
@@ -10808,11 +10868,13 @@ viewui(unsigned int tagui)
 	selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 	selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
 
-	if((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
-		selmon->sellt = 0;
-		selmon->lt[selmon->sellt] = &layouts[3];
-		selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
-	}
+	// 原来这里是想如果view所有tag就使用所有tag的layout[3], 但是会在switcher focus float窗口时有问题,
+	// 因为siwtcher可以跨tag, 所以跨的时候要view一下, 这里先注释掉, 以后用到的时候再说
+	// if((selmon->tagset[selmon->seltags] & TAGMASK) == TAGMASK){
+	// 	selmon->sellt = 0;
+	// 	selmon->lt[selmon->sellt] = &layouts[3];
+	// 	selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
+	// }
 
     // ------------- test smartview ---------------//
 	// record lastviewtime
