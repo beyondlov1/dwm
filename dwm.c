@@ -988,6 +988,7 @@ void
 updateborder(Client *c){
 	if (ISVISIBLE(c) && c->win)
 	{
+		
 		if (c->isdoublepagemarked && c->isscratched && c == selmon->sel)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 
@@ -1011,6 +1012,12 @@ updateborder(Client *c){
 
 		if (!c->isdoublepagemarked && !c->isscratched && c != selmon->sel)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
+	
+		if (c->zlevel > 0 && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+
+		if (c->zlevel > 0 && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	
 	}
 }
@@ -2755,6 +2762,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			continue;
 		n++;
 	}
+	if(n == 0) return;
 	Client *cs[n];
 	XY cxys[n];
 	XY cxyse[n];
@@ -2767,7 +2775,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		cs[i] = c;
 		i++;
 	}
-	// qsort(cs, n,  sizeof(Client *), ClientZlevelCmp);
+	qsort(cs, n,  sizeof(Client *), ClientZlevelCmp);
 
 
 	for (i = 0; i<n; i++)
@@ -3071,6 +3079,7 @@ clientswitchermove_tag(const Arg *arg)
 int
 angley(XY xy1, XY xy2)
 {
+	if(xy1.y - xy2.y == 0) return INT_MAX - 1;
 	// 上下
 	if(abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 1.2) return 2.5*distancexy(xy1, xy2);
 	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + 1.5*distancexy(xy1, xy2);
@@ -3079,6 +3088,7 @@ angley(XY xy1, XY xy2)
 int
 anglex(XY xy1, XY xy2)
 {
+	if(xy1.x - xy2.x == 0) return INT_MAX - 1;
 	// 左右
 	if(abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1) return 3*distancexy(xy1, xy2);
 	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + distancexy(xy1, xy2);
@@ -6305,7 +6315,7 @@ restack(Monitor *m)
 	drawbar(m);
 	if (!m->sel)
 		return;
-	if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
+	if (m->sel->isfloating || m->sel->zlevel > 0 || !m->lt[m->sellt]->arrange)
 		XRaiseWindow(dpy, m->sel->win);
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
@@ -6316,6 +6326,8 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
+	if(m->switcher)
+		XRaiseWindow(dpy, m->switcher);
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
@@ -7801,18 +7813,7 @@ tile5(Monitor *m)
 		}
 	}
 
-	// for (c = m->clients; c; c = c->next){
-	// 	if(ISVISIBLE(c) && c->zlevel > 0){
-	// 		XRaiseWindow(dpy, c->win);
-	// 		// LOG_FORMAT("zlevel 1 %s,%d", c->name, c->zlevel);
-	// 	}
-	// }
-
-	// for (c = m->clients; c; c = c->next){
-	// 	if(ISVISIBLE(c) && c->isfloating){
-	// 		XRaiseWindow(dpy, c->win);
-	// 	}
-	// }
+	// 之后restack会重新 XRaiseWindow
 
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)){
 		c->bw = borderpx;
