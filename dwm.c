@@ -239,7 +239,8 @@ struct Monitor {
 	Client *sel;
 	Client *stack;
 	Monitor *next;
-	Window barwin,switcher,switcherbarwin, switcherstickywin;
+	Window barwin,switcher, switcherbarwin, switcherstickywin;
+	Window _switcher;
 	int switcherww, switcherwh, switcherwx, switcherwy;
 	int switcherbarww, switcherbarwh, switcherbarwx, switcherbarwy;
 	int switcherstickyww, switcherstickywh, switcherstickywx, switcherstickywy;
@@ -3325,8 +3326,8 @@ tile5switcherpointfunc(int sx, int sy)
 		selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
 		XMapWindow(dpy, selmon->switcher);
 		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+		arrange(selmon);
 	}
-	arrange(selmon);
 }
 
 
@@ -3729,21 +3730,7 @@ enternotify(XEvent *e)
 	int oldy = c->y;
 	focus(c);
 
-	int offsetx = 0;
-	int offsety = 0;
-	if(c){
-		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww - borderpx;
-		if(c->x < 0) offsetx = c->x + borderpx;
-		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh - borderpx;
-		if(c->y < 0) offsety = c->y + borderpx;
-		if(offsetx != 0 || offsety != 0)
-			centertocamera(selmon->wx + selmon->ww/2 + offsetx, selmon->wy + selmon->wh/2 + offsety);
-	}
-
-	/*LOG("enternotify", c?c->name:"");*/
-	LOG_FORMAT("enternotify 2");
-	/*LOG_FORMAT("enternotify 2 %d %d", ev->x_root, ev->y_root);*/
-	arrange(m);
+	tile5viewcomplete(0);
 
 	/*int cursorx = ev->x_root + c->x - oldx;*/
 	/*int cursory = ev->y_root + c->y - oldy;*/
@@ -5865,11 +5852,13 @@ tile5viewcomplete(Arg *arg)
 	Client *c = selmon->sel;
 	int offsetx = 0;
 	int offsety = 0;
+	int paddingx = 50;
+	int paddingy = 25;
 	if(c){
-		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww;
-		if(c->x < 0) offsetx = c->x;
-		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh;
-		if(c->y < 0) offsety = c->y;
+		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww + paddingx;
+		if(c->x < 0) offsetx = c->x - paddingx;
+		if(c->y + c->h - selmon->wh > 0) offsety = c->y + c->h - selmon->wh + paddingy;
+		if(c->y < 0) offsety = c->y - paddingy;
 		if(offsetx != 0 || offsety != 0)
 			centertocamera(selmon->wx + selmon->ww/2 + offsetx, selmon->wy + selmon->wh/2 + offsety);
 	}
