@@ -102,7 +102,9 @@ enum { NetSupported, NetWMName, NetWMIcon, NetWMState, NetWMCheck,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
 	   NetWmStateSkipTaskbar,
 	   NetWmPid,
-       NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
+       NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, 
+	   NetMyNote,
+	   NetLast }; /* EWMH atoms */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
@@ -156,6 +158,7 @@ struct Client {
 	int id;
 	char name[256];
 	char class[64];
+	char note[64];
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
@@ -555,6 +558,7 @@ static void updatesystrayicongeom(Client *i, int w, int h);
 static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static void updatetitle(Client *c);
 static void updateclass(Client *c);
+static void updatenote(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void updateicon(Client *c);
@@ -2830,9 +2834,24 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		else
 		{
 			int tw = MIN(TEXTW(c->class), w);
-			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - bh, tw, bh, 0, c->class, 0);
+			int th = bh;
+			if(h / 2 < th) th = h / 2;
+			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - th, tw, th, 0, c->class, 0);
 		}
-		drw_text(drw, x, y + h / 2, w, bh, 30, c->name, 0);
+		int th = bh;
+		int tw = w;
+
+		tw = MIN(TEXTW(c->name), w);
+		th = MIN(th, h / 4);
+		drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
+
+		if(strlen(c->note) > 0){
+			tw = MIN(TEXTW(c->note), w);
+			th = MIN(th, h / 4);
+			drw_text(drw, x + w/2 - tw/2, y + 3 * h / 4, tw, th, 2, c->note, 0);
+		}
+
+		
 		drw_line(drw, x, y, x+w,y, 0);
 		drw_line(drw, x, y+h, x+w, y+h, 0);
 		drw_line(drw, x, y, x,y+h, 0);
@@ -4987,6 +5006,8 @@ manage(Window w, XWindowAttributes *wa)
 	updateicons(c);
 	updatetitle(c);
 	updateclass(c);
+	updatenote(c);
+
 
 	LOG_FORMAT("manage 1");
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
@@ -5852,8 +5873,8 @@ tile5viewcomplete(Arg *arg)
 	Client *c = selmon->sel;
 	int offsetx = 0;
 	int offsety = 0;
-	int paddingx = 50;
-	int paddingy = 25;
+	int paddingx = 0;
+	int paddingy = 0;
 	if(c){
 		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww + paddingx;
 		if(c->x < 0) offsetx = c->x - paddingx;
@@ -6059,6 +6080,11 @@ propertynotify(XEvent *e)
 		}
 		if (ev->atom == XA_WM_CLASS) {
 			updateclass(c);
+			if (c == c->mon->sel)
+				drawbar(c->mon);
+		}
+		if (ev->atom == netatom[NetMyNote]) {
+			updatenote(c);
 			if (c == c->mon->sel)
 				drawbar(c->mon);
 		}
@@ -6761,6 +6787,8 @@ setup(void)
 	netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
 
 	netatom[NetWmPid] = XInternAtom(dpy, "_NET_WM_PID", False);
+	netatom[NetMyNote] = XInternAtom(dpy, "_NET_MY_NOTE", False);
+
 
 	xatom[Manager] = XInternAtom(dpy, "MANAGER", False);
 	xatom[Xembed] = XInternAtom(dpy, "_XEMBED", False);
@@ -10636,6 +10664,19 @@ void
 updateclass(Client *c)
 {
 	getclass(c->win, c->class);
+}
+
+
+void
+updatenote(Client *c)
+{
+	if (!gettextprop(c->win, netatom[NetMyNote], c->note, sizeof c->note))
+	{
+		memset(c->note, 0, sizeof c->note);
+		return;
+	}
+	if (c->note[0] == '\0' || strcmp(c->note, "___") == 0) 
+		memset(c->note, 0, sizeof c->note);
 }
 
 void
