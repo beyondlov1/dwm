@@ -2833,8 +2833,9 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		if (c->icons[size_level])
 		{
 			drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
-			if(c->thumb)
-				drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->thumb);
+			// thumb
+			// if(c->thumb)
+			// 	drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->thumb);
 		}
 		else
 		{
