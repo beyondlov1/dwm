@@ -5,6 +5,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 #include <Imlib2.h>
+#include <errno.h>
+#include <time.h>
 
 #include "drw.h"
 #include "util.h"
@@ -541,4 +543,260 @@ drw_cur_free(Drw *drw, Cur *cursor)
 
 	XFreeCursor(drw->dpy, cursor->cursor);
 	free(cursor);
+}
+
+
+
+/* Clip rectangle nicely */
+void scrotNiceClip(Display *dpy,  Window root, Screen *scr,  int *rx, int *ry, int *rw, int *rh)
+{
+    if (*rx < 0) {
+        *rw += *rx;
+        *rx = 0;
+    }
+    if (*ry < 0) {
+        *rh += *ry;
+        *ry = 0;
+    }
+    if ((*rx + *rw) > scr->width)
+        *rw = scr->width - *rx;
+    if ((*ry + *rh) > scr->height)
+        *rh = scr->height - *ry;
+}
+
+static int findWindowManagerFrame(Display *dpy, Window root, Window *const target, int *const frames)
+{
+    int x, status;
+    unsigned int d;
+    Window rt, *children, parent;
+
+    status = XGetGeometry(dpy, *target, &root, &x, &x, &d, &d, &d, &d);
+
+    if (!status)
+        return 0;
+
+    for (;;) {
+        status = XQueryTree(dpy, *target, &rt, &parent, &children, &d);
+        if (status && (children != None))
+            XFree(children);
+        if (!status || (parent == None) || (parent == rt))
+            break;
+        *target = parent;
+        ++*frames;
+    }
+    return 1;
+}
+
+
+static Window scrotFindWindowByProperty(Display *display, const Window window,
+    const Atom property)
+{
+    Atom type = None;
+    int format, status;
+    unsigned char *data = NULL;
+    unsigned int i, numberChildren;
+    unsigned long after, numberItems;
+    Window child = None, *children, parent, rootReturn;
+
+    status = XQueryTree(display, window, &rootReturn, &parent, &children,
+        &numberChildren);
+    if (!status)
+        return None;
+    for (i = 0; (i < numberChildren) && (child == None); i++) {
+        status = XGetWindowProperty(display, children[i], property, 0L, 0L, False,
+            AnyPropertyType, &type, &format,
+            &numberItems, &after, &data);
+        XFree(data);
+        if ((status == Success) && type)
+            child = children[i];
+    }
+    for (i = 0; (i < numberChildren) && (child == None); i++)
+        child = scrotFindWindowByProperty(display, children[i], property);
+    if (children != None)
+        XFree(children);
+    return (child);
+}
+
+
+static Window scrotGetClientWindow(Display *display, Window target)
+{
+    Atom state;
+    Atom type = None;
+    int format, status;
+    unsigned char *data = NULL;
+    unsigned long after, items;
+    Window client;
+
+    state = XInternAtom(display, "WM_STATE", True);
+    if (state == None)
+        return target;
+    status = XGetWindowProperty(display, target, state, 0L, 0L, False,
+        AnyPropertyType, &type, &format, &items, &after,
+        &data);
+    XFree(data);
+    if ((status == Success) && (type != None))
+        return target;
+    client = scrotFindWindowByProperty(display, target, state);
+    if (!client)
+        return target;
+    return client;
+}
+
+
+/* clockNow() has the exact same semantics as CLOCK_MONOTONIC. Except that on
+ * Linux, CLOCK_MONOTONIC does not progress while the system is suspended, so
+ * the non-standard CLOCK_BOOTTIME is used instead to avoid this bug.
+ */
+struct timespec clockNow(void)
+{
+    struct timespec ret;
+#if defined(__linux__)
+    clock_gettime(CLOCK_BOOTTIME, &ret);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &ret);
+#endif
+    return ret;
+}
+
+static long miliToNanoSec(int ms)
+{
+    return ms * 1000L * 1000L;
+}
+
+/* OpenBSD and OS X lack clock_nanosleep(), so we call nanosleep() and use a
+ * trivial algorithm to correct for drift. The end timespec is returned for
+ * callers that want it. EINTR is also dealt with.
+ */
+struct timespec scrotSleepFor(struct timespec start, int ms)
+{
+    struct timespec end = {
+        .tv_sec  = start.tv_sec  + (ms / 1000),
+        .tv_nsec = start.tv_nsec + miliToNanoSec(ms % 1000),
+    };
+    if (end.tv_nsec >= miliToNanoSec(1000)) {
+        ++end.tv_sec;
+        end.tv_nsec -= miliToNanoSec(1000);
+    }
+
+    struct timespec tmp;
+    do {
+        tmp = clockNow();
+
+        /* XXX: Use timespecsub(). OS X doesn't have that BSD macro, and libbsd
+         * doesn't support OS X save for an unmaintained fork. libobsd supports
+         * OS X but doesn't have the macro yet.
+         */
+        tmp.tv_sec  = end.tv_sec  - tmp.tv_sec;
+        tmp.tv_nsec = end.tv_nsec - tmp.tv_nsec;
+        if (tmp.tv_nsec < 0) {
+            --tmp.tv_sec;
+            tmp.tv_nsec += miliToNanoSec(1000);
+        }
+    } while (nanosleep(&tmp, NULL) < 0 && errno == EINTR);
+
+    return end;
+}
+
+
+/* Get geometry of window and use that */
+int scrotGetGeometry(Display *dpy, Window root, Window target, int *rx, int *ry, int *rw, int *rh)
+{
+    Window child;
+    XWindowAttributes attr;
+    int stat, frames = 0;
+
+    /* Get windowmanager frame of window */
+    if (target != root) {
+        if (findWindowManagerFrame(dpy, root, &target, &frames)) {
+            /* Get client window. */
+            target = scrotGetClientWindow(dpy, target);
+
+            XRaiseWindow(dpy, target);
+            XSync(dpy, False);
+
+			/* HACK: there doesn't seem to be any way to figure out whether the
+             * raise request was accepted or rejected. so just sleep a bit to
+             * give the WM some time to update. */
+            scrotSleepFor(clockNow(), 160);
+        }
+    }
+    stat = XGetWindowAttributes(dpy, target, &attr);
+    if (!stat || (attr.map_state != IsViewable))
+        return 0;
+    *rw = attr.width;
+    *rh = attr.height;
+    XTranslateCoordinates(dpy, target, root, 0, 0, rx, ry, &child);
+    return 1;
+}
+
+Imlib_Image scrotGrabRect(int x, int y, int w, int h)
+{
+    Imlib_Image im = imlib_create_image_from_drawable(0, x, y, w, h, 1);
+    if (!im)
+        errx(EXIT_FAILURE, "failed to grab image");
+    return im;
+}
+
+Imlib_Image scrotGrabWindowById(Display *dpy, Window root, Screen *scr, Window window)
+{
+    Imlib_Image im = NULL;
+    int rx = 0, ry = 0, rw = 0, rh = 0;
+
+    if (!scrotGetGeometry(dpy, root, window, &rx, &ry, &rw, &rh))
+        return NULL;
+    scrotNiceClip(dpy, root, scr, &rx, &ry, &rw, &rh);
+    im = scrotGrabRect(rx, ry, rw, rh);
+    return im;
+}
+
+
+Picture
+drw_picture_image_resized(Drw *drw, Imlib_Image image, unsigned int srcw, unsigned int srch, unsigned int dstw, unsigned int dsth) {
+	Pixmap pm;
+	Picture pic;
+	GC gc;
+
+	Imlib_Image origin = image;
+	if (!origin) return None;
+	imlib_context_set_image(origin);
+	imlib_image_set_has_alpha(1);
+	Imlib_Image scaled = imlib_create_cropped_scaled_image(0, 0, srcw, srch, dstw, dsth);
+	imlib_free_image_and_decache();
+	if (!scaled) return None;
+	imlib_context_set_image(scaled);
+	imlib_image_set_has_alpha(1);
+
+	XImage img = {
+		dstw, dsth, 0, ZPixmap, (char *)imlib_image_get_data_for_reading_only(),
+		ImageByteOrder(drw->dpy), BitmapUnit(drw->dpy), BitmapBitOrder(drw->dpy), 32,
+		32, 0, 32,
+		0, 0, 0
+	};
+	XInitImage(&img);
+
+	pm = XCreatePixmap(drw->dpy, drw->root, dstw, dsth, 32);
+	gc = XCreateGC(drw->dpy, pm, 0, NULL);
+	XPutImage(drw->dpy, pm, gc, &img, 0, 0, 0, 0, dstw, dsth);
+	imlib_free_image_and_decache();
+	XFreeGC(drw->dpy, gc);
+
+	pic = XRenderCreatePicture(drw->dpy, pm, XRenderFindStandardFormat(drw->dpy, PictStandardARGB32), 0, NULL);
+	XFreePixmap(drw->dpy, pm);
+	
+	return pic;
+}
+
+void 
+initimlib(Display *disp, Window root, Screen *scr){
+	Visual *vis = DefaultVisual(disp, XScreenNumberOfScreen(scr));
+	Colormap cm = DefaultColormap(disp, XScreenNumberOfScreen(scr));
+
+	imlib_context_set_drawable(root);
+	imlib_context_set_display(disp);
+	imlib_context_set_visual(vis);
+	imlib_context_set_colormap(cm);
+	imlib_context_set_color_modifier(NULL);
+	imlib_context_set_operation(IMLIB_OP_COPY);
+	imlib_set_cache_size(0);
+   
 }

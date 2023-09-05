@@ -61,3 +61,10 @@ void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h)
 Picture drw_picture_create_resized(Drw *drw, char *src, unsigned int src_w, unsigned int src_h, unsigned int dst_w, unsigned int dst_h);
 Picture drw_picture_load_resized(Drw *drw, char *file, unsigned int src_w, unsigned int src_h, unsigned int dst_w, unsigned int dst_h);
 void drw_pic(Drw *drw, int x, int y, unsigned int w, unsigned int h, Picture pic);
+
+
+Imlib_Image scrotGrabWindowById(Display *dpy, Window root, Screen *scr, Window window);
+
+Picture drw_picture_image_resized(Drw *drw, Imlib_Image image, unsigned int srcw, unsigned int srch, unsigned int dstw, unsigned int dsth);
+
+void initimlib(Display *disp, Window root, Screen *scr);

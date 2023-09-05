@@ -48,6 +48,7 @@
 #include <dirent.h>
 #include <regex.h>
 #include <stdint.h>
+#include <Imlib2.h>
 
 #include "http.c"
 #include "drw.h"
@@ -187,6 +188,8 @@ struct Client {
 	unsigned int icws[3], ichs[3]; Picture icons[3];
 	MXY matcoor;
 	int launchindex;
+
+	Picture thumb;
 
 	int indexincontainer;
 	Container *container;
@@ -2830,6 +2833,8 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		if (c->icons[size_level])
 		{
 			drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->icons[size_level]);
+			if(c->thumb)
+				drw_pic(drw, x + w / 2 - c->icws[size_level] / 2, y + h / 2 - c->ichs[size_level], c->icws[size_level], c->ichs[size_level], c->thumb);
 		}
 		else
 		{
@@ -2841,6 +2846,8 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		int th = bh;
 		int tw = w;
 
+		tw = MIN(TEXTW(c->name), w);
+		th = MIN(th, h / 4);
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
 		drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
@@ -3823,6 +3830,14 @@ focus(Client *c)
 	selmon->sel = c;
 	drawbars();
 	LOG_FORMAT("focus: over");
+
+	// thumb
+	// if(c && c->win){
+	// 	Screen *scr = ScreenOfDisplay(dpy, screen);
+	// 	Imlib_Image image = scrotGrabWindowById(dpy, root, scr, c->win);
+	// 	c->thumb = drw_picture_image_resized(drw, image, c->w, c->h, 128,128);
+	// }
+
 }
 
 /* there are some broken focus acquiring clients needing extra handling */
@@ -4974,6 +4989,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->indexincontainer = 0;
 	c->container = createcontainerc(c);
 	c->zlevel = 0;
+	c->thumb = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -6840,6 +6856,8 @@ setup(void)
 	scratchgroupptr->tail->prev = scratchgroupptr->head;
 
 
+	// thumb
+	// initimlib(dpy, root, ScreenOfDisplay(dpy,screen));
 }
 
 
