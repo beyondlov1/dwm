@@ -1821,7 +1821,7 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 	Monitor *m = selmon;
 
 	/*XMoveResizeWindow(dpy,switcherbarwin, wx,wy, ww, wh);*/
-
+	
 	for (c = m->clients; c; c = c->next) {
 		if (ISVISIBLE(c))
 			n++;
@@ -1866,6 +1866,11 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 
 		x += w;
 	}
+
+
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	int tw = TEXTW(stext) - lrpad + 2;
+	drw_text(drw, ww - tw, 0, tw, bh, 0, stext, 0);
 
 	drw_map(drw, switcherbarwin, 0, 0, ww, wh);
 }
@@ -3532,21 +3537,22 @@ drawswitcher(Monitor *m)
 
 	XWarpPointer(dpy, None, root, 0, 0, 0, 0, m->switcherwx + sxys[0].x, m->switcherwy + sxys[0].y);
 
-	/*m->switcherbarww = ww;*/
-	/*m->switcherbarwh = bh;*/
-	/*m->switcherbarwx = wx;*/
-	/*m->switcherbarwy = wy-bh;*/
-	/*m->switcherbaraction.drawfunc = drawswitcherbar;*/
-	/*m->switcherbaraction.movefunc = NULL;*/
-	/*m->switcherbaraction.pointerfunc = switcherbaraction;*/
-	/*m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),*/
-				/*CopyFromParent, DefaultVisual(dpy, screen),*/
-				/*CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);*/
-	/*XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);*/
-	/*XMapWindow(dpy, m->switcherbarwin);*/
-	/*m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);*/
-	/*XMapRaised(dpy, m->switcherbarwin);*/
-	/*XSetClassHint(dpy, m->switcherbarwin, &ch);*/
+	m->switcherbarww = ww;
+	m->switcherbarwh = bh;
+	m->switcherbarwx = wx;
+	m->switcherbarwy = wy-bh;
+	m->switcherbaraction.drawfunc = drawswitcherbar;
+	m->switcherbaraction.movefunc = NULL;
+	m->switcherbaraction.pointerfunc = switcherbaraction;
+	m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),
+				CopyFromParent, DefaultVisual(dpy, screen),
+				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+	XSetClassHint(dpy, m->switcher, &ch);
+	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
+	XMapWindow(dpy, m->switcherbarwin);
+	m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);
+	XMapRaised(dpy, m->switcherbarwin);
+	XSetClassHint(dpy, m->switcherbarwin, &ch);
 }
 
 void 
@@ -3564,7 +3570,7 @@ destroyswitcher(Monitor *m)
 	XUnmapWindow(dpy, m->switcherbarwin);
 	XDestroyWindow(dpy, m->switcherbarwin);
 	selmon->switcherbarwin = 0L;	
-	/*updatesystray();*/
+	// updatesystray();
 }
 
 void
@@ -10601,8 +10607,8 @@ updatesystray(void)
 	Monitor *m = systraytomon(NULL);
 	
 	if (m->switcher) {
-		/*m->systrayrx = m->switcherbarwx + m->switcherbarww;*/
-		/*m->systrayy = m->switcherbarwy;*/
+		// m->systrayrx = m->switcherbarwx + m->switcherbarww;
+		// m->systrayy = m->switcherbarwy;
 		m->systrayrx = m->ww + m->wx;
 		m->systrayy = m->by + m->wy;
 	}else{
@@ -10667,6 +10673,8 @@ updatesystray(void)
 	/* redraw background */
 	XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
 	XFillRectangle(dpy, systray->win, drw->gc, 0, 0, w, bh);
+	// my raise
+	XRaiseWindow(dpy, systray->win);
 	XSync(dpy, False);
 }
 
