@@ -652,7 +652,7 @@ static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
-static Window root, wmcheckwin;
+static Window root, wmcheckwin, borderwintop, borderwinbottom, borderwinleft, borderwinright;
 static Client *focuschain, *FC_HEAD;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
@@ -990,6 +990,10 @@ arrange(Monitor *m)
 	if (m && m->switcherstickywin) {
 		m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
 	}
+	if (borderwintop) XMapRaised(dpy, borderwintop);
+	if (borderwinleft) XMapRaised(dpy, borderwinleft);
+	if (borderwinright) XMapRaised(dpy, borderwinright);
+	if (borderwinbottom) XMapRaised(dpy, borderwinbottom);
 }
 
 void
@@ -1261,6 +1265,10 @@ cleanup(void)
 		free(scheme[i]);
 	free(scheme);
 	XDestroyWindow(dpy, wmcheckwin);
+	XDestroyWindow(dpy, borderwintop);
+	XDestroyWindow(dpy, borderwinbottom);
+	XDestroyWindow(dpy, borderwinleft);
+	XDestroyWindow(dpy, borderwinright);
 	drw_free(drw);
 	XSync(dpy, False);
 	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
@@ -3735,6 +3743,26 @@ enternotify(XEvent *e)
 	if (selmon->switcher) {
 		return;
 	}
+	if (borderwintop && ev->window == borderwintop) {
+		Arg arg = {.i = FOCUS_UP};
+		switchermove(&arg);
+		return;
+	}
+	if (borderwinbottom && ev->window == borderwinbottom) {
+		Arg arg = {.i = FOCUS_DOWN};
+		switchermove(&arg);
+		return;
+	}
+	if (borderwinleft && ev->window == borderwinleft) {
+		Arg arg = {.i = FOCUS_LEFT};
+		switchermove(&arg);
+		return;
+	}
+	if (borderwinright && ev->window == borderwinright) {
+		Arg arg = {.i = FOCUS_RIGHT};
+		switchermove(&arg);
+		return;
+	}
 	/*if (selmon->sel && selmon->sel->istemp) {*/
 		/*return;*/
 	/*}*/
@@ -4280,6 +4308,7 @@ focusgrid5(const Arg *arg)
 	Client *c = nextclosestc(arg);
 	if (c) {
 		focus(c);
+		tile5viewcomplete(0);
 		// try remove this for performance
 		/*restack(selmon);*/
 		arrange(selmon);
@@ -6727,6 +6756,46 @@ setfacty(const Arg *arg)
 	arrange(selmon);
 }
 
+void 
+initborderwin(void)
+{
+	int borderw = 3;
+	int i;
+	for (i = -2; i < 3; i++)
+	{
+		if(i==0) continue;
+		XSetWindowAttributes wa = {
+			.override_redirect = True,
+			.background_pixmap = ParentRelative,
+			.event_mask = ButtonPressMask|ExposureMask|EnterWindowMask
+		};
+		XClassHint ch = {"dwm", "dwm"};
+		int x,y,w,h;
+		if(i == FOCUS_UP) {x = 0;y=0; w=selmon->ww; h=borderw;}
+		if(i == FOCUS_DOWN) {x = 0; y=selmon->wh - borderw; w=selmon->ww; h=borderw;}
+		if(i == FOCUS_LEFT) {x = 0; y=0; w=borderw; h=selmon->wh;}
+		if(i == FOCUS_RIGHT) {x = selmon->ww - borderw; y=0; w=borderw; h=selmon->wh;}
+
+		Window win = XCreateWindow(dpy, root, x,y,w,h,0, DefaultDepth(dpy, screen),
+					CopyFromParent, DefaultVisual(dpy, screen),
+					CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+
+		if(i == FOCUS_UP)  borderwintop = win;
+		if(i == FOCUS_DOWN) borderwinbottom = win;
+		if(i == FOCUS_LEFT) borderwinleft = win;
+		if(i == FOCUS_RIGHT) borderwinright = win;
+
+		XDefineCursor(dpy, win, cursor[CurNormal]->cursor);
+		XSetClassHint(dpy, win, &ch);
+		XMapWindow(dpy, win);
+		XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
+		XFillRectangle(dpy, win, drw->gc, x,y,w,h);
+		XMapRaised(dpy, win);
+	}
+	XSync(dpy, False);
+
+}
+
 void
 setup(void)
 {
@@ -6824,6 +6893,9 @@ setup(void)
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
 	for (i = 0; i < LENGTH(colors); i++)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
+	
+	// init border 
+	initborderwin();
 	/* init system tray */
 	updatesystray();
 	/* init bars */
