@@ -14,6 +14,8 @@ static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
 static const int showsystray        = 1;        /* 0 means no systray */
 static const int showbar            = 0;        /* 0 means no bar */
+static const int showborderwin      = 0;
+static const int showcornerwin      = 1;
 static const int topbar             = 0;        /* 0 means bottom bar */
 static const Bool viewontag         = True;     /* Switch view on tag switch */
 static const Bool managestubon         = False;     /* if total stub > screen stub(default 3); move new window to new tag */
@@ -212,6 +214,9 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,                       XK_k,      tile5expandy,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_Down,      tile5expandy,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Up,      tile5expandy,       {.f = 0.1} },
+	{ Mod1Mask,                       XK_Tab,      scratchmove,       {.i = -2} },
+	{ Mod1Mask,                       XK_Page_Up,      scratchmove,       {.i = +2} },
+	{ Mod1Mask,                       XK_Page_Down,      scratchmove,       {.i = -2} },
 
 	{ Mod1Mask,                       XK_equal,      tile5expand,       {.f=0.1} },
 	{ Mod1Mask,                       XK_minus,      tile5expand,       {.f=-0.1} },
@@ -228,7 +233,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_e, rispawn,          {.v = fmcmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
-	{ Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
+	// { Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
@@ -240,8 +245,8 @@ static Key keys[] = {
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	// { MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
-	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
-	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
+	{ Mod1Mask,                       XK_p,      addtoscratchgroup,  {0 } },
+	{ Mod1Mask,                       XK_y,      removefromscratchgroup,  {0 } },
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
 	{ Mod1Mask,                       XK_grave,      togglescratchgroup,  {0} },
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
@@ -346,7 +351,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	//{ MODKEY,                       XK_m,      setlayout,      {0} },
-	{ MODKEY,                       XK_m,      tile6maximize,      {0} },
+	{ MODKEY,                       XK_m,      tile5maximize,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	// { MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
@@ -519,7 +524,7 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
-	{ MODKEY,                       XK_m,      tile6maximize,      {0} },
+	{ MODKEY,                       XK_m,      tile5maximize,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },

@@ -418,6 +418,8 @@ static void expand(const Arg *arg);
 static void tile5expand(const Arg *arg);
 static void tile5expandx(const Arg *arg);
 static void tile5expandy(const Arg *arg);
+static void tile5expandto(int w, int h);
+static void tile5maximize(const Arg *arg);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
@@ -518,6 +520,7 @@ static void swap(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
+static void scratchmove(Arg *arg);
 static void switchermove(const Arg *arg);
 static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
@@ -653,6 +656,7 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin, borderwintop, borderwinbottom, borderwinleft, borderwinright;
+static Window cornerwin1, cornerwin2, cornerwin3, cornerwin4;
 static Client *focuschain, *FC_HEAD;
 static ScratchItem *scratchitemptr;
 static ScratchGroup *scratchgroupptr;
@@ -990,10 +994,18 @@ arrange(Monitor *m)
 	if (m && m->switcherstickywin) {
 		m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
 	}
-	if (borderwintop) XMapRaised(dpy, borderwintop);
-	if (borderwinleft) XMapRaised(dpy, borderwinleft);
-	if (borderwinright) XMapRaised(dpy, borderwinright);
-	if (borderwinbottom) XMapRaised(dpy, borderwinbottom);
+	if(showborderwin){
+		if (borderwintop) XMapRaised(dpy, borderwintop);
+		if (borderwinleft) XMapRaised(dpy, borderwinleft);
+		if (borderwinright) XMapRaised(dpy, borderwinright);
+		if (borderwinbottom) XMapRaised(dpy, borderwinbottom);
+	}
+	if(showcornerwin){
+		if (cornerwin1) XMapRaised(dpy, cornerwin1);
+		if (cornerwin2) XMapRaised(dpy, cornerwin2);
+		if (cornerwin3) XMapRaised(dpy, cornerwin3);
+		if (cornerwin4) XMapRaised(dpy, cornerwin4);
+	}
 }
 
 void
@@ -1115,6 +1127,39 @@ buttonpress(XEvent *e)
 	Monitor *m;
 	XButtonPressedEvent *ev = &e->xbutton;
 	char *text, *s, ch;
+
+	if(showborderwin)
+	{
+		if (borderwintop && ev->window == borderwintop) {
+			// Arg arg = {.i = FOCUS_UP};
+			selmon->camera_center_x += 0;
+			selmon->camera_center_y += 100;
+			arrange(selmon);
+			return;
+		}
+		if (borderwinbottom && ev->window == borderwinbottom) {
+			// Arg arg = {.i = FOCUS_DOWN};
+			selmon->camera_center_x += 0;
+			selmon->camera_center_y += -100;
+			arrange(selmon);
+			return;
+		}
+		if (borderwinleft && ev->window == borderwinleft) {
+			// Arg arg = {.i = FOCUS_LEFT};
+			selmon->camera_center_x += 100;
+			selmon->camera_center_y += 0;
+			arrange(selmon);
+			return;
+		}
+		if (borderwinright && ev->window == borderwinright) {
+			// Arg arg = {.i = FOCUS_RIGHT};
+			selmon->camera_center_x += -100;
+			selmon->camera_center_y += 0;
+			arrange(selmon);
+			return;
+		}
+	}
+	
 
 	click = ClkRootWin;
 	/* focus monitor if necessary */
@@ -1265,10 +1310,18 @@ cleanup(void)
 		free(scheme[i]);
 	free(scheme);
 	XDestroyWindow(dpy, wmcheckwin);
-	XDestroyWindow(dpy, borderwintop);
-	XDestroyWindow(dpy, borderwinbottom);
-	XDestroyWindow(dpy, borderwinleft);
-	XDestroyWindow(dpy, borderwinright);
+	if(showborderwin){
+		XDestroyWindow(dpy, borderwintop);
+		XDestroyWindow(dpy, borderwinbottom);
+		XDestroyWindow(dpy, borderwinleft);
+		XDestroyWindow(dpy, borderwinright);
+	}
+	if(showcornerwin){
+		XDestroyWindow(dpy, cornerwin1);
+		XDestroyWindow(dpy, cornerwin2);
+		XDestroyWindow(dpy, cornerwin3);
+		XDestroyWindow(dpy, cornerwin4);
+	}
 	drw_free(drw);
 	XSync(dpy, False);
 	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
@@ -1830,51 +1883,54 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 
 	/*XMoveResizeWindow(dpy,switcherbarwin, wx,wy, ww, wh);*/
 	
-	for (c = m->clients; c; c = c->next) {
-		if (ISVISIBLE(c))
-			n++;
-		occ |= c->tags;
-		if(!c->isfloating) occt |= c->tags;
-		if (c->isurgent)
-			urg |= c->tags;
-	}
-
-	int x = 0,w = 0;
 	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_rect(drw, x, 0, ww, bh, 1, 1);
-	for (i = 0; i < LENGTH(tags); i++) {
-		/* Do not draw vacant tags */
-		if(!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
-			continue;
-		w = TEXTW(tags[i]);
-		int colorindex = SchemeNorm;
-		if (occt & 1 << i) {
-			colorindex = SchemeTiled;
-		}
-		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel :colorindex]);
+	drw_rect(drw, 0, 0, ww, bh, 1, 1);
 
-		// update tag title
-		Client *c;
-		for(c = m->stack;c;c = c->snext){
-			if (!c->isfloating && (c->tags & (1 << i))) {
-				break;
-			}
-		}
-		if (c) {
-			char tagname[20];
-			int tagnamelen = strlen(tags[i]);
-			do {
-				tagnamelen ++;
-				snprintf(tagname, tagnamelen,"%d-%s",i + 1, c->name);
-			}while (TEXTW(tagname) < TEXTW(tags[i]) && tagnamelen < 20);
-			drw_text(drw, x, 0, w, bh, lrpad / 2,tagname, urg & 1 << i);
-		}else {
-			drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
-		}
+	// -------------- draw tag -----------------
+	// for (c = m->clients; c; c = c->next) {
+	// 	if (ISVISIBLE(c))
+	// 		n++;
+	// 	occ |= c->tags;
+	// 	if(!c->isfloating) occt |= c->tags;
+	// 	if (c->isurgent)
+	// 		urg |= c->tags;
+	// }
 
-		x += w;
-	}
+	// int x = 0,w = 0;
+	// for (i = 0; i < LENGTH(tags); i++) {
+	// 	/* Do not draw vacant tags */
+	// 	if(!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+	// 		continue;
+	// 	w = TEXTW(tags[i]);
+	// 	int colorindex = SchemeNorm;
+	// 	if (occt & 1 << i) {
+	// 		colorindex = SchemeTiled;
+	// 	}
+	// 	drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel :colorindex]);
 
+	// 	// update tag title
+	// 	Client *c;
+	// 	for(c = m->stack;c;c = c->snext){
+	// 		if (!c->isfloating && (c->tags & (1 << i))) {
+	// 			break;
+	// 		}
+	// 	}
+	// 	if (c) {
+	// 		char tagname[20];
+	// 		int tagnamelen = strlen(tags[i]);
+	// 		do {
+	// 			tagnamelen ++;
+	// 			snprintf(tagname, tagnamelen,"%d-%s",i + 1, c->name);
+	// 		}while (TEXTW(tagname) < TEXTW(tags[i]) && tagnamelen < 20);
+	// 		drw_text(drw, x, 0, w, bh, lrpad / 2,tagname, urg & 1 << i);
+	// 	}else {
+	// 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+	// 	}
+
+	// 	x += w;
+	// }
+
+	// -------------- draw tag end -----------------
 
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	int tw = TEXTW(stext) - lrpad + 2;
@@ -2901,6 +2957,30 @@ void drawclientswitcherwinx_tag(Window win, int ww, int wh)
 	
 }
 
+int
+sxy2client_tag_all(int rx, int ry, Client *result[])
+{
+	LOG_FORMAT("sxy2client 1, rx:%d,ry:%d", rx, ry);
+	XY sxys[] = {{rx, ry}};
+	XY cxys[1];
+	int tagindexout[1];
+	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys, tagindexout);
+
+	int foundn = 0;
+	Client *c;
+	for (c = selmon->clients; c; c = c->next)
+	{
+		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
+		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
+		{
+			result[foundn] = c;
+			foundn ++;
+		}
+	}
+	return foundn;
+}
+
+
 Client *
 sxy2client_tag(int rx, int ry)
 {
@@ -3384,10 +3464,10 @@ tile5switcherfocuschangefunc(Arg *arg)
 
 	int i=0;
 
-	XY cxys[n];
-	XY sxys[n];
-	int tagindexin[n];
-	int curi = 0;
+	XY cxys[n+1];
+	XY sxys[n+1];
+	int tagindexin[n+1];
+	int curi = -1;
 	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
 		if(!c->isfloating){
@@ -3398,12 +3478,29 @@ tile5switcherfocuschangefunc(Arg *arg)
 			i++;
 		}
 	}
+	if(curi == -1){
+		cxys[n].x = selmon->sel->x + selmon->sel->w/2;
+		cxys[n].y = selmon->sel->y + selmon->sel->h/2;
+		tagindexin[n] = gettagindex(selmon->sel->tags);
+		curi = n;
+	}else{
+		cxys[n].x = 0;
+		cxys[n].y = 0;
+		tagindexin[n] = 0;
+	}
 
-
-	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
+	clientxy2switcherxy_tag(cxys,n+1,sxys,tagindexin);
 	int closest = nextclosestanglexy(arg, n, sxys, curi);
 	if (closest < 0) return;
-	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
+	Client *closestcs[20];
+	int foundn = sxy2client_tag_all(sxys[closest].x, sxys[closest].y, closestcs);
+	if(foundn < 1) return;
+	Client *closestc;
+	for(i = 0;i<foundn;i++)
+	{
+		if(closestcs[i]->isfloating) continue;
+		closestc = closestcs[i];
+	}
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
 			viewui(closestc->tags);
@@ -3435,7 +3532,7 @@ drawswitcher(Monitor *m)
 {
 	if(m->switcher) return;
 	if(!m->sel) return;
-	if(m->sel->isfloating) return;
+	// if(m->sel->isfloating) return;
 
 
 	XSetWindowAttributes wa = {
@@ -3743,24 +3840,11 @@ enternotify(XEvent *e)
 	if (selmon->switcher) {
 		return;
 	}
-	if (borderwintop && ev->window == borderwintop) {
-		Arg arg = {.i = FOCUS_UP};
-		switchermove(&arg);
-		return;
-	}
-	if (borderwinbottom && ev->window == borderwinbottom) {
-		Arg arg = {.i = FOCUS_DOWN};
-		switchermove(&arg);
-		return;
-	}
-	if (borderwinleft && ev->window == borderwinleft) {
-		Arg arg = {.i = FOCUS_LEFT};
-		switchermove(&arg);
-		return;
-	}
-	if (borderwinright && ev->window == borderwinright) {
-		Arg arg = {.i = FOCUS_RIGHT};
-		switchermove(&arg);
+	if (showcornerwin && (ev->window == cornerwin1 
+			|| ev->window == cornerwin2
+			|| ev->window == cornerwin3
+			|| ev->window == cornerwin4)) {
+		toggleswitchers(NULL);
 		return;
 	}
 	/*if (selmon->sel && selmon->sel->istemp) {*/
@@ -3800,7 +3884,7 @@ enternotify(XEvent *e)
 	}
 	int cursorx = c->x + c->w/2;
 	int cursory = c->y + c->h/2;
-	/*XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);*/
+	// XWarpPointer(dpy, None, root, 0, 0, 0, 0, cursorx, cursory);
 
 }
 
@@ -6759,7 +6843,8 @@ setfacty(const Arg *arg)
 void 
 initborderwin(void)
 {
-	int borderw = 3;
+	if(!showborderwin) return;
+	int borderw = 2;
 	int i;
 	for (i = -2; i < 3; i++)
 	{
@@ -6789,11 +6874,51 @@ initborderwin(void)
 		XSetClassHint(dpy, win, &ch);
 		XMapWindow(dpy, win);
 		XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
-		XFillRectangle(dpy, win, drw->gc, x,y,w,h);
+		XFillRectangle(dpy, win, drw->gc, 0,0,w,h);
 		XMapRaised(dpy, win);
 	}
 	XSync(dpy, False);
+}
 
+
+void 
+initcornerwin(void)
+{
+	if(!showcornerwin) return;
+	int borderw = 2;
+	int i;
+	for (i = -2; i < 3; i++)
+	{
+		if(i==0) continue;
+		XSetWindowAttributes wa = {
+			.override_redirect = True,
+			.background_pixmap = ParentRelative,
+			.event_mask = ButtonPressMask|ExposureMask|EnterWindowMask
+		};
+		XClassHint ch = {"dwm", "dwm"};
+		int x,y,w,h;
+		if(i == -2) { x = 0; y=0; w=borderw; h=borderw;}
+		if(i == -1) {x = selmon->ww - borderw; y=0; w=borderw; h=borderw;}
+		if(i == 1) {x = selmon->ww - borderw; y=selmon->wh - borderw; w=borderw; h=borderw;}
+		if(i == 2) {x = 0; y=selmon->wh - borderw; w=borderw; h=borderw;}
+
+		Window win = XCreateWindow(dpy, root, x,y,w,h,0, DefaultDepth(dpy, screen),
+					CopyFromParent, DefaultVisual(dpy, screen),
+					CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+
+		if(i == -2)  cornerwin1 = win;
+		if(i == -1) cornerwin2 = win;
+		if(i == 1) cornerwin3 = win;
+		if(i == 2) cornerwin4 = win;
+
+		XDefineCursor(dpy, win, cursor[CurNormal]->cursor);
+		XSetClassHint(dpy, win, &ch);
+		XMapWindow(dpy, win);
+		XSetForeground(dpy, drw->gc, scheme[SchemeNorm][ColBg].pixel);
+		XFillRectangle(dpy, win, drw->gc, 0,0,w,h);
+		XMapRaised(dpy, win);
+	}
+	XSync(dpy, False);
 }
 
 void
@@ -6896,6 +7021,8 @@ setup(void)
 	
 	// init border 
 	initborderwin();
+	// init corner 
+	initcornerwin();
 	/* init system tray */
 	updatesystray();
 	/* init bars */
@@ -7907,11 +8034,11 @@ tile5(Monitor *m)
 				c->y = c->y;
 			}
 
-			if(c->isfloating && ISVISIBLE(c) && !c->launchparent)
-			{
-				c->x = m->ww/2 - c->w/2;
-				c->y = m->wh/2 - c->h/2;
-			}
+			// if(c->isfloating && ISVISIBLE(c) && !c->launchparent)
+			// {
+			// 	c->x = m->ww/2 - c->w/2;
+			// 	c->y = m->wh/2 - c->h/2;
+			// }
 		}
 		
 	}
@@ -8265,6 +8392,27 @@ tile6maximize(const Arg *arg)
 	}
 	showstickyswitcher = 0;
 	arrange(selmon);
+}
+
+void 
+tile5maximize(const Arg *arg)
+{
+	Client *cc = selmon->sel;
+	if(!cc) return;
+
+	int tow = selmon->ww;
+	int toh = selmon->wh;
+	if(cc->w < 0.8 * selmon->ww ){
+		tow = selmon->ww * 0.8;
+	}
+	if(cc->h < 0.8 * selmon->wh){
+		toh = selmon->wh * 0.8;
+	}
+	if(cc->w == selmon->ww && cc->h == selmon->wh){
+		tow = selmon->ww * 0.8;
+		toh = selmon->wh * 0.8;
+	}
+	tile5expandto(tow, toh);
 }
 
 int
@@ -9212,12 +9360,13 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 }
 
 void 
-tile5expandv(float scalex, float scaley)
+tile5expandto(int w, int h)
 {
 	if(!selmon->sel) return;
+	if(selmon->sel->isscratched) return;
 	Client *cc = selmon->sel;
-	int deltaw = cc->w * scalex/2;
-	int deltah = cc->h * scaley/2;
+	int deltaw = w - cc->w;
+	int deltah = h - cc->h;
 	int oldx = cc->x;
 	int oldy = cc->y;
 	int oldw = cc->w;
@@ -9250,7 +9399,7 @@ tile5expandv(float scalex, float scaley)
 	}
 
 	rect_t oldr = {cc->x,cc->y,cc->w,cc->h};
-	rect_t newr = {cc->x - deltaw,cc->y - deltah, cc->w + deltaw*2,cc->h + deltah*2};
+	rect_t newr = {cc->x - deltaw/2,cc->y - deltah/2, cc->w + deltaw,cc->h + deltah};
 	ts[tsi].x = newr.x;
 	ts[tsi].y = newr.y;
 	ts[tsi].w = newr.w;
@@ -9271,12 +9420,23 @@ tile5expandv(float scalex, float scaley)
 	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
 }
 
+
+void 
+tile5expandtoscale(float scalex, float scaley)
+{
+	if(!selmon->sel) return;
+	Client *cc = selmon->sel;
+	int w = cc->w * scalex + cc->w;
+	int h = cc->h * scaley + cc->h;
+	tile5expandto(w, h);
+}
+
 void
 tile5expandx(const Arg *arg)
 {
 	float scalex = arg->f;
 	float scaley = 0;
-	tile5expandv(scalex, scaley);
+	tile5expandtoscale(scalex, scaley);
 }
 
 
@@ -9285,7 +9445,7 @@ tile5expandy(const Arg *arg)
 {
 	float scalex = 0;
 	float scaley = arg->f;
-	tile5expandv(scalex, scaley);
+	tile5expandtoscale(scalex, scaley);
 }
 
 
@@ -9294,7 +9454,7 @@ tile5expand(const Arg *arg)
 {
 	float scalex = arg->f;
 	float scaley = arg->f;
-	tile5expandv(scalex, scaley);
+	tile5expandtoscale(scalex, scaley);
 }
 
 void
@@ -9372,6 +9532,8 @@ tile5togglefloating(const Arg *arg)
 	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
 		return;
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
+	if (selmon->sel->isfloating) selmon->sel->zlevel = 1;
+	if (!selmon->sel->isfloating) selmon->sel->zlevel = 0;
 	arrange(selmon);
 }
 
@@ -9519,6 +9681,64 @@ showscratchgroup(ScratchGroup *sg)
 	sg->isfloating = 1;
 }
 
+void
+scratchmove(Arg *arg)
+{
+	ScratchGroup *sg = scratchgroupptr;
+	if(!sg || !sg->isfloating) return;
+	if(!selmon->sel) return;
+	Client *result = NULL;
+	int miny = INT_MAX;
+	int maxy = INT_MIN;
+	Client *minyc = NULL;
+	Client *maxyc = NULL;
+	int mindisty = INT_MAX;
+	int curry = selmon->sel->y + selmon->sel->h/2;
+	ScratchItem *si;
+	int i = 0;
+	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	{
+		if(selmon->sel == si->c) continue;
+		int tmpy = si->y+si->h/2;
+		int disty = abs(curry - tmpy);
+		if (arg->i == FOCUS_UP)
+		{
+			if(tmpy <= curry && disty < mindisty)
+			{
+				mindisty = disty;
+				result = si->c;
+			}
+		}
+		if (arg->i == FOCUS_DOWN)
+		{
+			if(tmpy >= curry && disty < mindisty)
+			{
+				mindisty = disty;
+				result = si->c;
+			}
+		}
+		if(tmpy < miny) {
+			miny = tmpy;
+			minyc = si->c;
+		}
+		if(tmpy > maxy) {
+			maxy = tmpy;
+			maxyc = si->c;
+		}
+	}
+	if(!result)
+	{
+		if (arg->i == FOCUS_UP && maxyc)
+		{
+			result = maxyc;
+		}
+		if (arg->i == FOCUS_DOWN && minyc)
+		{
+			result = minyc;
+		}
+	}
+	if(result) focus(result);
+}
 
 ScratchItem 
 *findscratchitem(Client *c, ScratchGroup *sg){
