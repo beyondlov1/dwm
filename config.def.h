@@ -15,7 +15,7 @@ static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display 
 static const int showsystray        = 1;        /* 0 means no systray */
 static const int showbar            = 0;        /* 0 means no bar */
 static const int showborderwin      = 0;
-static const int showcornerwin      = 1;
+static const int showcornerwin      = 0;
 static const int topbar             = 0;        /* 0 means bottom bar */
 static const Bool viewontag         = True;     /* Switch view on tag switch */
 static const Bool managestubon         = False;     /* if total stub > screen stub(default 3); move new window to new tag */
@@ -343,7 +343,8 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	//{ 0,                       XK_Super_L,      empty,      {0} },
 	{ 0,                       XK_Super_L,      toggleswitchers,      {0} },
-	{ MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
+	// { MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
+	{ MODKEY,                       XK_grave,      tile5maximize,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
@@ -459,7 +460,8 @@ static Key switcherkeys[] = {
 	{0, XK_Escape, toggleswitchers, {0}},
 	{0, XK_Super_L, toggleswitchers, {0}},
 	{MODKEY, XK_Return, toggleswitchers, {0}},
-	{MODKEY, XK_grave, tile6maximizewithsticky, {0}},
+	// {MODKEY, XK_grave, tile6maximizewithsticky, {0}},
+	{MODKEY, XK_grave, tile5maximize, {0} },
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
 	{ MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
