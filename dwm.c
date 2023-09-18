@@ -3666,7 +3666,7 @@ drawswitcher(Monitor *m)
 	m->switcherbarwin = XCreateWindow(dpy, root, m->switcherbarwx, m->switcherbarwy, m->switcherbarww, m->switcherbarwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-	XSetClassHint(dpy, m->switcher, &ch);
+	XSetClassHint(dpy, m->switcherbarwin, &ch);
 	XDefineCursor(dpy, m->switcherbarwin, cursor[CurNormal]->cursor);
 	XMapWindow(dpy, m->switcherbarwin);
 	m->switcherbaraction.drawfunc(m->switcherbarwin, m->switcherbarww, m->switcherbarwh);
