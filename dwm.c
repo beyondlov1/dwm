@@ -3572,8 +3572,22 @@ drawswitcher(Monitor *m)
 
 	/*int ww = m->ww/2;*/
 	/*int wh = m->wh/2;*/
-	int ww = m->ww/3;
-	int wh = m->wh/3;
+	// int ww = m->ww/3;
+	// int wh = m->wh/3;
+
+	Client *c;
+	int cminx = INT_MAX, cminy= INT_MAX, cmaxx= INT_MIN, cmaxy= INT_MIN;
+	for(c = nexttiled(selmon->clients);c;c = nexttiled(c->next))
+	{
+		cmaxx = MAX(c->x + c->w, cmaxx);
+		cmaxy = MAX(c->y + c->h, cmaxy);
+		cminx = MIN(c->x, cminx);
+		cminy = MIN(c->y, cminy);
+	}
+	// 所有窗口缩放到整个屏幕大小的时候, 再缩放1/n
+	float c2sfactor = sqrt((cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
+	int ww = m->ww * c2sfactor;
+	int wh = m->wh * c2sfactor;
 
 	// -------------- 剪裁空白tag ---------------
 	int tagn = LENGTH(tags);
