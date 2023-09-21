@@ -8416,10 +8416,10 @@ tile5maximize(const Arg *arg)
 
 	int tow = selmon->ww;
 	int toh = selmon->wh;
-	if(cc->w < 0.8 * selmon->ww ){
+	if(cc->w < 0.79 * selmon->ww ){
 		tow = selmon->ww * 0.8;
 	}
-	if(cc->h < 0.8 * selmon->wh){
+	if(cc->h < 0.79 * selmon->wh){
 		toh = selmon->wh * 0.8;
 	}
 	if(cc->w == selmon->ww && cc->h == selmon->wh){
