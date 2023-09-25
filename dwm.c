@@ -3534,6 +3534,7 @@ drawswitcher(Monitor *m)
 	if(!m->sel) return;
 	// if(m->sel->isfloating) return;
 
+	LOG_FORMAT("drawswitcher");
 
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
@@ -3583,9 +3584,12 @@ drawswitcher(Monitor *m)
 		cmaxy = MAX(c->y + c->h, cmaxy);
 		cminx = MIN(c->x, cminx);
 		cminy = MIN(c->y, cminy);
+		LOG_FORMAT("c->w %d", c->w);
+		LOG_FORMAT("c->h %d", c->h);
 	}
 	// 所有窗口缩放到整个屏幕大小的时候, 再缩放1/n
-	float c2sfactor = sqrt((cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
+	float c2sfactor = sqrt(1.0*(cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
+	LOG_FORMAT("c2sfactor %d", c2sfactor);
 	int ww = m->ww * c2sfactor;
 	int wh = m->wh * c2sfactor;
 
@@ -3596,6 +3600,7 @@ drawswitcher(Monitor *m)
 	getvalidtagn(&validtagn, tagi2t);
 	double zoomf = sqrt(validtagn);
 	zoomf = MIN(zoomf,1.6);
+	LOG_FORMAT("zoomf %f",zoomf);
 	ww = zoomf * ww;
 	wh = zoomf * wh;
 
@@ -3604,6 +3609,7 @@ drawswitcher(Monitor *m)
 	int tagsww[tagn];
 	int tagswh[tagn];
 	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
+	LOG_FORMAT("validtagn %d", validtagn);
 	int minx = INT_MAX, miny= INT_MAX, maxx= INT_MIN, maxy= INT_MIN;
 	int i;
 	for (i = 0; i < validtagn; i++)
@@ -3616,6 +3622,7 @@ drawswitcher(Monitor *m)
 	}
 	ww = maxx - minx;
 	wh = maxy - miny;
+	LOG_FORMAT("ww %d wh %d",ww,wh);
 	if(ww == 0 || wh == 0) return;
 	// -------------- 剪裁空白tag end ---------------
 
