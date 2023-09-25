@@ -3586,8 +3586,8 @@ drawswitcher(Monitor *m)
 	}
 	// 所有窗口缩放到整个屏幕大小的时候, 再缩放1/n
 	float c2sfactor = sqrt((cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
-	int ww = m->ww * c2sfactor;
-	int wh = m->wh * c2sfactor;
+	int ww = MIN(m->ww * c2sfactor, m->ww);
+	int wh = MIN(m->wh * c2sfactor, m->wh);
 
 	// -------------- 剪裁空白tag ---------------
 	int tagn = LENGTH(tags);
