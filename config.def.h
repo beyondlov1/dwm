@@ -195,7 +195,7 @@ static Key keys[] = {
 
 	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
 	{ Mod1Mask,                       XK_n,      spawn,      { .v = notecurrwincmd } },
-
+	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 
 	// for tile5
 	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },

@@ -3355,11 +3355,12 @@ tile5switcherxy2xy(XY sxys[], int n, XY cxys[], int tagindexout[])
 
 	int i;
 	int j;
-    	XY tsxys[n]; // sxy 相对自己tag的相对位置
+    XY tsxys[n]; // sxy 相对自己tag的相对位置
 	int s2t[n]; // sxy->tagindex
 	memset(s2t, 0, sizeof(s2t));
 	for (j = 0; j < n; j++)
 	{
+		int found = 0;
 		for (i = 0; i < tagn; i++)
 		{
 			if(sxys[j].x > tagsx[i] && sxys[j].x <= tagsx[i]+tagsww[i] && sxys[j].y > tagsy[i] && sxys[j].y <= tagsy[i]+tagswh[i])
@@ -3368,8 +3369,15 @@ tile5switcherxy2xy(XY sxys[], int n, XY cxys[], int tagindexout[])
 				tsxys[j].y = sxys[j].y - tagsy[i];
 				s2t[j] = i;
 				tagindexout[j] = i;
+				found = 1;
 				break;
 			}
+		}
+		if(!found){
+			tsxys[j].x = sxys[j].x - tagsx[0];
+			tsxys[j].y = sxys[j].y - tagsy[0];
+			s2t[j] = 0;
+			tagindexout[j] = 0;
 		}
 	}
 
@@ -6047,10 +6055,10 @@ void
 tile5switchermove(Client *c, int sx, int sy)
 {
 	LOG_FORMAT("tile5switchermove sx:%d, sy:%d", sx, sy);
-	if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) 
-	{
-		return;
-	}
+	// if (sx < 0 || sx > selmon->switcherww || sy < 0 || sy > selmon->switcherwh) 
+	// {
+	// 	return;
+	// }
 
 	XY sxys[] = {{sx, sy}};
 	XY cxys[1];
