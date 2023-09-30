@@ -3659,6 +3659,7 @@ drawswitcher(Monitor *m)
 	// 多屏校正
 	m->switcherwx = wx + m->wx;
 	m->switcherwy = wy + m->wy;
+	if (m->switcherwy < bh) m->switcherwy = bh;
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
@@ -3671,10 +3672,10 @@ drawswitcher(Monitor *m)
 
 	XWarpPointer(dpy, None, root, 0, 0, 0, 0, m->switcherwx + sxys[0].x, m->switcherwy + sxys[0].y);
 
-	m->switcherbarww = ww;
+	m->switcherbarww = m->switcherww;
 	m->switcherbarwh = bh;
-	m->switcherbarwx = wx;
-	m->switcherbarwy = wy-bh;
+	m->switcherbarwx = m->switcherwx;
+	m->switcherbarwy = m->switcherwy-bh;
 	m->switcherbaraction.drawfunc = drawswitcherbar;
 	m->switcherbaraction.movefunc = NULL;
 	m->switcherbaraction.pointerfunc = switcherbaraction;
