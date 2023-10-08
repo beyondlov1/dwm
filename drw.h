@@ -41,6 +41,8 @@ void drw_font_getexts(Fnt *font, const char *text, unsigned int len, unsigned in
 /* Colorscheme abstraction */
 void drw_clr_create(Drw *drw, Clr *dest, const char *clrname);
 Clr *drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount);
+void drw_clr_create_argb(Drw *drw, Clr *dest, const XRenderColor *argb);
+Clr *drw_scm_create_argb(Drw *drw, const XRenderColor argb[], size_t clrcount);
 
 /* Cursor abstraction */
 Cur *drw_cur_create(Drw *drw, int shape);

@@ -163,6 +163,7 @@ struct Client {
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
+	int custom_oldw, custom_oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int hintsvalid;
 	int bw, oldbw;
@@ -193,6 +194,9 @@ struct Client {
 
 	int indexincontainer;
 	Container *container;
+
+	long lastfocustime;
+	long lastunfocustime;
 };
 
 
@@ -652,6 +656,7 @@ static int restart = 0;
 static int running = 1;
 static Cur *cursor[CurLast];
 static Clr **scheme;
+static Clr **gradual_scheme;
 static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
@@ -2869,6 +2874,35 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 	XY sxyse[n];
 	clientxy2switcherxy_pertag_one(cxys, n, sxys, s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
 	clientxy2switcherxy_pertag_one(cxyse, n, sxyse,s2t, tagindex, tagsx, tagsy, tagsww, tagswh);
+	long minlastfocusperiod = LONG_MAX;
+	long maxlastfocusperiod = LONG_MIN;
+	long maxlastfocustime = LONG_MIN;
+	long minlastfocustime = LONG_MAX;
+	for (i = 0; i<n; i++)
+	{
+		c = cs[i];
+		long lastunfocustime = c->lastunfocustime;
+		long  lastfocustime = c->lastfocustime;
+		if(c->lastfocustime == 0) continue;
+		if(c->lastunfocustime == 0) lastunfocustime = getcurrusec();
+		if(c->lastunfocustime - c->lastfocustime <= 0){
+			lastunfocustime = getcurrusec();
+		}
+		minlastfocusperiod = MIN(minlastfocusperiod, lastunfocustime - lastfocustime);
+		maxlastfocusperiod = MAX(maxlastfocusperiod, lastunfocustime - lastfocustime);
+	}
+	if(minlastfocusperiod == LONG_MAX || maxlastfocusperiod == LONG_MIN){
+		minlastfocusperiod = 0;
+		maxlastfocusperiod = 1000*60*60*3;
+	}
+	for (i = 0; i<n; i++)
+	{
+		c = cs[i];
+		long  lastfocustime = c->lastfocustime;
+		if(lastfocustime == 0) continue;
+		maxlastfocustime = MAX(maxlastfocustime, lastfocustime);
+		minlastfocustime = MIN(minlastfocustime, lastfocustime);
+	}
 	for (i = 0; i<n; i++)
 	{
 		c = cs[i];
@@ -2892,7 +2926,23 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		}
 		else
 		{
-			drw_setscheme(drw, scheme[SchemeNorm]);
+			long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
+			long curr = getcurrusec();
+			if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
+				int timescale = 1000 * 1000 * 60;
+				// 归一化
+				float focusperiodfeat = 1.0 * log(1.0*(lastfocusperiod - minlastfocusperiod)/timescale + 1)/log(1.0*(maxlastfocusperiod - minlastfocusperiod)/timescale+ 1);
+				// 归一化后反比
+				float focustimefeat = (exp(5.0 * log(1.0*(c->lastfocustime - minlastfocustime)/timescale + 1) / log(1.0*(curr - minlastfocustime)/timescale + 1)) - 1) / (exp(5.0) - 1);
+				float feat = pow(focustimefeat * focusperiodfeat, 0.5);
+				int clr_level = 0.99 * gradual_colors_count * feat;
+				LOG_FORMAT("lastfocusperiod:%ld %ld %ld %d",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,clr_level);
+				LOG_FORMAT("lastfocusperiod:%f",focusperiodfeat);
+				LOG_FORMAT("lastfocusperiod:%f",focustimefeat);
+				drw_setscheme(drw, gradual_scheme[clr_level]);
+			}else{
+				drw_setscheme(drw, scheme[SchemeNorm]);
+			}
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
 		int size_level = 1;
@@ -5140,6 +5190,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->container = createcontainerc(c);
 	c->zlevel = 0;
 	c->thumb = 0;
+	c->custom_oldw = c->custom_oldh = 0;
+	c->lastfocustime = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -6039,8 +6091,8 @@ tile5viewcomplete(Arg *arg)
 	Client *c = selmon->sel;
 	int offsetx = 0;
 	int offsety = 0;
-	int paddingx = 0;
-	int paddingy = 0;
+	int paddingx = -borderpx;
+	int paddingy = -borderpx;
 	if(c){
 		if(c->x + c->w - selmon->ww > 0) offsetx = c->x + c->w - selmon->ww + paddingx;
 		if(c->x < 0) offsetx = c->x - paddingx;
@@ -6052,6 +6104,7 @@ tile5viewcomplete(Arg *arg)
 	arrange(selmon);
 }
 
+// switcher 中移动窗口
 void 
 tile5switchermove(Client *c, int sx, int sy)
 {
@@ -6071,39 +6124,64 @@ tile5switchermove(Client *c, int sx, int sy)
 	c->placed = 1;
 
 	// 尝试在移动时, 如果和别的client交叉, 则把其他placed 改成0. 但是因为在tile5中, 是排过序的, 所以, 先出现的client一定先放置
-	/*Monitor *m = c->mon;*/
-	/*int tsn = 0;*/
-	/*Client *tmpc;*/
-	/*for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))*/
-	/*{*/
-		/*if (tmpc != c) tsn++;*/
-	/*}*/
+	Monitor *m = c->mon;
+	int tsn = 0;
+	Client *tmpc;
+	for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))
+	{
+		if (tmpc != c) tsn++;
+	}
 
-	/*int i = 0;*/
-	/*rect_t ts[tsn];*/
-	/*Client *cs[tsn];*/
-	/*for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))*/
-	/*{*/
-		/*if (tmpc != c) {*/
-			/*ts[i].x = tmpc->x;*/
-			/*ts[i].y = tmpc->y;*/
-			/*ts[i].w = tmpc->w;*/
-			/*ts[i].h = tmpc->h;*/
-			/*cs[i] = tmpc;*/
-			/*i++;*/
-		/*}*/
-	/*}*/
+	int i = 0;
+	rect_t ts[tsn];
+	Client *cs[tsn];
+	for(tmpc=nexttiled(m->clients);tmpc;tmpc=nexttiled(tmpc->next))
+	{
+		if (tmpc != c) {
+			ts[i].x = tmpc->x;
+			ts[i].y = tmpc->y;
+			ts[i].w = tmpc->w;
+			ts[i].h = tmpc->h;
+			cs[i] = tmpc;
+			i++;
+		}
+	}
 
-	/*rect_t r = {c->x, c->y, c->w, c->h};*/
-	/*for(i = 0; i<tsn; i++)*/
-	/*{*/
-		/*rect_t t = ts[i];*/
-		/*if(intersectpercent(r,t) > 0){*/
-			/*LOG_FORMAT("tile5switchermove 1");*/
-			/*cs[i]->placed = 0;*/
-			/*c->placed = 0;*/
-		/*}*/
-	/*}*/
+	int isintersect = 0;
+	rect_t r = {c->x, c->y, c->w, c->h};
+	for(i = 0; i<tsn; i++)
+	{
+		rect_t t = ts[i];
+		if(intersectpercent(r,t) > 0.2 && c->x > t.x && c->x < t.x + t.w && c->y > t.y && c->y < t.y + t.h){
+			LOG_FORMAT("tile5switchermove 1");
+			// cs[i]->placed = 0;
+			// c->placed = 0;
+			int intersect_left = MAX(r.x, t.x);
+			int intersect_right = MIN(r.x + r.w, t.x + t.w);
+			int intersect_top = MAX(r.y, t.y);
+			int intersect_bottom = MIN(r.y + r.h, t.y + t.h);
+			int intersect_w = intersect_right - intersect_left;
+			int intersect_h = intersect_bottom - intersect_top;
+			c->custom_oldw = c->w;
+			c->custom_oldh = c->h;
+			c->x = intersect_left;
+			c->y = intersect_top;
+			c->w = intersect_w;
+			c->h = intersect_h;
+			c->zlevel = 1;
+			cs[i]->zlevel = 0;
+			isintersect = 1;
+		}
+	}
+	if(!isintersect){
+		if(c->zlevel > 0) c->zlevel = 0;
+		if(c->custom_oldw > 0 && c->custom_oldh > 0){
+			c->w = c->custom_oldw;
+			c->h = c->custom_oldh;
+			c->custom_oldw = 0;
+			c->custom_oldh = 0;
+		}
+	}
 
 	arrange(c->mon);
 	c->mon->switcheraction.drawfunc(c->mon->switcher, c->mon->switcherww, c->mon->switcherwh );
@@ -6663,6 +6741,7 @@ setfocus(Client *c)
 	}
 	sendevent(c->win, wmatom[WMTakeFocus], NoEventMask, wmatom[WMTakeFocus], CurrentTime, 0, 0, 0);
 	c->isfocused = True;
+	c->lastfocustime = getcurrusec();
 	LOG_FORMAT("setfocus: 3 ");
 	lru(c);
 	LOG_FORMAT("setfocus: 4 ");
@@ -7048,6 +7127,10 @@ setup(void)
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
 	for (i = 0; i < LENGTH(colors); i++)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
+
+	gradual_scheme = ecalloc(LENGTH(gradual_colors), sizeof(Clr *));
+	for (i = 0; i < LENGTH(gradual_colors); i++)
+		gradual_scheme[i] = drw_scm_create(drw, gradual_colors[i], 3);
 	
 	// init border 
 	initborderwin();
@@ -8430,15 +8513,17 @@ tile5maximize(const Arg *arg)
 	Client *cc = selmon->sel;
 	if(!cc) return;
 
-	int tow = selmon->ww;
-	int toh = selmon->wh;
+	int maxww = selmon->ww + borderpx * 2;
+	int maxwh = selmon->wh + borderpx * 2;
+	int tow = maxww;
+	int toh = maxwh;
 	if(cc->w < 0.79 * selmon->ww ){
 		tow = selmon->ww * 0.8;
 	}
 	if(cc->h < 0.79 * selmon->wh){
 		toh = selmon->wh * 0.8;
 	}
-	if(cc->w == selmon->ww && cc->h == selmon->wh){
+	if(cc->w == maxww && cc->h == maxwh){
 		tow = selmon->ww * 0.8;
 		toh = selmon->wh * 0.8;
 	}
@@ -9278,6 +9363,8 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 	int i;
 	for(i = 0; i<tsn; i++)
 	{
+		// tsi 中保存了已经推/拉过的窗口在 ts 中的索引
+		// 这里是为了避免循环递归， 无限推拉
 		int found = 0;
 		int j;
 		for(j=0;j<tsin;j++)
@@ -9389,6 +9476,202 @@ pushorpull3(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int tsis[],
 	LOG_FORMAT("pushorpull 2");
 }
 
+
+// 处理了膨胀和收缩
+// 处理角落中, 和谁都不相交的情况
+// 收缩的时候可以做到拉火车的效果
+// 改为横向遍历，并增加每个窗口可被移动的次数
+void 
+pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[])
+{
+	// 排除自己
+	int max_pushpull_cnt = 3;
+	ts_cnt[tsi] = max_pushpull_cnt;
+
+	LOG_FORMAT("pushorpull 1");
+	LOG_FORMAT("pushorpull 5 old: %d %d %d %d", oldr.x, oldr.y, oldr.w, oldr.h);
+	LOG_FORMAT("pushorpull 5 new: %d %d %d %d", newr.x, newr.y, newr.w, newr.h);
+	int oldx = oldr.x;
+	int oldy = oldr.y;
+	int oldw = oldr.w;
+	int oldh = oldr.h;
+	int deltaw_left = newr.x - oldr.x;
+	int deltaw_right = newr.x + newr.w - oldr.x- oldr.w;
+	int deltah_up = newr.y - oldr.y;
+	int deltah_down = newr.y + newr.h - oldr.y- oldr.h;
+
+	int next_i = 0;
+	rect_t oldr_nexts[tsn];
+	rect_t newr_nexts[tsn];
+	int next_i_2_i[tsn];
+	
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		LOG_FORMAT("pushorpull 8 %d",ts_cnt[i]);
+		if(ts_cnt[i] >= max_pushpull_cnt){
+			continue;
+		}
+		rect_t t = ts[i];
+		oldr_nexts[next_i].x = t.x;
+		oldr_nexts[next_i].y = t.y;
+		oldr_nexts[next_i].w = t.w;
+		oldr_nexts[next_i].h = t.h;
+
+		// if(intersectpercent(newr, t) == 0) continue;
+
+		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
+
+		rect_t left = {oldx-abs(deltaw_left), oldy, abs(deltaw_left), oldh};
+		rect_t right = {oldx+oldw, oldy, abs(deltaw_right), oldh};
+		rect_t up = {oldx, oldy-abs(deltah_up), oldw, abs(deltah_up)};
+		rect_t down = {oldx, oldy+oldh, oldw, abs(deltah_down)};
+		rect_t lefttop = {oldx-abs(deltaw_left), oldy-abs(deltah_up), abs(deltaw_left), abs(deltah_up)};
+		rect_t righttop = {oldx+oldw, oldy-abs(deltah_up), abs(deltaw_right), abs(deltah_up)};
+		rect_t leftbuttom = {oldx-abs(deltaw_left), oldy+oldh, abs(deltaw_left), abs(deltah_down)};
+		rect_t rightbuttom = {oldx+oldw, oldy+oldh, abs(deltaw_right), abs(deltah_down)};
+
+		LOG_FORMAT("pushorpull 7 i: %d t: %d %d %d %d",i, t.x, t.y,t.w,t.h);
+		LOG_FORMAT("pushorpull 7 i: %d left: %d %d %d %d", i, left.x, left.y, left.w, left.h);
+		LOG_FORMAT("pushorpull 7 i: %d right: %d %d %d %d",i, right.x, right.y, right.w, right.h);
+		LOG_FORMAT("pushorpull 7 i: %d down: %d %d %d %d",i, down.x, down.y, down.w, down.h);
+		LOG_FORMAT("pushorpull 7 i: %d up: %d %d %d %d",i, up.x, up.y, up.w, up.h);
+
+		rect_t interrectleft;
+		double interpercentleft = intersectpercentwithrect(left,t,&interrectleft);
+		rect_t interrectright;
+		double interpercentright = intersectpercentwithrect(right,t,&interrectright);
+		rect_t interrectup;
+		double interpercentup = intersectpercentwithrect(up,t,&interrectup);
+		rect_t interrectdown;
+		double interpercentdown = intersectpercentwithrect(down,t,&interrectdown);
+
+		LOG_FORMAT("pushorpull 7 i: %d %f %f %f %f", i, interpercentleft, interpercentright, interpercentup, interrectdown);
+
+		if(interpercentleft > 0 && interrectleft.w < interrectleft.h){
+			// left
+			// if(ts[tsi].x < t.x) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
+		if( interpercentright > 0 && interrectright.w < interrectright.h){
+			// right
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if( interpercentup > 0 && interrectup.w >= interrectup.h){
+			// up
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if( interpercentdown > 0 && interrectdown.w >= interrectdown.h){
+			// down
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+
+
+		// 处理角落中的, 如果不处理, 有可能会出现偶尔的相交
+		if(intersectpercent(lefttop,t) > 0){
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if( intersectpercent(righttop,t) > 0){
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if(intersectpercent(leftbuttom,t) > 0){
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if(intersectpercent(rightbuttom,t) > 0){
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+	}
+
+	int next_n = next_i;
+	for(next_i = 0; next_i<next_n; next_i++)
+	{
+		LOG_FORMAT("pushorpull 5 ");
+		pushorpull4(oldr_nexts[next_i], newr_nexts[next_i], ts, tsn, next_i_2_i[next_i], ts_cnt);
+	}
+	
+	LOG_FORMAT("pushorpull 2");
+}
+
 void 
 tile5expandto(int w, int h)
 {
@@ -9434,9 +9717,15 @@ tile5expandto(int w, int h)
 	ts[tsi].y = newr.y;
 	ts[tsi].w = newr.w;
 	ts[tsi].h = newr.h;
-	int tsis[tsn];
-	int tsin = 0;
-	pushorpull3(oldr, newr, ts, tsn, tsi, tsis, tsin);
+
+	// int tsis[tsn];
+	// int tsin = 0;
+	// pushorpull3(oldr, newr, ts, tsn, tsi, tsis, tsin);
+
+
+	int ts_cnt[tsn];
+	memset(ts_cnt, 0, sizeof(ts_cnt));
+	pushorpull4(oldr, newr, ts, tsn, tsi, ts_cnt);
 
 	for(i = 0; i<tsn; i++)
 	{
@@ -10573,6 +10862,7 @@ unfocus(Client *c, int setfocus)
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	c->isfocused = False;
+	c->lastunfocustime = getcurrusec();
 	selmon->sel = NULL;
 	updateborder(c);
 }

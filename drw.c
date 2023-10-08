@@ -324,6 +324,36 @@ drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount)
 }
 
 void
+drw_clr_create_argb(Drw *drw, Clr *dest, const XRenderColor *argb)
+{
+	if (!drw || !dest || !argb)
+		return;
+
+	if (!XftColorAllocValue(drw->dpy, DefaultVisual(drw->dpy, drw->screen),
+	                       DefaultColormap(drw->dpy, drw->screen),
+	                       argb, dest))
+		die("error, cannot allocate color ");
+}
+
+/* Wrapper to create color schemes. The caller has to call free(3) on the
+ * returned color scheme when done using it. */
+Clr *
+drw_scm_create_argb(Drw *drw, const XRenderColor argb[], size_t clrcount)
+{
+	size_t i;
+	Clr *ret;
+
+	/* need at least two colors for a scheme */
+	if (!drw || !argb || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(XftColor))))
+		return NULL;
+
+	for (i = 0; i < clrcount; i++)
+		drw_clr_create_argb(drw, &ret[i], &argb[i]);
+	return ret;
+}
+
+
+void
 drw_setfontset(Drw *drw, Fnt *set)
 {
 	if (drw)

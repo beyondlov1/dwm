@@ -40,6 +40,28 @@ static const char *colors[][3] = {
 	[SchemeTiled] = {"#ff9300", col_gray1, col_gray2},
 };
 
+static const int gradual_colors_count = 6;
+static const char *gradual_colors[][3] = {
+	 {col_white, "#222222", col_gray2},
+	 {col_white, "#252c32", col_gray2}, 
+	 {col_white, "#273642", col_gray2}, 
+	 {col_white, "#2a4053", col_gray2}, 
+	 {col_white, "#2c4a63", col_gray2}, 
+	 {col_white, "#2f5473", col_gray2}
+};
+
+// 显示不出来
+// static const XRenderColor gradual_colors[][3] = {
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)30}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)70}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)120}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)170}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)220}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// 	 {{(unsigned short)187,(unsigned short)187,(unsigned short)187,(unsigned short)255}, {(unsigned short)67,(unsigned short)165,(unsigned short)245,(unsigned short)255}, {(unsigned short)68,(unsigned short)68,(unsigned short)68,(unsigned short)255}},
+// };
+
+
+
 /* tagging */
 static const char *tags[] = { "  1-term  ", "2-browser ", "  3-dev1  ", "  4-dev2  ", "5-datasource", " 6-learn  ", "    7     ", "    8     ", "    9     " };
 
