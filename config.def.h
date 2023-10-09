@@ -194,6 +194,7 @@ static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
 static const char *rofiscriptcmd[] = {"/home/beyond/software/rofiscript", NULL};
 static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NULL};
 static const char *notecurrwincmd[] = {"/home/beyond/software/notecurrwin.sh", NULL};
+static const char *ocrcmd[] = {"/home/beyond/software/ocr.sh", NULL};
 
 
 static const TaskGroup taskgroup1 = {
@@ -215,9 +216,10 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
 
+	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
+	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
 	{ Mod1Mask,                       XK_n,      spawn,      { .v = notecurrwincmd } },
-	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 
 	// for tile5
 	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },

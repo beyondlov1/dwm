@@ -8523,7 +8523,7 @@ tile5maximize(const Arg *arg)
 	if(cc->h < 0.79 * selmon->wh){
 		toh = selmon->wh * 0.8;
 	}
-	if(cc->w == maxww && cc->h == maxwh){
+	if(cc->w > maxww - borderpx && cc->h > maxwh - borderpx ){
 		tow = selmon->ww * 0.8;
 		toh = selmon->wh * 0.8;
 	}
