@@ -4836,7 +4836,7 @@ keyrelease(XEvent *e)
 
 	ev = &e->xkey;
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-	if(selmon->switcher && keysym == XK_Super_L)
+	if(selmon->switcher && (keysym == XK_Super_L || keysym == XK_Super_R))
 	{
 		if (selmon->sel && selmon->sel->container->cn > 1) {
 			XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
