@@ -617,6 +617,7 @@ static double intersectpercent(rect_t g, rect_t t);
 static double intersectpercentwithrect(rect_t g, rect_t t, rect_t *interrect);
 static void switcherfactors_tag(float factor[],int minx[], int miny[], int tagsx[], int tagsy[],int tagsww[], int tagswh[]);
 static void pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[]);
+static void pushorpull5withforce(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[],  float ts_force[][4]);
 
 static void LOG(char *content,char *content2);
 
@@ -1105,22 +1106,6 @@ attachstack(Client *c)
 {
 	c->snext = c->mon->stack;
 	c->mon->stack = c;
-}
-
-void
-switcherbuttonpress(XButtonPressedEvent *ev)
-{
-	int rx = ev->x;
-	int ry = ev->y;
-	int iw = selmon->ww / 6;
-	int ih = selmon->wh / 6;
-	int col = rx/iw;
-	int row = ry/ih;
-	int tagindex = col+row*3;
-	unsigned int tags = 1 << tagindex;
-	const Arg arg = {.ui = tags};
-	view(&arg);
-	destroyswitcher(selmon);
 }
 
 void
@@ -6194,11 +6179,40 @@ typedef struct
 	rect_t out_r[4]; // 具有磁力的外部区域 左下右上
 } MagnetItem;
 
+#define MAX_CHOOSE(x1,x2,i1,i2) (x1 > x2 ? i1 : i2)
+#define MIN_CHOOSE(x1,x2,i1,i2) (x1 > x2 ? i2 : i1)
 
+void
+sticktoborder(int start, int end, int borderstart, int borderend, int *resultstart)
+{
+	if(start < borderstart)
+	{
+		*resultstart = borderstart;
+		return;
+	}
+	if(end > borderend)
+	{
+		*resultstart = borderend - (end - start);
+		return;
+	}
+	if(start - borderstart < borderend - end 
+	// && start - borderstart < (end-start)*0.2
+	)
+	{
+		*resultstart = borderstart;
+	}
+	if(borderend - end < start - borderstart 
+	// && borderend - end < (end-start)*0.2
+	){
+		*resultstart = borderend - (end - start);
+	}
+}
+
+// switcher移动窗口
 void
 movemouseswitcher(const Arg *arg)
 {
-	int x, y, ocx, ocy, px, py, catchingpx = 0, catchingpy = 0;
+	int x, y, ocx, ocy,moved = 0, px, py, catchingpx = 0, catchingpy = 0;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -6282,7 +6296,10 @@ movemouseswitcher(const Arg *arg)
 	}
 
 	rect_t ts[2];
-	
+	ts[0].x =  c->x;
+	ts[0].y =  c->y;
+	ts[0].w =  c->w;
+	ts[0].h =  c->h;
 
 	/*int oldx = ev.xmotion.x - selmon->switcherwx;*/
 	/*int oldy = ev.xmotion.y - selmon->switcherwy;*/
@@ -6327,15 +6344,91 @@ movemouseswitcher(const Arg *arg)
 			ts[0].w =  m_cxys[1].x - m_cxys[0].x;
 			ts[0].h =  m_cxys[1].y - m_cxys[0].y;
 			int ts_cnt[] = {0,0};
+			float ts_force[][4] = {{0.0,0.0,0.0,0.0},{0.0,0.0,0.0,0.0}};
+			float ts_max_force[] = {0.0,0.0,0.0,0.0};
+			float ts_max_force_magnet[] = {0,0,0,0};
+			rect_t tmpr;
 			for(i=0;i<magnet_n*2;i++)
 			{
 				ts[1].x = newrs[i].x;
 				ts[1].y = newrs[i].y;
 				ts[1].w = newrs[i].w;
 				ts[1].h = newrs[i].h;
-				pushorpull4(oldrs[i], newrs[i], ts, 2, 1, ts_cnt);
+				memcpy(&tmpr, &ts[0], sizeof(tmpr));
+				pushorpull5withforce(oldrs[i], newrs[i], ts, 2, 1, ts_cnt, ts_force);
+				if(ts_force[0][0] > ts_max_force[0]){
+					ts_max_force[0] = ts_force[0][0];
+					ts_max_force_magnet[0] = i;
+				}
+				if(ts_force[0][1] > ts_max_force[1]){
+					ts_max_force[1] = ts_force[0][1];
+					ts_max_force_magnet[1] = i;
+				}
+				if(ts_force[0][2] > ts_max_force[2]){
+					ts_max_force[2] = ts_force[0][2];
+					ts_max_force_magnet[2] = i;
+				}
+				if(ts_force[0][3] > ts_max_force[3]){
+					ts_max_force[3] = ts_force[0][3];
+					ts_max_force_magnet[3] = i;
+				}
+				memcpy(&ts[0], &tmpr, sizeof(tmpr));
 				memset(ts_cnt, 0, sizeof(ts_cnt));
+				memset(ts_force[0], 0, sizeof(ts_force[0]));
+				memset(ts_force[1], 0, sizeof(ts_force[1]));
 			}
+			float max_force_x = MAX(ts_max_force[0], ts_max_force[2]);
+			float max_force_y = MAX(ts_max_force[1], ts_max_force[3]);
+			
+			int ts_max_force_magnet_x = MAX_CHOOSE(ts_max_force[0], ts_max_force[2], ts_max_force_magnet[0], ts_max_force_magnet[2]);
+			if(max_force_x > 0){
+				int steph = newrs[ts_max_force_magnet_x].h/2;
+				int safeh = ts[0].h/steph == 0?steph:ts[0].h;
+				ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
+				ts[1].x = newrs[ts_max_force_magnet_x].x;
+				ts[1].y = newrs[ts_max_force_magnet_x].y;
+				ts[1].w = newrs[ts_max_force_magnet_x].w;
+				ts[1].h = newrs[ts_max_force_magnet_x].h;
+				pushorpull5withforce(oldrs[ts_max_force_magnet_x], newrs[ts_max_force_magnet_x], ts, 2, 1, ts_cnt, ts_force);
+				memset(ts_cnt, 0, sizeof(ts_cnt));
+			}else{
+				int steph = selmon->wh/2;
+				int safeh = ts[0].h/steph == 0?steph:ts[0].h;
+				ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
+			}
+
+			int ts_max_force_magnet_y = MAX_CHOOSE(ts_max_force[1], ts_max_force[3], ts_max_force_magnet[1], ts_max_force_magnet[3]);
+			if (max_force_y > 0)
+			{
+				int stepw = newrs[ts_max_force_magnet_y].w/2;
+				int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
+				ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
+				ts[1].x = newrs[ts_max_force_magnet_y].x;
+				ts[1].y = newrs[ts_max_force_magnet_y].y;
+				ts[1].w = newrs[ts_max_force_magnet_y].w;
+				ts[1].h = newrs[ts_max_force_magnet_y].h;
+				pushorpull5withforce(oldrs[ts_max_force_magnet_y], newrs[ts_max_force_magnet_y], ts, 2, 1, ts_cnt, ts_force);
+				memset(ts_cnt, 0, sizeof(ts_cnt));
+			}else{
+				int stepw = selmon->ww/2;
+				int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
+				ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
+			}
+
+			if(max_force_x > 0 && max_force_y == 0)
+			{
+				// 纵向吸附，横向对齐
+				rect_t x_magnet = newrs[ts_max_force_magnet_x];
+				sticktoborder(ts[0].y, ts[0].y+ts[0].h,x_magnet.y,x_magnet.y+x_magnet.h,&(ts[0].y));
+			}
+
+			if(max_force_x == 0 && max_force_y > 0)
+			{
+				// 横向吸附，纵向对齐
+				rect_t y_magnet = newrs[ts_max_force_magnet_y];
+				sticktoborder(ts[0].x, ts[0].x+ts[0].w, y_magnet.x,y_magnet.x+y_magnet.w,&(ts[0].x));
+			}
+
 			XY m2_cxys[] = {{ts[0].x, ts[0].y}, {ts[0].x+ts[0].w, ts[0].y+ts[0].h}};
 			XY m2_sxys[2];
 			selmon->switcheraction.xy2switcherxy(m2_cxys, 2, m2_sxys, tagindexin);
@@ -6347,11 +6440,17 @@ movemouseswitcher(const Arg *arg)
 
 
 			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
+			moved = 1;
 			break;
 		}
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
 
+	if (!moved) return;
+	
+	c->w = ts[0].w;
+	c->h = ts[0].h;
+	
 	if(selmon->lt[selmon->sellt]->arrange == tile7)
 		pysmoveclient(oldc, px, py);
 	if(selmon->lt[selmon->sellt]->arrange == tile5)
@@ -9648,6 +9747,7 @@ pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[
 
 		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
 
+		// 这些用来判定哪些相邻的rect_t需要push/pull
 		rect_t left = {oldx-abs(deltaw_left), oldy, abs(deltaw_left), oldh};
 		rect_t right = {oldx+oldw, oldy, abs(deltaw_right), oldh};
 		rect_t up = {oldx, oldy-abs(deltah_up), oldw, abs(deltah_up)};
@@ -9793,6 +9893,212 @@ pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[
 	{
 		LOG_FORMAT("pushorpull 5 ");
 		pushorpull4(oldr_nexts[next_i], newr_nexts[next_i], ts, tsn, next_i_2_i[next_i], ts_cnt);
+	}
+	
+	LOG_FORMAT("pushorpull 2");
+}
+
+// 和 pushorpull4 不兼容, pushorpull4 万象天引的时候是 oldr+deltar 相交的会push/pull.
+// 这里是与oldr相交的rect_r都会被push/pull
+// 处理了膨胀和收缩
+// 处理角落中, 和谁都不相交的情况
+// 收缩的时候可以做到拉火车的效果
+// 改为横向遍历，并增加每个窗口可被移动的次数
+// 增加输出每个ts受到的力(交叉比例相加)
+void 
+pushorpull5withforce(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[], float ts_force[][4])
+{
+	// 排除自己
+	int max_pushpull_cnt = 3;
+	ts_cnt[tsi] = max_pushpull_cnt;
+
+	LOG_FORMAT("pushorpull 1");
+	LOG_FORMAT("pushorpull 5 old: %d %d %d %d", oldr.x, oldr.y, oldr.w, oldr.h);
+	LOG_FORMAT("pushorpull 5 new: %d %d %d %d", newr.x, newr.y, newr.w, newr.h);
+	int oldx = oldr.x;
+	int oldy = oldr.y;
+	int oldw = oldr.w;
+	int oldh = oldr.h;
+	int newx = newr.x;
+	int newy = newr.y;
+	int neww = newr.w;
+	int newh = newr.h;
+	int deltaw_left = newr.x - oldr.x;
+	int deltaw_right = newr.x + newr.w - oldr.x- oldr.w;
+	int deltah_up = newr.y - oldr.y;
+	int deltah_down = newr.y + newr.h - oldr.y- oldr.h;
+
+	int next_i = 0;
+	rect_t oldr_nexts[tsn];
+	rect_t newr_nexts[tsn];
+	int next_i_2_i[tsn];
+	
+	int i;
+	for(i = 0; i<tsn; i++)
+	{
+		LOG_FORMAT("pushorpull 8 %d",ts_cnt[i]);
+		if(ts_cnt[i] >= max_pushpull_cnt){
+			continue;
+		}
+		rect_t t = ts[i];
+		oldr_nexts[next_i].x = t.x;
+		oldr_nexts[next_i].y = t.y;
+		oldr_nexts[next_i].w = t.w;
+		oldr_nexts[next_i].h = t.h;
+
+		// if(intersectpercent(newr, t) == 0) continue;
+
+		LOG_FORMAT("pushorpull 3 %d %d %d %d", deltaw_left, deltah_up, deltaw_right, deltah_down);
+
+		rect_t left = {MIN(oldx, newx), oldy, abs(deltaw_left), oldh};
+		rect_t right = {MIN(oldx+oldw, newx+neww), oldy, abs(deltaw_right), oldh};
+		rect_t up = {oldx, MIN(oldy, newy), oldw, abs(deltah_up)};
+		rect_t down = {oldx, MIN(oldy+oldh, newy+newh), oldw, abs(deltah_down)};
+		rect_t lefttop = {MIN(oldx, newx), MIN(oldy, newy), abs(deltaw_left), abs(deltah_up)};
+		rect_t righttop = {MIN(oldx+oldw, newx+neww), MIN(oldy, newy), abs(deltaw_right), abs(deltah_up)};
+		rect_t leftbuttom = {MIN(oldx, newx), MIN(oldy+oldh, newy+newh), abs(deltaw_left), abs(deltah_down)};
+		rect_t rightbuttom = {MIN(oldx+oldw, newx+neww), MIN(oldy+oldh, newy+newh), abs(deltaw_right), abs(deltah_down)};
+
+		LOG_FORMAT("pushorpull 7 i: %d t: %d %d %d %d",i, t.x, t.y,t.w,t.h);
+		LOG_FORMAT("pushorpull 7 i: %d left: %d %d %d %d", i, left.x, left.y, left.w, left.h);
+		LOG_FORMAT("pushorpull 7 i: %d right: %d %d %d %d",i, right.x, right.y, right.w, right.h);
+		LOG_FORMAT("pushorpull 7 i: %d down: %d %d %d %d",i, down.x, down.y, down.w, down.h);
+		LOG_FORMAT("pushorpull 7 i: %d up: %d %d %d %d",i, up.x, up.y, up.w, up.h);
+
+		rect_t interrectleft;
+		double interpercentleft = intersectpercentwithrect(left,t,&interrectleft);
+		rect_t interrectright;
+		double interpercentright = intersectpercentwithrect(right,t,&interrectright);
+		rect_t interrectup;
+		double interpercentup = intersectpercentwithrect(up,t,&interrectup);
+		rect_t interrectdown;
+		double interpercentdown = intersectpercentwithrect(down,t,&interrectdown);
+
+		LOG_FORMAT("pushorpull 7 i: %d %f %f %f %f", i, interpercentleft, interpercentright, interpercentup, interrectdown);
+
+		if(interpercentleft > 0 && interrectleft.w < interrectleft.h){
+			// left
+			// if(ts[tsi].x < t.x) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			ts_force[i][0] = ts_force[i][0] + interpercentleft;
+			continue;
+		}
+		LOG_FORMAT("pushorpull 4 %d %d %d %d", right.x, right.y, right.w, right.h);
+		if( interpercentright > 0 && interrectright.w < interrectright.h){
+			// right
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			ts_force[i][2] = ts_force[i][2] + interpercentright;
+			continue;
+		}
+		if( interpercentup > 0 && interrectup.w >= interrectup.h){
+			// up
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			ts_force[i][3] = ts_force[i][3] + interpercentup;
+			continue;
+		}
+		if( interpercentdown > 0 && interrectdown.w >= interrectdown.h){
+			// down
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			ts_force[i][1] = ts_force[i][1] + interpercentdown;
+			continue;
+		}
+
+
+		// 处理角落中的, 如果不处理, 有可能会出现偶尔的相交
+		if(intersectpercent(lefttop,t) > 0){
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if( intersectpercent(righttop,t) > 0){
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y < t.y ) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y - ts[i].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if(intersectpercent(leftbuttom,t) > 0){
+			// if(ts[tsi].x < t.x) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x - ts[i].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+		if(intersectpercent(rightbuttom,t) > 0){
+			// if(ts[tsi].x + ts[tsi].w > t.x + t.w) continue;
+			// if(ts[tsi].y + ts[tsi].h > t.y + t.h) continue;
+			ts[i].x = ts[tsi].x + ts[tsi].w;
+			ts[i].y = ts[tsi].y + ts[tsi].h;
+			ts_cnt[i] = ts_cnt[i] +1 ;
+			newr_nexts[next_i].x = ts[i].x;
+			newr_nexts[next_i].y = ts[i].y;
+			newr_nexts[next_i].w = ts[i].w;
+			newr_nexts[next_i].h = ts[i].h;
+			next_i_2_i[next_i]  = i;
+			next_i++;
+			continue;
+		}
+	}
+
+	int next_n = next_i;
+	for(next_i = 0; next_i<next_n; next_i++)
+	{
+		LOG_FORMAT("pushorpull 5 ");
+		pushorpull5withforce(oldr_nexts[next_i], newr_nexts[next_i], ts, tsn, next_i_2_i[next_i], ts_cnt, ts_force);
 	}
 	
 	LOG_FORMAT("pushorpull 2");
