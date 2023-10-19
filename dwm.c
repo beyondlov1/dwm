@@ -4091,9 +4091,14 @@ void
 focuslast(const Arg *arg)
 {
 	Client *lastfocused = selmon->sel->lastfocus;
-	if (lastfocused && lastfocused->win) {
+	while (lastfocused && lastfocused->win) {
+		if(selmon->sel->lastfocustime - lastfocused->lastfocustime < 1000*1000*1){
+			lastfocused = lastfocused->lastfocus;
+			continue;
+		}
 		focus(lastfocused);
 		arrange(selmon);
+		break;
 	}
 }
 
@@ -6392,7 +6397,7 @@ movemouseswitcher(const Arg *arg)
 				pushorpull5withforce(oldrs[ts_max_force_magnet_x], newrs[ts_max_force_magnet_x], ts, 2, 1, ts_cnt, ts_force);
 				memset(ts_cnt, 0, sizeof(ts_cnt));
 			}else{
-				int steph = selmon->wh/2;
+				int steph = selmon->wh/2 + borderpx;
 				int safeh = ts[0].h/steph == 0?steph:ts[0].h;
 				ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
 			}
@@ -6410,7 +6415,7 @@ movemouseswitcher(const Arg *arg)
 				pushorpull5withforce(oldrs[ts_max_force_magnet_y], newrs[ts_max_force_magnet_y], ts, 2, 1, ts_cnt, ts_force);
 				memset(ts_cnt, 0, sizeof(ts_cnt));
 			}else{
-				int stepw = selmon->ww/2;
+				int stepw = selmon->ww/2 + borderpx;
 				int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
 				ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
 			}
@@ -11289,8 +11294,8 @@ fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int
 		int distancetocenterij = distancexy(centerijxy, targetxy);
 		totaldistance += distancetocenterij;
 
-		if(items[a].x == centerx) totaldistance = totaldistance * 0.8;
-		if(items[a].y == centery) totaldistance = totaldistance * 0.8;
+		if(items[a].x == centerx) totaldistance = totaldistance * 0.9;
+		if(items[a].y == centery) totaldistance = totaldistance * 0.9;
 
 		int b;
 		for(b=0;b<tsn;b++)
@@ -11299,7 +11304,7 @@ fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int
 			int tcentery = ts[b].y + ts[b].h/2;
 			XY tcenterxy = {tcenterx, tcentery*stepw/steph};
 			int distance = distancexy(tcenterxy, targetxy);
-			totaldistance += distance * 0.2;
+			totaldistance += distance * 0.01;
 		}
 
 		items[a].score = totaldistance;
