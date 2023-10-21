@@ -153,6 +153,7 @@ struct Container {
 	int placed;
 	int x, y, w, h;
 	float masterfactor;
+	int hiddencn;
 	void (*arrange)(Container *container); 
 };
 struct Client {
@@ -168,7 +169,7 @@ struct Client {
 	int hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed, hidden;
 	int zlevel;
 	Client *next;
 	Client *snext;
@@ -619,6 +620,13 @@ static void switcherfactors_tag(float factor[],int minx[], int miny[], int tagsx
 static void pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[]);
 static void pushorpull5withforce(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[],  float ts_force[][4]);
 
+static void tile7_hide_other_in_container(const Arg *arg);
+
+static void i_move(const Arg *arg);
+static void i_focus(const Arg *arg);
+static void i_maxwindow(const Arg *arg);
+
+
 static void LOG(char *content,char *content2);
 
 /* variables */
@@ -713,7 +721,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
+static int islog = 1;
 
 void
 LOG(char *content, char * content2){
@@ -3597,23 +3605,27 @@ drawswitcher(Monitor *m)
 	// m->switcheraction.sxy2client = sxy2client;
 	// m->switcheraction.movefunc = clientswitchermove;
 
-	/*m->switcheraction.pointerfunc = clientswitcheraction;*/
-	/*m->switcheraction.drawfunc = drawclientswitcherwin;*/
-	/*m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;*/
-	/*m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;*/
-	/*m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;*/
-	/*m->switcheraction.sxy2client = sxy2client_tag;*/
-	/*m->switcheraction.movefunc = clientswitchermove_tag2;*/
-	/*m->switcheraction.switcherfactors = switcherfactors_tag;*/
-
-	m->switcheraction.pointerfunc = tile5switcherpointfunc; // 鼠标切换focus
-	m->switcheraction.drawfunc = drawclientswitcherwin;
-	m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
-	m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;
-	m->switcheraction.switcherxy2xy = tile5switcherxy2xy;
-	m->switcheraction.sxy2client = sxy2client_tag;
-	m->switcheraction.movefunc = tile5switcherfocuschangefunc; // 上下左右切换focus
-	m->switcheraction.switcherfactors = switcherfactors_tag;
+	if(selmon->lt[selmon->sellt]->arrange == tile5)
+	{
+		m->switcheraction.pointerfunc = tile5switcherpointfunc; // 鼠标切换focus
+		m->switcheraction.drawfunc = drawclientswitcherwin;
+		m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
+		m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;
+		m->switcheraction.switcherxy2xy = tile5switcherxy2xy;
+		m->switcheraction.sxy2client = sxy2client_tag;
+		m->switcheraction.movefunc = tile5switcherfocuschangefunc; // 上下左右切换focus
+		m->switcheraction.switcherfactors = switcherfactors_tag;
+	}else{
+		m->switcheraction.pointerfunc = clientswitcheraction;
+		m->switcheraction.drawfunc = drawclientswitcherwin;
+		m->switcheraction.drawfuncx = drawclientswitcherwinx_tag;
+		m->switcheraction.xy2switcherxy = clientxy2switcherxy_tag;
+		m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;
+		m->switcheraction.sxy2client = sxy2client_tag;
+		m->switcheraction.movefunc = clientswitchermove_tag2;
+		m->switcheraction.switcherfactors = switcherfactors_tag;
+	}
+	
 
 	/*int ww = m->ww/2;*/
 	/*int wh = m->wh/2;*/
@@ -3690,12 +3702,14 @@ drawswitcher(Monitor *m)
 	wy = pry - m->wy - sxys[0].y;
 	if (wx < 0) wx = 0;
 	if (wx > m->ww - m->switcherww) wx = m->ww - m->switcherww;
-	if (wy < 0) wy = 0;
+	if (wy < bh) {
+		wy = bh;
+		m->switcherwh -= bh;
+	}
 	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
-	// 多屏校正
+	// 多屏校正 end
 	m->switcherwx = wx + m->wx;
 	m->switcherwy = wy + m->wy;
-	if (m->switcherwy < bh) m->switcherwy = bh;
 	m->switcher = XCreateWindow(dpy, root, m->switcherwx, m->switcherwy, m->switcherww, m->switcherwh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
@@ -5183,6 +5197,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->thumb = 0;
 	c->custom_oldw = c->custom_oldh = 0;
 	c->lastfocustime = 0;
+	c->hidden = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -5229,6 +5244,10 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	LOG_FORMAT("manage 2");
 
+	if (c->isfloating) {
+		c->x = c->mon->ww - c->w;
+		c->y = c->mon->wh - c->h;
+	}
 	LOG_FORMAT("manage 3");
 	if(!manageppidstick(c) && !isnextscratch && !isnexttemp) managestub(c);
 	if((selmon->tagset[selmon->seltags] & TAGMASK == TAGMASK) && (c->tags & TAGMASK) == TAGMASK) c->tags = 1; 
@@ -5911,7 +5930,8 @@ separatefromcontainer(Client *oldc)
 
 void 
 mergetocontainerof(Client *oldc, Client *chosenc){
-	if(chosenc->container->cn > CONTAINER_MAX_N) return;
+	LOG_FORMAT("mergetocontainerof -2, cn:%d", chosenc->container->cn);
+	if(chosenc->container->cn >= CONTAINER_MAX_N) return;
 	if(chosenc == oldc) return;
 	LOG_FORMAT("mergetocontainerof -1");
 	Container *container1 = oldc->container;
@@ -6217,7 +6237,7 @@ sticktoborder(int start, int end, int borderstart, int borderend, int *resultsta
 void
 movemouseswitcher(const Arg *arg)
 {
-	int x, y, ocx, ocy,moved = 0, px, py, catchingpx = 0, catchingpy = 0;
+	int x, y, ocx, ocy,moved = 0, px, py, catchingpx = 0, catchingpy = 0,i=0;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -6236,7 +6256,13 @@ movemouseswitcher(const Arg *arg)
 	if (!getrootptr(&x, &y))
 		return;
 
-	// 计算磁力块
+	
+	int usemagnet = 0;
+	if(selmon->lt[selmon->sellt]->arrange == tile7)
+		usemagnet = 0;
+	if(selmon->lt[selmon->sellt]->arrange == tile5)
+		usemagnet = 1;
+
 	int magnet_n = 0;
 	Client *tmpc;
 	for(tmpc=nexttiled(selmon->clients);tmpc;tmpc=nexttiled(tmpc->next))
@@ -6244,71 +6270,80 @@ movemouseswitcher(const Arg *arg)
 		if(tmpc == c) continue;
 		magnet_n ++;
 	}
-
+		
 	rect_t oldrs[magnet_n*2];
 	rect_t newrs[magnet_n*2];
 	MagnetItem magnets[magnet_n];
-	int i = 0;
-	for(tmpc=nexttiled(selmon->clients);tmpc;tmpc=nexttiled(tmpc->next))
-	{
-		if(tmpc == c) continue;
-		magnets[i].r.x = tmpc->x;
-		magnets[i].r.y = tmpc->y;
-		magnets[i].r.w = tmpc->w;
-		magnets[i].r.h = tmpc->h;
-
-		magnets[i].out_r[0].w = magnets[i].r.w * 0.2;
-		magnets[i].out_r[0].h = magnets[i].r.h;
-		magnets[i].out_r[0].x = magnets[i].r.x-magnets[i].out_r[0].w;
-		magnets[i].out_r[0].y = magnets[i].r.y;
-		
-		magnets[i].out_r[1].w = magnets[i].r.w ;
-		magnets[i].out_r[1].h = magnets[i].r.h * 0.2;
-		magnets[i].out_r[1].x = magnets[i].r.x;
-		magnets[i].out_r[1].y = magnets[i].r.y + magnets[i].r.h + magnets[i].out_r[1].h;
-
-		magnets[i].out_r[2].w = magnets[i].r.w * 0.2;
-		magnets[i].out_r[2].h = magnets[i].r.h;
-		magnets[i].out_r[2].x = magnets[i].r.x + magnets[i].r.w;
-		magnets[i].out_r[2].y = magnets[i].r.y;
-
-		magnets[i].out_r[3].w = magnets[i].r.w;
-		magnets[i].out_r[3].h = magnets[i].r.h * 0.2;
-		magnets[i].out_r[3].x = magnets[i].r.x;
-		magnets[i].out_r[3].y = magnets[i].r.y - magnets[i].out_r[3].h;
-
-		oldrs[i].x = tmpc->x - tmpc->w * 0.2;
-		oldrs[i].y = tmpc->y;
-		oldrs[i].w = tmpc->w + tmpc->w * 0.2 * 2;
-		oldrs[i].h = tmpc->h;
-
-		oldrs[i+magnet_n].x = tmpc->x;
-		oldrs[i+magnet_n].y = tmpc->y - tmpc->h * 0.2;
-		oldrs[i+magnet_n].w = tmpc->w;
-		oldrs[i+magnet_n].h = tmpc->h + tmpc->h * 0.2 * 2;
-
-		newrs[i].x = tmpc->x;
-		newrs[i].y = tmpc->y;
-		newrs[i].w = tmpc->w;
-		newrs[i].h = tmpc->h;
-
-		newrs[i+magnet_n].x = tmpc->x;
-		newrs[i+magnet_n].y = tmpc->y;
-		newrs[i+magnet_n].w = tmpc->w;
-		newrs[i+magnet_n].h = tmpc->h;
-
-		i++;
-	}
-
 	rect_t ts[2];
-	ts[0].x =  c->x;
-	ts[0].y =  c->y;
-	ts[0].w =  c->w;
-	ts[0].h =  c->h;
+	if(usemagnet)
+	{
+		// 计算磁力块
+		for(tmpc=nexttiled(selmon->clients);tmpc;tmpc=nexttiled(tmpc->next))
+		{
+			if(tmpc == c) continue;
+
+			// 暂时无用
+			magnets[i].r.x = tmpc->x;
+			magnets[i].r.y = tmpc->y;
+			magnets[i].r.w = tmpc->w;
+			magnets[i].r.h = tmpc->h;
+
+			magnets[i].out_r[0].w = magnets[i].r.w * 0.2;
+			magnets[i].out_r[0].h = magnets[i].r.h;
+			magnets[i].out_r[0].x = magnets[i].r.x-magnets[i].out_r[0].w;
+			magnets[i].out_r[0].y = magnets[i].r.y;
+			
+			magnets[i].out_r[1].w = magnets[i].r.w ;
+			magnets[i].out_r[1].h = magnets[i].r.h * 0.2;
+			magnets[i].out_r[1].x = magnets[i].r.x;
+			magnets[i].out_r[1].y = magnets[i].r.y + magnets[i].r.h + magnets[i].out_r[1].h;
+
+			magnets[i].out_r[2].w = magnets[i].r.w * 0.2;
+			magnets[i].out_r[2].h = magnets[i].r.h;
+			magnets[i].out_r[2].x = magnets[i].r.x + magnets[i].r.w;
+			magnets[i].out_r[2].y = magnets[i].r.y;
+
+			magnets[i].out_r[3].w = magnets[i].r.w;
+			magnets[i].out_r[3].h = magnets[i].r.h * 0.2;
+			magnets[i].out_r[3].x = magnets[i].r.x;
+			magnets[i].out_r[3].y = magnets[i].r.y - magnets[i].out_r[3].h;
+			// 暂时无用 end
+
+			oldrs[i].x = tmpc->x - tmpc->w * 0.2;
+			oldrs[i].y = tmpc->y;
+			oldrs[i].w = tmpc->w + tmpc->w * 0.2 * 2;
+			oldrs[i].h = tmpc->h;
+
+			oldrs[i+magnet_n].x = tmpc->x;
+			oldrs[i+magnet_n].y = tmpc->y - tmpc->h * 0.2;
+			oldrs[i+magnet_n].w = tmpc->w;
+			oldrs[i+magnet_n].h = tmpc->h + tmpc->h * 0.2 * 2;
+
+			newrs[i].x = tmpc->x;
+			newrs[i].y = tmpc->y;
+			newrs[i].w = tmpc->w;
+			newrs[i].h = tmpc->h;
+
+			newrs[i+magnet_n].x = tmpc->x;
+			newrs[i+magnet_n].y = tmpc->y;
+			newrs[i+magnet_n].w = tmpc->w;
+			newrs[i+magnet_n].h = tmpc->h;
+
+			i++;
+		}
+
+		ts[0].x =  c->x;
+		ts[0].y =  c->y;
+		ts[0].w =  c->w;
+		ts[0].h =  c->h;
+	}
+	
 
 	/*int oldx = ev.xmotion.x - selmon->switcherwx;*/
 	/*int oldy = ev.xmotion.y - selmon->switcherwy;*/
 	/*Client *oldc = selmon->switcheraction.pointerfuncx(oldx, oldy);*/
+	int pointerx = 0;
+	int pointery = 0;
 	Client *oldc = selmon->sel;
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
@@ -6324,6 +6359,8 @@ movemouseswitcher(const Arg *arg)
 			lasttime = ev.xmotion.time;
 			px = ev.xmotion.x - selmon->switcherwx;
 			py = ev.xmotion.y - selmon->switcherwy;
+			pointerx = px;
+			pointery = py;
 			if(catchingpx == 0) catchingpx = px;
 			if(catchingpy == 0) catchingpy = py;
 			selmon->switcheraction.drawfuncx(selmon->switcher, selmon->switcherww, selmon->switcherwh);
@@ -6339,109 +6376,112 @@ movemouseswitcher(const Arg *arg)
 			py = py - (catchingpy - sxys[0].y);
 			drw_rect(drw, px, py, sxys[1].x - sxys[0].x, sxys[1].y - sxys[0].y, 1, 1);
 
-			// 磁吸
-			XY m_sxys[] = {{px, py}, {px + sxys[1].x - sxys[0].x, py+sxys[1].y - sxys[0].y}};
-			XY m_cxys[2];
-			int tagindexout[2];
-			selmon->switcheraction.switcherxy2xy(m_sxys,2,m_cxys, tagindexout);
-			ts[0].x =  m_cxys[0].x;
-			ts[0].y =  m_cxys[0].y;
-			ts[0].w =  m_cxys[1].x - m_cxys[0].x;
-			ts[0].h =  m_cxys[1].y - m_cxys[0].y;
-			int ts_cnt[] = {0,0};
-			float ts_force[][4] = {{0.0,0.0,0.0,0.0},{0.0,0.0,0.0,0.0}};
-			float ts_max_force[] = {0.0,0.0,0.0,0.0};
-			float ts_max_force_magnet[] = {0,0,0,0};
-			rect_t tmpr;
-			for(i=0;i<magnet_n*2;i++)
+			if(usemagnet)
 			{
-				ts[1].x = newrs[i].x;
-				ts[1].y = newrs[i].y;
-				ts[1].w = newrs[i].w;
-				ts[1].h = newrs[i].h;
-				memcpy(&tmpr, &ts[0], sizeof(tmpr));
-				pushorpull5withforce(oldrs[i], newrs[i], ts, 2, 1, ts_cnt, ts_force);
-				if(ts_force[0][0] > ts_max_force[0]){
-					ts_max_force[0] = ts_force[0][0];
-					ts_max_force_magnet[0] = i;
+				// 磁吸
+				XY m_sxys[] = {{px, py}, {px + sxys[1].x - sxys[0].x, py+sxys[1].y - sxys[0].y}};
+				XY m_cxys[2];
+				int tagindexout[2];
+				selmon->switcheraction.switcherxy2xy(m_sxys,2,m_cxys, tagindexout);
+				ts[0].x =  m_cxys[0].x;
+				ts[0].y =  m_cxys[0].y;
+				ts[0].w =  m_cxys[1].x - m_cxys[0].x;
+				ts[0].h =  m_cxys[1].y - m_cxys[0].y;
+				int ts_cnt[] = {0,0};
+				float ts_force[][4] = {{0.0,0.0,0.0,0.0},{0.0,0.0,0.0,0.0}};
+				float ts_max_force[] = {0.0,0.0,0.0,0.0};
+				float ts_max_force_magnet[] = {0,0,0,0};
+				rect_t tmpr;
+				for(i=0;i<magnet_n*2;i++)
+				{
+					ts[1].x = newrs[i].x;
+					ts[1].y = newrs[i].y;
+					ts[1].w = newrs[i].w;
+					ts[1].h = newrs[i].h;
+					memcpy(&tmpr, &ts[0], sizeof(tmpr));
+					pushorpull5withforce(oldrs[i], newrs[i], ts, 2, 1, ts_cnt, ts_force);
+					if(ts_force[0][0] > ts_max_force[0]){
+						ts_max_force[0] = ts_force[0][0];
+						ts_max_force_magnet[0] = i;
+					}
+					if(ts_force[0][1] > ts_max_force[1]){
+						ts_max_force[1] = ts_force[0][1];
+						ts_max_force_magnet[1] = i;
+					}
+					if(ts_force[0][2] > ts_max_force[2]){
+						ts_max_force[2] = ts_force[0][2];
+						ts_max_force_magnet[2] = i;
+					}
+					if(ts_force[0][3] > ts_max_force[3]){
+						ts_max_force[3] = ts_force[0][3];
+						ts_max_force_magnet[3] = i;
+					}
+					memcpy(&ts[0], &tmpr, sizeof(tmpr));
+					memset(ts_cnt, 0, sizeof(ts_cnt));
+					memset(ts_force[0], 0, sizeof(ts_force[0]));
+					memset(ts_force[1], 0, sizeof(ts_force[1]));
 				}
-				if(ts_force[0][1] > ts_max_force[1]){
-					ts_max_force[1] = ts_force[0][1];
-					ts_max_force_magnet[1] = i;
+				float max_force_x = MAX(ts_max_force[0], ts_max_force[2]);
+				float max_force_y = MAX(ts_max_force[1], ts_max_force[3]);
+				
+				int ts_max_force_magnet_x = MAX_CHOOSE(ts_max_force[0], ts_max_force[2], ts_max_force_magnet[0], ts_max_force_magnet[2]);
+				if(max_force_x > 0){
+					int steph = newrs[ts_max_force_magnet_x].h/2;
+					int safeh = ts[0].h/steph == 0?steph:ts[0].h;
+					ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
+					ts[1].x = newrs[ts_max_force_magnet_x].x;
+					ts[1].y = newrs[ts_max_force_magnet_x].y;
+					ts[1].w = newrs[ts_max_force_magnet_x].w;
+					ts[1].h = newrs[ts_max_force_magnet_x].h;
+					pushorpull5withforce(oldrs[ts_max_force_magnet_x], newrs[ts_max_force_magnet_x], ts, 2, 1, ts_cnt, ts_force);
+					memset(ts_cnt, 0, sizeof(ts_cnt));
+				}else{
+					int steph = selmon->wh/2 + borderpx;
+					int safeh = ts[0].h/steph == 0?steph:ts[0].h;
+					ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
 				}
-				if(ts_force[0][2] > ts_max_force[2]){
-					ts_max_force[2] = ts_force[0][2];
-					ts_max_force_magnet[2] = i;
+
+				int ts_max_force_magnet_y = MAX_CHOOSE(ts_max_force[1], ts_max_force[3], ts_max_force_magnet[1], ts_max_force_magnet[3]);
+				if (max_force_y > 0)
+				{
+					int stepw = newrs[ts_max_force_magnet_y].w/2;
+					int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
+					ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
+					ts[1].x = newrs[ts_max_force_magnet_y].x;
+					ts[1].y = newrs[ts_max_force_magnet_y].y;
+					ts[1].w = newrs[ts_max_force_magnet_y].w;
+					ts[1].h = newrs[ts_max_force_magnet_y].h;
+					pushorpull5withforce(oldrs[ts_max_force_magnet_y], newrs[ts_max_force_magnet_y], ts, 2, 1, ts_cnt, ts_force);
+					memset(ts_cnt, 0, sizeof(ts_cnt));
+				}else{
+					int stepw = selmon->ww/2 + borderpx;
+					int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
+					ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
 				}
-				if(ts_force[0][3] > ts_max_force[3]){
-					ts_max_force[3] = ts_force[0][3];
-					ts_max_force_magnet[3] = i;
+
+				if(max_force_x > 0 && max_force_y == 0)
+				{
+					// 纵向吸附，横向对齐
+					rect_t x_magnet = newrs[ts_max_force_magnet_x];
+					sticktoborder(ts[0].y, ts[0].y+ts[0].h,x_magnet.y,x_magnet.y+x_magnet.h,&(ts[0].y));
 				}
-				memcpy(&ts[0], &tmpr, sizeof(tmpr));
-				memset(ts_cnt, 0, sizeof(ts_cnt));
-				memset(ts_force[0], 0, sizeof(ts_force[0]));
-				memset(ts_force[1], 0, sizeof(ts_force[1]));
-			}
-			float max_force_x = MAX(ts_max_force[0], ts_max_force[2]);
-			float max_force_y = MAX(ts_max_force[1], ts_max_force[3]);
-			
-			int ts_max_force_magnet_x = MAX_CHOOSE(ts_max_force[0], ts_max_force[2], ts_max_force_magnet[0], ts_max_force_magnet[2]);
-			if(max_force_x > 0){
-				int steph = newrs[ts_max_force_magnet_x].h/2;
-				int safeh = ts[0].h/steph == 0?steph:ts[0].h;
-				ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
-				ts[1].x = newrs[ts_max_force_magnet_x].x;
-				ts[1].y = newrs[ts_max_force_magnet_x].y;
-				ts[1].w = newrs[ts_max_force_magnet_x].w;
-				ts[1].h = newrs[ts_max_force_magnet_x].h;
-				pushorpull5withforce(oldrs[ts_max_force_magnet_x], newrs[ts_max_force_magnet_x], ts, 2, 1, ts_cnt, ts_force);
-				memset(ts_cnt, 0, sizeof(ts_cnt));
-			}else{
-				int steph = selmon->wh/2 + borderpx;
-				int safeh = ts[0].h/steph == 0?steph:ts[0].h;
-				ts[0].h = safeh/steph*steph + (safeh % steph < steph/3 ? 0 : steph);
-			}
 
-			int ts_max_force_magnet_y = MAX_CHOOSE(ts_max_force[1], ts_max_force[3], ts_max_force_magnet[1], ts_max_force_magnet[3]);
-			if (max_force_y > 0)
-			{
-				int stepw = newrs[ts_max_force_magnet_y].w/2;
-				int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
-				ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
-				ts[1].x = newrs[ts_max_force_magnet_y].x;
-				ts[1].y = newrs[ts_max_force_magnet_y].y;
-				ts[1].w = newrs[ts_max_force_magnet_y].w;
-				ts[1].h = newrs[ts_max_force_magnet_y].h;
-				pushorpull5withforce(oldrs[ts_max_force_magnet_y], newrs[ts_max_force_magnet_y], ts, 2, 1, ts_cnt, ts_force);
-				memset(ts_cnt, 0, sizeof(ts_cnt));
-			}else{
-				int stepw = selmon->ww/2 + borderpx;
-				int safew = ts[0].w/stepw == 0?stepw:ts[0].w;
-				ts[0].w = safew/stepw*stepw + (safew % stepw < stepw/3 ? 0 : stepw);
-			}
+				if(max_force_x == 0 && max_force_y > 0)
+				{
+					// 横向吸附，纵向对齐
+					rect_t y_magnet = newrs[ts_max_force_magnet_y];
+					sticktoborder(ts[0].x, ts[0].x+ts[0].w, y_magnet.x,y_magnet.x+y_magnet.w,&(ts[0].x));
+				}
 
-			if(max_force_x > 0 && max_force_y == 0)
-			{
-				// 纵向吸附，横向对齐
-				rect_t x_magnet = newrs[ts_max_force_magnet_x];
-				sticktoborder(ts[0].y, ts[0].y+ts[0].h,x_magnet.y,x_magnet.y+x_magnet.h,&(ts[0].y));
+				XY m2_cxys[] = {{ts[0].x, ts[0].y}, {ts[0].x+ts[0].w, ts[0].y+ts[0].h}};
+				XY m2_sxys[2];
+				selmon->switcheraction.xy2switcherxy(m2_cxys, 2, m2_sxys, tagindexin);
+				px = m2_sxys[0].x;
+				py = m2_sxys[0].y;
+				drw_setscheme(drw, scheme[SchemeSwitchPrepareMove]);
+				drw_rect(drw, px, py, m2_sxys[1].x - m2_sxys[0].x, m2_sxys[1].y - m2_sxys[0].y, 0, 0);
+				// 磁吸 end
 			}
-
-			if(max_force_x == 0 && max_force_y > 0)
-			{
-				// 横向吸附，纵向对齐
-				rect_t y_magnet = newrs[ts_max_force_magnet_y];
-				sticktoborder(ts[0].x, ts[0].x+ts[0].w, y_magnet.x,y_magnet.x+y_magnet.w,&(ts[0].x));
-			}
-
-			XY m2_cxys[] = {{ts[0].x, ts[0].y}, {ts[0].x+ts[0].w, ts[0].y+ts[0].h}};
-			XY m2_sxys[2];
-			selmon->switcheraction.xy2switcherxy(m2_cxys, 2, m2_sxys, tagindexin);
-			px = m2_sxys[0].x;
-			py = m2_sxys[0].y;
-			drw_setscheme(drw, scheme[SchemeSwitchPrepareMove]);
-			drw_rect(drw, px, py, m2_sxys[1].x - m2_sxys[0].x, m2_sxys[1].y - m2_sxys[0].y, 0, 0);
-			// 磁吸 end
 
 
 			drw_map(drw,selmon->switcher, 0, 0,selmon->switcherww, selmon->switcherwh);
@@ -6452,12 +6492,15 @@ movemouseswitcher(const Arg *arg)
 	XUngrabPointer(dpy, CurrentTime);
 
 	if (!moved) return;
-	
-	c->w = ts[0].w;
-	c->h = ts[0].h;
+
+	if(usemagnet)
+	{
+		c->w = ts[0].w;
+		c->h = ts[0].h;
+	}
 	
 	if(selmon->lt[selmon->sellt]->arrange == tile7)
-		pysmoveclient(oldc, px, py);
+		pysmoveclient(oldc, pointerx, pointery);
 	if(selmon->lt[selmon->sellt]->arrange == tile5)
 		tile5switchermove(oldc, px, py);
 }
@@ -8858,11 +8901,12 @@ createcontainerc(Client *c)
 	container->id = c->id;
 	container->cs[container->cn] = c;
 	container->cn ++;
-	container->masterfactor = 1.9;
+	container->masterfactor = 2.4;
 	container->arrange = container_layout_tile_v;
-	// container->arrange = container_layout_mosaic;
+	/*container->arrange = container_layout_mosaic;*/
 	c->container = container;
 	c->indexincontainer = 0;
+	container->hiddencn = 0;
 	return container;
 }
 
@@ -9101,7 +9145,7 @@ tile7(Monitor *m)
 			updateindexincontainer(container);
 		}
 
-        // 单屏使用
+        	// 单屏使用
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
 			// c->bw = 0;
@@ -9142,10 +9186,37 @@ tile7(Monitor *m)
 	// 	XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 	// 	updateborder(c);
 	// }
-
 	LOG_FORMAT("tile7 5");
 }
 
+void
+tile7_hide_other_in_container(const Arg *arg){
+	int i;
+	Client *c;
+	Container *container = selmon->sel->container;
+	if (container->cn > 1) {
+		if (container->hiddencn == 0) {
+			for (i=0;i<container->cn;i++) {
+				c = container->cs[i];
+				if (c && c!=selmon->sel && c->hidden == 0) {
+					c->hidden = 1;
+					container->hiddencn += 1;
+				}
+			}
+		}else {
+			for (i=0;i<container->cn;i++) {
+				c = container->cs[i];
+				c->hidden = 0;
+			}
+			container->hiddencn = 0;
+		}
+		arrange(selmon);
+	}
+}
+
+/**
+ * 纵向
+ */
 void
 container_layout_tile_v(Container *container)
 {
@@ -9172,8 +9243,13 @@ container_layout_tile_v(Container *container)
 		int slavew = container->w;
 		int masterh = container->h;
 		int slaveh = container->h;
-		int isvsplit = container->cn <= nmaster ? 0:1;
-		if(isvsplit) 
+		int ismastervsplit = container->cn > 1 ? 1:0;
+		if(ismastervsplit) 
+		{
+			masterh = container->h;
+		}
+		int isslavevsplit = container->cn > nmaster ? 1:0;
+		if(isslavevsplit) 
 		{
 			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
 			slaveh = container->h - masterh;
@@ -9185,11 +9261,15 @@ container_layout_tile_v(Container *container)
 		int slavenexty = 0;
 		int masternextx = 0;
 		int slavenextx = 0;
+		float vmasterfactor = 0.45;
+		int nextmasterw = container->w *(1-vmasterfactor)/(1-pow(vmasterfactor, MIN(container->cn, nmaster))) / vmasterfactor;
 		for (j = 0; j < container->cn; j++)
 		{
+			LOG_FORMAT("container_layout_tile 2 start");
 			int ismaster = j < nmaster ? 1:0;
 			c = container->cs[j];
-			c->w = ismaster ? masterw : slavew;
+			int my_masterw = nextmasterw * 0.45;
+			c->w = ismaster ? my_masterw : slavew;
 			c->h = ismaster ? masterh : slaveh;
 			c->y = container->y + (ismaster ? 0 : masterh);
 			c->x = container->x + (ismaster ? masternextx : slavenextx);
@@ -9209,8 +9289,10 @@ container_layout_tile_v(Container *container)
 			XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 			updateborder(c);
 
-			if(ismaster)
-				masternextx += masterw;
+			if(ismaster){
+				masternextx += my_masterw;
+				nextmasterw *= vmasterfactor;
+			}
 			else
 				slavenextx += slavew;
 			c->matcoor = container->matcoor;
@@ -9221,6 +9303,9 @@ container_layout_tile_v(Container *container)
 	
 }
 
+/**
+ * 横向
+ */
 void
 container_layout_tile(Container *container)
 {
@@ -11304,7 +11389,7 @@ fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int
 			int tcentery = ts[b].y + ts[b].h/2;
 			XY tcenterxy = {tcenterx, tcentery*stepw/steph};
 			int distance = distancexy(tcenterxy, targetxy);
-			totaldistance += distance * 0.01;
+			totaldistance += distance * 0.05;
 		}
 
 		items[a].score = totaldistance;
@@ -11897,6 +11982,7 @@ updatetitle(Client *c)
 {
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
 		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
+	if (c->name[255] != '\0') c->name[255] = '\0';
 	if (c->name[0] == '\0') /* hack to mark broken clients */
 		strcpy(c->name, broken);
 }
@@ -13019,7 +13105,37 @@ dismiss(const Arg *arg)
 {
 	
 }
+
+void
+i_move(const Arg *arg)
+{
+	if (selmon->lt[selmon->sellt]->arrange == tile5) {
+		tile5move(arg);
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		swap(arg);
+	}
+}
  
+void 
+i_focus(const Arg *arg)
+{
+
+}
+
+void 
+i_maxwindow(const Arg *arg)
+{
+	if (selmon->lt[selmon->sellt]->arrange == tile5) {
+		tile5maximize(arg);
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		tile7_hide_other_in_container(arg);
+	}
+}
+
 int
 main(int argc, char *argv[])
 {

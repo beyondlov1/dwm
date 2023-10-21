@@ -127,7 +127,7 @@ static const Rule subjrules[] = {
 static const float mfact     = 0.60; /* factor of master area size [0.05..0.95] */
 static const float factx     = 0.05; /* factor of master area size [0.05..0.95] */
 static const float facty     = 0.05; /* factor of master area size [0.05..0.95] */
-static const int nmaster     = 1;    /* number of clients in master area */
+static const int nmaster     = 2;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 
@@ -139,8 +139,8 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 #include "gapgridsortedneat.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	// { "[]=",      tile7 },
-	{ "[]=",      tile5 },
+	{ "[]=",      tile7 },
+	//{ "[]=",      tile5 },
 	{ "[M]",      monocle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "HHH",      gapgridsortedneat },
@@ -223,14 +223,14 @@ static Key keys[] = {
 	{ Mod1Mask,                       XK_n,      spawn,      { .v = notecurrwincmd } },
 
 	// for tile5
-	{ MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
-	{ MODKEY|ShiftMask,                       XK_Down,      tile5move,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_Up,      tile5move,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_Right,      tile5move,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_Left,      tile5move,       {.i = -1} },
+	// { MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
+	// { MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
+	// { MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
+	// { MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
+	// { MODKEY|ShiftMask,                       XK_Down,      tile5move,       {.i = -2} },
+	// { MODKEY|ShiftMask,                       XK_Up,      tile5move,       {.i = +2} },
+	// { MODKEY|ShiftMask,                       XK_Right,      tile5move,       {.i = +1} },
+	// { MODKEY|ShiftMask,                       XK_Left,      tile5move,       {.i = -1} },
 	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
@@ -371,7 +371,7 @@ static Key keys[] = {
 	{ 0,                       XK_Super_R,      toggleswitchers,      {0} },
 	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
 	// { MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
-	{ MODKEY,                       XK_grave,      tile5maximize,      {0} },
+	{ MODKEY,                       XK_grave,      i_maxwindow,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
@@ -379,7 +379,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
 	// { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	//{ MODKEY,                       XK_m,      setlayout,      {0} },
-	{ MODKEY,                       XK_m,      tile5maximize,      {0} },
+	{ MODKEY,                       XK_m,      i_maxwindow,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	// { MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
@@ -440,15 +440,6 @@ static Key keys[] = {
 
 static Key switcherkeys[] = {
 
-	// for tile5
-    { MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_k,      tile5move,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_l,      tile5move,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_h,      tile5move,       {.i = -1} },
-	{ MODKEY|ShiftMask,                       XK_Down,      tile5move,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_Up,      tile5move,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_Right,      tile5move,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_Left,      tile5move,       {.i = -1} },
 	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
@@ -490,7 +481,7 @@ static Key switcherkeys[] = {
 	{0, XF86XK_Tools, toggleswitchers, {0}},
 	{MODKEY, XK_Return, toggleswitchers, {0}},
 	// {MODKEY, XK_grave, tile6maximizewithsticky, {0}},
-	{MODKEY, XK_grave, tile5maximize, {0} },
+	{MODKEY, XK_grave, i_maxwindow, {0} },
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
 	{ MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
@@ -511,14 +502,14 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 
-	{ MODKEY|ShiftMask,                       XK_j,      swap,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_k,      swap,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_l,      swap,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_h,      swap,       {.i = -1} },
-	{ MODKEY|ShiftMask,                       XK_Down,      swap,       {.i = -2} },
-	{ MODKEY|ShiftMask,                       XK_Up,      swap,       {.i = +2} },
-	{ MODKEY|ShiftMask,                       XK_Right,      swap,       {.i = +1} },
-	{ MODKEY|ShiftMask,                       XK_Left,      swap,       {.i = -1} },
+	{ MODKEY|ShiftMask,                       XK_j,      i_move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_k,      i_move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_l,      i_move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_h,      i_move,       {.i = -1} },
+	{ MODKEY|ShiftMask,                       XK_Down,      i_move,       {.i = -2} },
+	{ MODKEY|ShiftMask,                       XK_Up,     i_move,       {.i = +2} },
+	{ MODKEY|ShiftMask,                       XK_Right,      i_move,       {.i = +1} },
+	{ MODKEY|ShiftMask,                       XK_Left,      i_move,       {.i = -1} },
 
     { MODKEY|ControlMask,                       XK_l,      expand,       {.f = 0.2} },
 	{ MODKEY|ControlMask,                       XK_h,      expand,       {.f = -0.2} },
@@ -555,7 +546,7 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_d,      doublepagemark,      {.v = &layouts[4]} },
-	{ MODKEY,                       XK_m,      tile5maximize,      {0} },
+	{ MODKEY,                       XK_m,      i_maxwindow,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },
