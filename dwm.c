@@ -153,6 +153,10 @@ struct Container {
 	int placed;
 	int x, y, w, h;
 	float masterfactor;
+	float masterfactorh;
+	float masterfactor_old;
+	float masterfactorh_old;
+	// 暂时没用
 	int hiddencn;
 	void (*arrange)(Container *container); 
 };
@@ -169,7 +173,9 @@ struct Client {
 	int hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed, hidden;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
+	// 暂时没用
+	int hidden;
 	int zlevel;
 	Client *next;
 	Client *snext;
@@ -620,11 +626,15 @@ static void switcherfactors_tag(float factor[],int minx[], int miny[], int tagsx
 static void pushorpull4(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[]);
 static void pushorpull5withforce(rect_t oldr, rect_t newr, rect_t ts[], int tsn, int tsi, int ts_cnt[],  float ts_force[][4]);
 
-static void tile7_hide_other_in_container(const Arg *arg);
+static void tile7maximize_approximate(const Arg *arg);
+static void tile7expandx(const Arg *arg);
+static void tile7expandy(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
 static void i_maxwindow(const Arg *arg);
+static void i_expandx(const Arg *arg);
+static void i_expandy(const Arg *arg);
 
 
 static void LOG(char *content,char *content2);
@@ -721,7 +731,7 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 1;
+static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -8902,6 +8912,7 @@ createcontainerc(Client *c)
 	container->cs[container->cn] = c;
 	container->cn ++;
 	container->masterfactor = 2.4;
+	container->masterfactorh = 2.4;
 	container->arrange = container_layout_tile_v;
 	/*container->arrange = container_layout_mosaic;*/
 	c->container = container;
@@ -9190,27 +9201,24 @@ tile7(Monitor *m)
 }
 
 void
-tile7_hide_other_in_container(const Arg *arg){
+tile7maximize_approximate(const Arg *arg){
 	int i;
 	Client *c;
 	Container *container = selmon->sel->container;
 	if (container->cn > 1) {
-		if (container->hiddencn == 0) {
-			for (i=0;i<container->cn;i++) {
-				c = container->cs[i];
-				if (c && c!=selmon->sel && c->hidden == 0) {
-					c->hidden = 1;
-					container->hiddencn += 1;
-				}
-			}
+		float masterfactor_max = 5;
+		float masterfactorh_max = 5;
+		if (container->masterfactor < masterfactor_max && container->masterfactorh < masterfactorh_max) {
+			container->masterfactor_old = container->masterfactor;
+			container->masterfactorh_old = container->masterfactorh;
+			container->masterfactor = masterfactor_max;
+			container->masterfactorh = masterfactorh_max;
 		}else {
-			for (i=0;i<container->cn;i++) {
-				c = container->cs[i];
-				c->hidden = 0;
-			}
-			container->hiddencn = 0;
+			container->masterfactor = container->masterfactor_old;
+			container->masterfactorh = container->masterfactorh_old;
 		}
 		arrange(selmon);
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
 	}
 }
 
@@ -9261,14 +9269,14 @@ container_layout_tile_v(Container *container)
 		int slavenexty = 0;
 		int masternextx = 0;
 		int slavenextx = 0;
-		float vmasterfactor = 0.45;
-		int nextmasterw = container->w *(1-vmasterfactor)/(1-pow(vmasterfactor, MIN(container->cn, nmaster))) / vmasterfactor;
+		float masterfactorh_slave = 1/container->masterfactorh;
+		int nextmasterw = container->w *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(container->cn, nmaster))) / masterfactorh_slave;
 		for (j = 0; j < container->cn; j++)
 		{
 			LOG_FORMAT("container_layout_tile 2 start");
 			int ismaster = j < nmaster ? 1:0;
 			c = container->cs[j];
-			int my_masterw = nextmasterw * 0.45;
+			int my_masterw = nextmasterw * masterfactorh_slave;
 			c->w = ismaster ? my_masterw : slavew;
 			c->h = ismaster ? masterh : slaveh;
 			c->y = container->y + (ismaster ? 0 : masterh);
@@ -9291,7 +9299,7 @@ container_layout_tile_v(Container *container)
 
 			if(ismaster){
 				masternextx += my_masterw;
-				nextmasterw *= vmasterfactor;
+				nextmasterw *= masterfactorh_slave;
 			}
 			else
 				slavenextx += slavew;
@@ -9496,9 +9504,22 @@ container_layout_mosaic(Container *container)
 	}
 }
 
+void
+tile7expandx(const Arg *arg)
+{
+	float incr = arg->f;
+	selmon->sel->container->masterfactorh += incr;
+	float minfactor = 0.3;
+	float maxfactor = 3.0;
+	if(selmon->sel->container->masterfactorh > maxfactor) selmon->sel->container->masterfactorh = maxfactor;
+	if(selmon->sel->container->masterfactorh < minfactor) selmon->sel->container->masterfactorh = minfactor;
+	arrange(selmon);
+	selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+}
+
 
 void
-expand(const Arg *arg)
+tile7expandy(const Arg *arg)
 {
 	float incr = arg->f;
 	selmon->sel->container->masterfactor += incr;
@@ -13125,6 +13146,28 @@ i_focus(const Arg *arg)
 }
 
 void 
+i_expandx(const Arg *arg)
+{
+	if (selmon->lt[selmon->sellt]->arrange == tile5) {
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		tile7expandx(arg);
+	}
+}
+
+void 
+i_expandy(const Arg *arg)
+{
+	if (selmon->lt[selmon->sellt]->arrange == tile5) {
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		tile7expandy(arg);
+	}
+}
+
+void 
 i_maxwindow(const Arg *arg)
 {
 	if (selmon->lt[selmon->sellt]->arrange == tile5) {
@@ -13132,7 +13175,7 @@ i_maxwindow(const Arg *arg)
 	}
 
 	if (selmon->lt[selmon->sellt]->arrange == tile7) {
-		tile7_hide_other_in_container(arg);
+		tile7maximize_approximate(arg);
 	}
 }
 
