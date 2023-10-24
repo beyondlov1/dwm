@@ -629,12 +629,14 @@ static void pushorpull5withforce(rect_t oldr, rect_t newr, rect_t ts[], int tsn,
 static void tile7maximize_approximate(const Arg *arg);
 static void tile7expandx(const Arg *arg);
 static void tile7expandy(const Arg *arg);
+static void tile7switchermovecontainer(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
 static void i_maxwindow(const Arg *arg);
 static void i_expandx(const Arg *arg);
 static void i_expandy(const Arg *arg);
+static void i_switcherfocuschange(const Arg *arg);
 
 
 static void LOG(char *content,char *content2);
@@ -708,6 +710,7 @@ static int switchercurtagindex;
 static float tile6initwinfactor = 1;
 static float lasttile6initwinfactor = 0.9;
 static int showstickyswitcher = 0;
+static int switchersticky_container_onlymaster = 0;
 static int global_client_id = 1;
 
 /* configuration, allows nested code to access above variables */
@@ -2304,8 +2307,11 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 	int n = 0;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
-		if (!c->isfloating)
-			n++;
+	{
+		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
+		n++;
+	}
 	if (n == 0)
 	{
 		drw_map(drw,win, 0, 0, ww, wh);
@@ -2317,6 +2323,7 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 	for (c = selmon->clients; c; c = c->next)
 	{
 		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
 		int x, y, w, h;
 		x = 0;
 		y = itemh * i;
@@ -2350,8 +2357,11 @@ sxy2clientxysticky(int rx, int ry)
 	int n = 0;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
-		if (!c->isfloating)
-			n++;
+	{
+		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
+		n++;
+	}
 
 	int ww = selmon->switcherstickyww;
 	int wh = selmon->switcherstickywh;
@@ -2361,6 +2371,7 @@ sxy2clientxysticky(int rx, int ry)
 	for (c = selmon->clients; c; c = c->next)
 	{
 		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
 		int x, y, w, h;
 		x = 0;
 		y = itemh * i;
@@ -2398,12 +2409,15 @@ clientswitchermoveverticalsticky(const Arg *arg)
 	int selindex = 0, n = 0;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
-		if (!c->isfloating)
-			n++;
+	{
+		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
+		n++;
+	}
 	for (c = selmon->clients; c; c = c->next)
 	{
-		if (c->isfloating)
-			continue;
+		if (c->isfloating) continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
 		if (selmon->sel == c) {
 			break;
 		}
@@ -2420,6 +2434,7 @@ clientswitchermoveverticalsticky(const Arg *arg)
 	{
 		if (c->isfloating)
 			continue;
+		if (switchersticky_container_onlymaster && selmon->lt[selmon->sellt]->arrange == tile7 && c != c->container->cs[0]) continue;
 		if (i == selindex) {
 			if(c->tags != selmon->tagset[selmon->seltags]) 
 				viewui(c->tags);
@@ -2933,6 +2948,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 			long curr = getcurrusec();
 			if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
+				LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
 				int timescale = 1000 * 1000 * 60;
 				// 归一化
 				float focusperiodfeat = 1.0 * log(1.0*(lastfocusperiod - minlastfocusperiod)/timescale + 1)/log(1.0*(maxlastfocusperiod - minlastfocusperiod)/timescale+ 1);
@@ -3714,6 +3730,8 @@ drawswitcher(Monitor *m)
 	if (wx > m->ww - m->switcherww) wx = m->ww - m->switcherww;
 	if (wy < bh) {
 		wy = bh;
+	}
+	if (wy < bh && m->switcherwh > (m->ww - bh)) {
 		m->switcherwh -= bh;
 	}
 	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
@@ -3879,6 +3897,33 @@ switchermove(const Arg *arg)
 		}
 	}
 	focusgrid5(arg);
+}
+
+void
+tile7switchermovecontainer(const Arg *arg)
+{
+	Client *c;
+	Client *targetc = selmon->sel;
+	Client *oldc = selmon->sel;
+	int i;
+	for(i=0;i<5;i++)
+	{
+		c = nextclosestc(arg);
+		if (c) {
+			if(c == selmon->sel) return;
+			focus(c);
+			if(c->container != targetc->container)
+				break;
+		}
+	}
+	if(c) focus(c->container->cs[0]);
+	arrange(selmon);
+	if(selmon->switcher)
+	{
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+		XMapWindow(dpy, selmon->switcher);
+		XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+	}
 }
 
 void
@@ -6109,6 +6154,7 @@ tile5cameramove(Arg *arg)
 void
 tile5viewcomplete(Arg *arg)
 {
+	if(selmon->lt[selmon->sellt]->arrange != tile5) return;
 	Client *c = selmon->sel;
 	int offsetx = 0;
 	int offsety = 0;
@@ -9079,11 +9125,13 @@ tile7(Monitor *m)
 	}
 	else 
 	{
-		for(i = 0;i<n;i++)
+		LOG_FORMAT("tile7 10");
+		for(i = 0;i<ctn;i++)
 		{
+			LOG_FORMAT("tile7 11");
 			container = tiledcs[i];
 			int neww = sc.w * tile6initwinfactor;
-			int newh = sc.h * tile6initwinfactor;
+			int newh = sc.h;
 			if(showstickyswitcher)
 				newh = sc.h;
 
@@ -9094,8 +9142,10 @@ tile7(Monitor *m)
 			}
 
 			rect_t r;
+			LOG_FORMAT("tile7 12");
 			int ok = 0;
 			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			LOG_FORMAT("tile7 13");
 			if(!ok)
 			{
 				r.x = (m->ww - neww) / 2;
@@ -9114,7 +9164,9 @@ tile7(Monitor *m)
 			ts[i].y = container->y;
 			ts[i].w = container->w;
 			ts[i].h = container->h;
+			LOG_FORMAT("tile7 14");
 		}
+		LOG_FORMAT("tile7 15");
 	}
 
 	LOG_FORMAT("tile7 3");
@@ -9206,8 +9258,8 @@ tile7maximize_approximate(const Arg *arg){
 	Client *c;
 	Container *container = selmon->sel->container;
 	if (container->cn > 1) {
-		float masterfactor_max = 5;
-		float masterfactorh_max = 5;
+		float masterfactor_max = 7;
+		float masterfactorh_max = 7;
 		if (container->masterfactor < masterfactor_max && container->masterfactorh < masterfactorh_max) {
 			container->masterfactor_old = container->masterfactor;
 			container->masterfactorh_old = container->masterfactorh;
@@ -11621,7 +11673,11 @@ unmanage(Client *c, int destroyed)
 		}
 	}
 
-	m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
+
+	if(m->switcher)
+		m->switcheraction.drawfunc(m->switcher, m->switcherww, m->switcherwh);
+	if(m->switcherstickywin)
+		m->switcherstickyaction.drawfunc(m->switcherstickywin, m->switcherstickyww, m->switcherstickywh);
 }
 
 void
@@ -13176,6 +13232,18 @@ i_maxwindow(const Arg *arg)
 
 	if (selmon->lt[selmon->sellt]->arrange == tile7) {
 		tile7maximize_approximate(arg);
+	}
+}
+
+void 
+i_switcherfocuschange(const Arg *arg)
+{
+	if (selmon->lt[selmon->sellt]->arrange == tile5) {
+		switchermove(arg);
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		switchermove(arg);
 	}
 }
 

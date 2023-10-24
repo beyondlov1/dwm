@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <title>remote layout</title>
+        <script src="./index.js"></script>
+    </head>
+    <body onload="init();">
+        <div class="container">
+            <canvas id="windowswitcher" width="1080" height="800"></canvas>
+            <div id="hotkeys">
+                <button onclick="F1()">F1</button>
+                <button onclick="fullscreen()" style="font-size:20px;" >fullscreen</button>
+                <button onclick="enter()" style="font-size:20px;">enter</button>
+                <button onclick="left()" style="width: 95px;height: 90px;">left</button>
+                <button onclick="right()" style="width: 95px;height: 90px;">right</button>
+                <button onclick="up()" >up</button>
+                <button onclick="down()">down</button>
+                
+            </div>
+        </div>
+        
+    </body>
+    <style type="text/css">
+        canvas {
+          border: 1px solid black;
+        }
+       
+        .container {
+            display: grid;
+            grid-template-columns: 13fr 200px;
+            grid-template-rows: auto;
+            grid-column-gap: 20px;
+            grid-row-gap: 20px;
+            justify-items: stretch;
+            align-items: stretch;
+        }
+
+        button {
+            font-size:20px;
+            width: 200px;
+            height: 90px;
+            margin-top: 20px;
+        }
+      </style>
+      
+</html>
