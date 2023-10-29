@@ -3731,7 +3731,7 @@ drawswitcher(Monitor *m)
 	if (wy < bh) {
 		wy = bh;
 	}
-	if (wy < bh && m->switcherwh > (m->ww - bh)) {
+	if (m->switcherwh > (m->wh - bh)) {
 		m->switcherwh -= bh;
 	}
 	if (wy > m->wh - m->switcherwh) wy = m->wh - m->switcherwh;
