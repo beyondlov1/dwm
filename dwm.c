@@ -159,6 +159,7 @@ struct Container {
 	// 暂时没用
 	int hiddencn;
 	void (*arrange)(Container *container); 
+	void (*oldarrange)(Container *container); 
 };
 struct Client {
 	int id;
@@ -3067,10 +3068,14 @@ sxy2client_tag(int rx, int ry)
 		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
 		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
 		{
-			found = c;
-			break;
+			LOG_FORMAT("sxy2client 3, c:%s, z:%d", c->name, c->zlevel);
+			if (!found) found =c;
+			else if (found->zlevel < c->zlevel) {
+				found = c;
+			}
 		}
 	}
+	if(found) LOG_FORMAT("sxy2client 2, foundname:%s", found->name);
 	return found;
 }
 
@@ -3286,7 +3291,7 @@ anglex(XY xy1, XY xy2)
 }
 
 int
-nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
+nextclosestanglexyz(const Arg *arg, int n, XY xys[], int curi, int zlevels[])
 {
 	int i;
 	int closest = -1;
@@ -3299,6 +3304,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i!=curi && xy.x < curxy.x)
 			{
 				int dist = anglex(xy, curxy);
+				/*if (min > dist || (min == dist && zlevels[i] > zlevels[closest])) {*/
 				if (min > dist) {
 					closest = i;
 					min = dist;
@@ -3315,6 +3321,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.x > curxy.x)
 			{
 				int dist = anglex(xy, curxy);
+				/*if (min > dist  || (min == dist && zlevels[i] > zlevels[closest]))*/
 				if (min > dist)
 				{
 					closest = i;
@@ -3333,6 +3340,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.y < curxy.y)
 			{
 				int dist = angley(xy, curxy);
+				/*if (min > dist  || (min == dist && zlevels[i] > zlevels[closest]))*/
 				if (min > dist)
 				{
 					closest = i;
@@ -3351,6 +3359,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 			if (i != curi && xy.y > curxy.y)
 			{
 				int dist = angley(xy, curxy);
+				/*if (min > dist || (min == dist && zlevels[i] > zlevels[closest]))*/
 				if (min > dist)
 				{
 					closest = i;
@@ -3362,6 +3371,16 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 	return closest;
 }
 
+
+
+int
+nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
+{
+	int zlevels[n];
+	memset(zlevels, 0, sizeof(zlevels));
+	return nextclosestanglexyz(arg, n, xys, curi, zlevels);
+}
+
 void 
 clientswitchermove_tag2(const Arg *arg)
 {
@@ -3371,13 +3390,14 @@ clientswitchermove_tag2(const Arg *arg)
 	{
 		if(!c->isfloating) n++;
 	}
-
 	int i=0;
 
 	XY cxys[n];
 	XY sxys[n];
 	int tagindexin[n];
 	int curi = 0;
+	int zlevels[n];
+	memset(zlevels, 0, sizeof(zlevels));
 	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
 		if(!c->isfloating){
@@ -3385,12 +3405,13 @@ clientswitchermove_tag2(const Arg *arg)
 			cxys[i].x = c->x + c->w/2;
 			cxys[i].y = c->y + c->h/2;
 			tagindexin[i] = gettagindex(c->tags);
+			zlevels[i] = c->zlevel;
 			i++;
 		}
 	}
 
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
-	int closest = nextclosestanglexy(arg, n, sxys, curi);
+	int closest = nextclosestanglexyz(arg, n, sxys, curi, zlevels);
 	if (closest < 0) return;
 	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
 	if (closestc) {
@@ -9252,6 +9273,7 @@ tile7(Monitor *m)
 	LOG_FORMAT("tile7 5");
 }
 
+
 void
 tile7maximize_approximate(const Arg *arg){
 	int i;
@@ -9268,6 +9290,55 @@ tile7maximize_approximate(const Arg *arg){
 		}else {
 			container->masterfactor = container->masterfactor_old;
 			container->masterfactorh = container->masterfactorh_old;
+		}
+		arrange(selmon);
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+	}
+}
+
+
+/**
+ * 全屏
+ */
+void
+container_layout_full(Container *container)
+{
+	Client *c;
+	int j;
+
+	for (j = 0; j < container->cn; j++)
+	{
+		c = container->cs[j];
+		c->x = container->x;
+		c->y = container->y;
+		c->w = container->w;
+		c->h = container->h;
+		c->matcoor = container->matcoor;
+		c->bw = 0;
+	}
+}
+
+void
+tile7maximize(const Arg *arg){
+	int j;
+	Client *c;
+	Container *container = selmon->sel->container;
+	if (container->cn > 1) {
+		if (container->arrange && container->arrange == container_layout_full && container->oldarrange) {
+			container->arrange = container->oldarrange;
+			for (j = 0; j < container->cn; j++)
+				container->cs[j]->zlevel = 0;
+		}else{
+			container->oldarrange = container->arrange;
+			container->arrange = container_layout_full;
+			for (j = 0; j < container->cn; j++)
+			{
+				if(selmon->sel == container->cs[j])
+					container->cs[j]->zlevel = 1;
+				else{
+					container->cs[j]->zlevel = 0;
+				}
+			}
 		}
 		arrange(selmon);
 		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
@@ -13231,7 +13302,8 @@ i_maxwindow(const Arg *arg)
 	}
 
 	if (selmon->lt[selmon->sellt]->arrange == tile7) {
-		tile7maximize_approximate(arg);
+		/*tile7maximize_approximate(arg);*/
+		tile7maximize(arg);
 	}
 }
 
