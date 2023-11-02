@@ -39,6 +39,7 @@ static const char *colors[][3] = {
 	[SchemeDoublePageMarked] = {col_gray2, col_cyan, "#ff9300"},
 	[SchemeSwitchPrepareMove] = {"#ff9300", "#ff9300", "#ff9300"},
 	[SchemeTiled] = {"#ff9300", col_gray1, col_gray2},
+	[SchemeFulled] = {"#33FF89", col_gray1, col_gray2},
 };
 
 static const int gradual_colors_count = 6;

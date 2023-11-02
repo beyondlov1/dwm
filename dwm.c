@@ -97,7 +97,7 @@ static FILE *actionlogfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked,SchemeSwitchPrepareMove, SchemeTiled}; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked,SchemeSwitchPrepareMove, SchemeTiled, SchemeFulled}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMIcon, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -631,6 +631,7 @@ static void tile7maximize_approximate(const Arg *arg);
 static void tile7expandx(const Arg *arg);
 static void tile7expandy(const Arg *arg);
 static void tile7switchermovecontainer(const Arg *arg);
+static void container_layout_full(Container *container);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -2984,13 +2985,14 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			if(h / 2 < th) th = h / 2;
 			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - th, tw, th, 0, c->class, 0);
 		}
+
 		int th = bh;
 		int tw = w;
-
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
+		
 		drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
 
 		if(strlen(c->note) > 0){
@@ -2999,11 +3001,17 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			drw_text(drw, x + w/2 - tw/2, y + 3 * h / 4, tw, th, 2, c->note, 0);
 		}
 
-		
+		Clr *oldscheme  = drw->scheme;
+		if(c->container->arrange == container_layout_full && c->container->cn > 1){
+			drw_setscheme(drw, scheme[SchemeFulled]);
+		}
+
 		drw_line(drw, x, y, x+w,y, 0);
 		drw_line(drw, x, y+h, x+w, y+h, 0);
 		drw_line(drw, x, y, x,y+h, 0);
 		drw_line(drw, x+w, y, x+w,y+h, 0);
+
+		drw_setscheme(drw, oldscheme);
 	}
 }
 
@@ -5245,7 +5253,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
-	// hidescratchgroup if needed (example: open app from terminal)
+	// hidescratchgroup if needed (example: open app from terminal)manage()
 	if(scratchgroupptr->isfloating && !isnexttemp)
 		hidescratchgroupv(scratchgroupptr, 0);
 
@@ -6016,16 +6024,20 @@ mergetocontainerof(Client *oldc, Client *chosenc){
 	freecontainerc(oldc->container, oldc);
 	oldc->container = chosenc->container;
 	oldc->container->cs[oldc->container->cn] = oldc;
-	if(oldc->x < chosenc->x){
-		int i;
-		for(i=0;i<oldc->container->cn;i++)
-		{
-			if(oldc->container->cs[i] == chosenc) break;
-		}
-		oldc->container->cs[oldc->container->cn] = chosenc;
-		oldc->container->cs[i] = oldc;
-	}
+	// 如果在左边,则交换, 把oldc放到chosen的位置
+	/*if(oldc->x < chosenc->x){*/
+		/*int i;*/
+		/*for(i=0;i<oldc->container->cn;i++)*/
+		/*{*/
+			/*if(oldc->container->cs[i] == chosenc) break;*/
+		/*}*/
+		/*oldc->container->cs[oldc->container->cn] = chosenc;*/
+		/*oldc->container->cs[i] = oldc;*/
+	/*}*/
 	oldc->container->cn ++;
+	if(chosenc->container->cn > 1 && chosenc->container->arrange == container_layout_full){
+		chosenc->container->arrange = chosenc->container->oldarrange;
+	}
 	LOG_FORMAT("mergetocontainerof 1");
 	updateindexincontainer(container1);
 	updateindexincontainer(container2);
@@ -7786,7 +7798,7 @@ void stsspawn(const Arg *arg){
 
 void 
 stispawn(const Arg *arg){
-	char workingdir[128] = "";
+	char workingdir[512] = "";
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
@@ -13300,10 +13312,29 @@ i_maxwindow(const Arg *arg)
 	if (selmon->lt[selmon->sellt]->arrange == tile5) {
 		tile5maximize(arg);
 	}
-
+	
 	if (selmon->lt[selmon->sellt]->arrange == tile7) {
-		/*tile7maximize_approximate(arg);*/
-		tile7maximize(arg);
+		float masterfactor_max = 7;
+		float masterfactorh_max = 7;
+		Container *container = selmon->sel->container;
+		if(selmon->sel == selmon->sel->container->cs[0]){
+			if(selmon->sel->container->arrange == container_layout_full){
+				tile7maximize(arg);
+				if (container->masterfactor < masterfactor_max && container->masterfactorh < masterfactorh_max) {
+					// do nothing
+				}else {
+					tile7maximize_approximate(arg);
+				}
+			}else if(selmon->sel->container->arrange != container_layout_full){
+				if (container->masterfactor < masterfactor_max && container->masterfactorh < masterfactorh_max) {
+					tile7maximize_approximate(arg);
+				}else {
+					tile7maximize(arg);
+				}
+			}
+		}else{
+			tile7maximize(arg);
+		}
 	}
 }
 
