@@ -156,6 +156,7 @@ struct Container {
 	float masterfactorh;
 	float masterfactor_old;
 	float masterfactorh_old;
+	int nmaster;
 	// 暂时没用
 	int hiddencn;
 	void (*arrange)(Container *container); 
@@ -8992,6 +8993,7 @@ createcontainerc(Client *c)
 	container->cn ++;
 	container->masterfactor = 2.4;
 	container->masterfactorh = 2.4;
+	container->nmaster = 2;
 	container->arrange = container_layout_tile_v;
 	/*container->arrange = container_layout_mosaic;*/
 	c->container = container;
@@ -9299,9 +9301,11 @@ tile7maximize_approximate(const Arg *arg){
 			container->masterfactorh_old = container->masterfactorh;
 			container->masterfactor = masterfactor_max;
 			container->masterfactorh = masterfactorh_max;
+			container->nmaster = 1;
 		}else {
 			container->masterfactor = container->masterfactor_old;
 			container->masterfactorh = container->masterfactorh_old;
+			container->nmaster = 2;
 		}
 		arrange(selmon);
 		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
@@ -9391,25 +9395,25 @@ container_layout_tile_v(Container *container)
 		{
 			masterh = container->h;
 		}
-		int isslavevsplit = container->cn > nmaster ? 1:0;
+		int isslavevsplit = container->cn > container->nmaster ? 1:0;
 		if(isslavevsplit) 
 		{
 			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
 			slaveh = container->h - masterh;
 		}
-		masterw = container->w / MIN(container->cn, nmaster);
-		slavew = container->w / MAX(1, container->cn - nmaster);
+		masterw = container->w / MIN(container->cn, container->nmaster);
+		slavew = container->w / MAX(1, container->cn - container->nmaster);
 
 		int masternexty = 0;
 		int slavenexty = 0;
 		int masternextx = 0;
 		int slavenextx = 0;
 		float masterfactorh_slave = 1/container->masterfactorh;
-		int nextmasterw = container->w *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(container->cn, nmaster))) / masterfactorh_slave;
+		int nextmasterw = container->w *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(container->cn, container->nmaster))) / masterfactorh_slave;
 		for (j = 0; j < container->cn; j++)
 		{
 			LOG_FORMAT("container_layout_tile 2 start");
-			int ismaster = j < nmaster ? 1:0;
+			int ismaster = j < container->nmaster ? 1:0;
 			c = container->cs[j];
 			int my_masterw = nextmasterw * masterfactorh_slave;
 			c->w = ismaster ? my_masterw : slavew;
@@ -9475,20 +9479,20 @@ container_layout_tile(Container *container)
 		int slavew = container->w;
 		int masterh = container->h;
 		int slaveh = container->h;
-		int ishsplit = container->cn <= nmaster ? 0:1;
+		int ishsplit = container->cn <= container->nmaster ? 0:1;
 		if(ishsplit) 
 		{
 			masterw = container->w * container->masterfactor/(container->masterfactor + 1);
 			slavew = container->w - masterw;
 		}
-		masterh = container->h / MIN(container->cn, nmaster);
-		slaveh = container->h / MAX(1, container->cn - nmaster);
+		masterh = container->h / MIN(container->cn, container->nmaster);
+		slaveh = container->h / MAX(1, container->cn - container->nmaster);
 
 		int masternexty = 0;
 		int slavenexty = 0;
 		for (j = 0; j < container->cn; j++)
 		{
-			int ismaster = j < nmaster ? 1:0;
+			int ismaster = j < container->nmaster ? 1:0;
 			c = container->cs[j];
 			c->w = ismaster ? masterw : slavew;
 			c->h = ismaster ? masterh : slaveh;
