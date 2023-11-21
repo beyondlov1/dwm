@@ -15,7 +15,7 @@ static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display 
 static const int showsystray        = 1;        /* 0 means no systray */
 static const int showbar            = 0;        /* 0 means no bar */
 static const int showborderwin      = 0;
-static const int showcornerwin      = 0;
+static const int showcornerwin      = 1;
 static const int topbar             = 0;        /* 0 means bottom bar */
 static const Bool viewontag         = True;     /* Switch view on tag switch */
 static const Bool managestubon         = False;     /* if total stub > screen stub(default 3); move new window to new tag */
@@ -128,7 +128,7 @@ static const Rule subjrules[] = {
 static const float mfact     = 0.60; /* factor of master area size [0.05..0.95] */
 static const float factx     = 0.05; /* factor of master area size [0.05..0.95] */
 static const float facty     = 0.05; /* factor of master area size [0.05..0.95] */
-static const int nmaster     = 2;    /* number of clients in master area (没什么用, 但是不能删, 有旧功能占用着) */
+static const int nmaster     = 1;    /* number of clients in master area (没什么用, 但是不能删, 有旧功能占用着) */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 
@@ -194,9 +194,12 @@ static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
 static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
 
 static const char *rofiscriptcmd[] = {"/home/beyond/software/rofiscript", NULL};
-static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NULL};
 static const char *notecurrwincmd[] = {"/home/beyond/software/notecurrwin.sh", NULL};
 static const char *ocrcmd[] = {"/home/beyond/software/ocr.sh", NULL};
+static const char *smartleftcmd[] = {"/home/beyond/software/smartleft.sh", NULL};
+static const char *smartrightcmd[] = {"/home/beyond/software/smartright.sh", NULL};
+static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NULL};
+static const char *smartrefreshcmd[] = {"/home/beyond/software/smartrefresh.sh", NULL};
 
 
 static const TaskGroup taskgroup1 = {
@@ -218,6 +221,9 @@ static Key keys[] = {
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
 
+	{ 0,                       XK_F1,      spawn,      { .v = smartclosecmd } },
+	{ 0,                       XK_F2,      spawn,      { .v = smartrefreshcmd } },
+	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
@@ -248,14 +254,14 @@ static Key keys[] = {
 	{ Mod1Mask,                       XK_minus,      tile5expand,       {.f=-0.1} },
 	{ MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
 	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
-	{ Mod1Mask,                       XK_grave,      tile5viewcomplete,       {0} },
+	// { Mod1Mask,                       XK_grave,      tile5viewcomplete,       {0} },
 	
 
 	{Mod1Mask,                       XK_q, spawn,          { .v = rofiwebsearchcmd } },
 	{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{ControlMask|Mod1Mask,			XK_g, tile6maximizewithsticky, {0}},
-	{ MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
+	// { MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_e, rispawn,          {.v = fmcmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
@@ -263,9 +269,9 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
-	// { MODKEY,                       XK_q, itspawn,          {.v = querybrowsercmd } },
+	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ ControlMask,                  XK_space, itspawn,          {.v = copyqcmd } },
-	{ MODKEY,                       XK_a, itspawn,          {.v = dictcmd } },
+	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
 	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
 	// { MODKEY,                       XK_i, sspawn,          {.v = notecmd } },
@@ -274,7 +280,7 @@ static Key keys[] = {
 	{ Mod1Mask,                       XK_p,      addtoscratchgroup,  {0 } },
 	{ Mod1Mask,                       XK_y,      removefromscratchgroup,  {0 } },
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
-	{ Mod1Mask,                       XK_grave,      togglescratchgroup,  {0} },
+	// { Mod1Mask,                       XK_grave,      togglescratchgroup,  {0} },
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 	// { MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
@@ -301,6 +307,15 @@ static Key keys[] = {
 	{MODKEY, XK_l, switchermove, {.i = 1}},
 	{MODKEY, XK_k, switchermove, {.i = 2}},
 	{MODKEY, XK_j, switchermove, {.i = -2}},
+
+	{Mod1Mask|ShiftMask, XK_Left, switchermove, {.i = -1}},
+	{Mod1Mask|ShiftMask, XK_Right, switchermove, {.i = 1}},
+	{Mod1Mask|ShiftMask, XK_Up, switchermove, {.i = 2}},
+	{Mod1Mask|ShiftMask, XK_Down, switchermove, {.i = -2}},
+	{Mod1Mask|ShiftMask, XK_h, switchermove, {.i = -1}},
+	{Mod1Mask|ShiftMask, XK_l, switchermove, {.i = 1}},
+	{Mod1Mask|ShiftMask, XK_k, switchermove, {.i = 2}},
+	{Mod1Mask|ShiftMask, XK_j, switchermove, {.i = -2}},
 
 	{ControlMask|Mod1Mask, XK_Left, tile7switchermovecontainer, {.i = -1}},
 	{ControlMask|Mod1Mask, XK_Right, tile7switchermovecontainer, {.i = 1}},
@@ -377,7 +392,6 @@ static Key keys[] = {
 	{ 0,                       XK_Super_R,      toggleswitchers,      {0} },
 	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
 	// { MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
-	{ MODKEY,                       XK_grave,      i_maxwindow,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	//{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
@@ -394,6 +408,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_space,  tile5toggleshift,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  tile5togglefloating, {0} },
+	{ Mod1Mask|ShiftMask,             XK_space,  tile5togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	// { MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
@@ -496,7 +511,7 @@ static Key switcherkeys[] = {
 	{MODKEY, XK_grave, i_maxwindow, {0} },
 
 	{ MODKEY,			XK_F2, killclientforce, {0}},
-	{ MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
+	// { MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
 	{ MODKEY,                       XK_e, rispawn,          {.v = fmcmd} },
 	{ MODKEY,                       XK_slash, spawn,          {.v = fmclipcmd} },
 	{ MODKEY,                       XK_equal, tile6zoom,          { .f = 0.1 } },
@@ -504,8 +519,8 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
-	// { MODKEY,                       XK_q, itspawn,          {.v = querybrowsercmd } },
-	{ MODKEY,                       XK_a, itspawn,          {.v = dictcmd } },
+	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
+	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
 	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
@@ -604,6 +619,9 @@ static Button buttons[] = {
 	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button3,        resizemouse,    {0} },
+	{ ClkClientWin,         0,              Button2,        spawn,    {.v = smartclosecmd} },
+	{ ClkClientWin,         Mod1Mask,              Button1,        spawn,    {.v = smartleftcmd} },
+	{ ClkClientWin,         Mod1Mask,              Button3,        spawn,    {.v = smartrightcmd} },
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },

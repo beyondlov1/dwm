@@ -50,7 +50,10 @@ httppost(char *url, char *params, struct HttpResponse *resp)
 		res = curl_easy_perform(curl);
 		/* Check for errors */
 		if(res != CURLE_OK)
+		{
+			curl_easy_cleanup(curl);
 			return 0;
+		}
 		curl_easy_cleanup(curl);
 		return 1;
 	}
@@ -79,7 +82,10 @@ httpget(char *url, struct HttpResponse *resp)
 		res = curl_easy_perform(curl);
 		/* Check for errors */
 		if(res != CURLE_OK)
+		{
+			curl_easy_cleanup(curl);
 			return 0;
+		}
 		curl_easy_cleanup(curl);
 	}
 	return 1;

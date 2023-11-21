@@ -232,7 +232,7 @@ struct SwitcherAction{
 	void (*drawfunc)(Window win, int ww, int wh);
 	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
-	Client *(*sxy2client)(int rx, int ry);
+	Client *(*sxy2client)(int rx, int ry, int include_floating);
 	void *(*pointerfunc)(int rx, int ry);
 	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[], int tagindexin[]);
 	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[], int tagindexout[]);
@@ -1259,11 +1259,31 @@ buttonpress(XEvent *e)
 	}else if(ev->window == selmon->switcher){
 		/*selmon->switcheraction.pointerfunc(ev->x, ev->y);*/
 		/*destroyswitcher(selmon);*/
+		if (ev->button == Button4 && CLEANMASK(ShiftMask|MODKEY) != CLEANMASK(ev->state)) {
+			Arg arg = {.i = -1};
+			switchermove(&arg);
+			return;
+		}
+		if (ev->button == Button5 && CLEANMASK(ShiftMask|MODKEY) != CLEANMASK(ev->state)) {
+			Arg arg = {.i = 1};
+			switchermove(&arg);
+			return;
+		}
+		if (ev->button == Button4 && CLEANMASK(ShiftMask|MODKEY) == CLEANMASK(ev->state)) {
+			Arg arg = {.i = 2};
+			switchermove(&arg);
+			return;
+		}
+		if (ev->button == Button5 && CLEANMASK(ShiftMask|MODKEY) == CLEANMASK(ev->state)) {
+			Arg arg = {.i = -2};
+			switchermove(&arg);
+			return;
+		}
 		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state)) movemouseswitcher(&arg);
 		else destroyswitcher(selmon);
 		return;
 	}else if(ev->window == selmon->switcherstickywin && ev->button == Button3){
-		Client *sc = selmon->switcherstickyaction.sxy2client(ev->x, ev->y);
+		Client *sc = selmon->switcherstickyaction.sxy2client(ev->x, ev->y, 0);
 		if (sc) {
 			killclientc(sc);
 			updateswitchersticky(selmon);
@@ -2355,7 +2375,7 @@ drawclientswitcherwinverticalsticky(Window win, int ww, int wh)
 
 
 Client *
-sxy2clientxysticky(int rx, int ry)
+sxy2clientxysticky(int rx, int ry, /*not used*/int include_floating)
 {
 	int n = 0;
 	Client *c;
@@ -2393,7 +2413,7 @@ clientswitcheractionverticalsticky(int rx, int ry)
 {
 	int ww = selmon->switcherstickyww;
 	int wh = selmon->switcherstickywh;
-	Client *c = sxy2clientxysticky(rx, ry);
+	Client *c = sxy2clientxysticky(rx, ry, 0);
 	if (!c) return;
 	if (selmon->sel && c == selmon->sel) return;
 	if(c->tags != selmon->tagset[selmon->seltags]) 
@@ -2464,7 +2484,7 @@ clientswitcheraction(int rx, int ry)
 	if (!selmon->switcher) return;
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	Client *c = selmon->switcheraction.sxy2client(rx, ry);
+	Client *c = selmon->switcheraction.sxy2client(rx, ry, 1);
 	if (c && c != selmon->sel) {
 		if(c->tags != selmon->tagset[selmon->seltags]) 
 			viewui(c->tags);
@@ -3062,7 +3082,7 @@ sxy2client_tag_all(int rx, int ry, Client *result[])
 
 
 Client *
-sxy2client_tag(int rx, int ry)
+sxy2client_tag(int rx, int ry, int include_floating)
 {
 	LOG_FORMAT("sxy2client 1, rx:%d,ry:%d", rx, ry);
 	XY sxys[] = {{rx, ry}};
@@ -3078,8 +3098,10 @@ sxy2client_tag(int rx, int ry)
 		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
 		{
 			LOG_FORMAT("sxy2client 3, c:%s, z:%d", c->name, c->zlevel);
+			// 不再选中floating client
+			if(!include_floating && c->isfloating) continue;
 			if (!found) found =c;
-			else if (found->zlevel < c->zlevel) {
+			else if (found->zlevel < c->zlevel ) {
 				found = c;
 			}
 		}
@@ -3267,7 +3289,7 @@ clientswitchermove_tag(const Arg *arg)
 	int closest = closest2/4;
 	/*int closest = nextclosestxy(arg, n, sxys, curi);*/
 	if (closest < 0) return;
-	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
+	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
 			viewui(closestc->tags);
@@ -3422,7 +3444,7 @@ clientswitchermove_tag2(const Arg *arg)
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
 	int closest = nextclosestanglexyz(arg, n, sxys, curi, zlevels);
 	if (closest < 0) return;
-	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y);
+	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
 			viewui(closestc->tags);
@@ -3532,7 +3554,7 @@ tile5switcherpointfunc(int sx, int sy)
 
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
-	Client *c = selmon->switcheraction.sxy2client(sx, sy);
+	Client *c = selmon->switcheraction.sxy2client(sx, sy, 1);
 	if (c && c != selmon->sel) {
 		if(c->tags != selmon->tagset[selmon->seltags]) 
 			viewui(c->tags);
@@ -5298,6 +5320,46 @@ manage(Window w, XWindowAttributes *wa)
 			}
 	 } else c->istemp = 0;
 
+	updateicon(c);
+	updateicons(c);
+	updatetitle(c);
+	updateclass(c);
+	updatenote(c);
+
+	LOG_FORMAT("manage 1");
+	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
+		c->mon = t->mon;
+		c->tags = t->tags;
+		c->nstub = 0;
+	} else {
+		c->mon = selmon;
+		applyrules(c);
+	}
+	LOG_FORMAT("manage 2");
+
+
+	if (c->istemp)
+	{
+		if (isispawn) {
+			c->isfloating = False;
+		}else {
+			c->isfloating = True;
+		}
+	}
+	if (!strcmp(c->name, scratchpadname)) {
+		c->isfloating = True;
+	}
+
+	if(!c->isfloating){
+		if(c->w * c->h < selmon->ww * selmon->wh / 2){
+			isispawn = 1;
+		}
+
+		if(strcmp(c->class, "St") == 0 && selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
+			isispawn = 1;
+		}
+	}
+
 	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N) {
 		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
@@ -5311,28 +5373,17 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 
-	updateicon(c);
-	updateicons(c);
-	updatetitle(c);
-	updateclass(c);
-	updatenote(c);
-
-
-	LOG_FORMAT("manage 1");
-	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
-		c->mon = t->mon;
-		c->tags = t->tags;
-		c->nstub = 0;
-	} else {
-		c->mon = selmon;
-		applyrules(c);
+	if (selmon->sel && strcmp(selmon->sel->class, "St") == 0 && strcmp(c->class, "St") != 0 && selmon->sel->container->cn > 1 && !c->isfloating) {
+		mergetocontainerof(selmon->sel, c);
+		c->container->masterfactor = 7;
 	}
-	LOG_FORMAT("manage 2");
 
+	// 浮动窗口固定在右下角
 	if (c->isfloating) {
 		c->x = c->mon->ww - c->w;
 		c->y = c->mon->wh - c->h;
 	}
+
 	LOG_FORMAT("manage 3");
 	if(!manageppidstick(c) && !isnextscratch && !isnexttemp) managestub(c);
 	if((selmon->tagset[selmon->seltags] & TAGMASK == TAGMASK) && (c->tags & TAGMASK) == TAGMASK) c->tags = 1; 
@@ -5353,12 +5404,10 @@ manage(Window w, XWindowAttributes *wa)
 		c->bw = borderpx;
 	}
 
+	
 	if (c->istemp)
 	{
-		if (isispawn) {
-			c->isfloating = False;
-		}else {
-			c->isfloating = True;
+		if (!isispawn) {
 			c->tags = TAGMASK;
 		}
 		c->w = c->mon->ww / 2.5;
@@ -5370,10 +5419,10 @@ manage(Window w, XWindowAttributes *wa)
 	selmon->tagset[selmon->seltags] &= ~scratchtag;
 	if (!strcmp(c->name, scratchpadname)) {
 		c->mon->tagset[c->mon->seltags] |= c->tags = scratchtag;
-		c->isfloating = True;
 		c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
 		c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
 	}
+	
 
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -6021,6 +6070,7 @@ mergetocontainerof(Client *oldc, Client *chosenc){
 	LOG_FORMAT("mergetocontainerof -1");
 	Container *container1 = oldc->container;
 	Container *container2 = chosenc->container;
+	if (container1 == container2) return;
 	LOG_FORMAT("mergetocontainerof 0");
 	freecontainerc(oldc->container, oldc);
 	oldc->container = chosenc->container;
@@ -6084,7 +6134,7 @@ pysmoveclient(Client *target, int sx, int sy)
 	XY centerxy = clientxy2centered_container(cxys[0]);
 	LOG_FORMAT("movemouseswitcher 0 centerxy:%d %d ", centerxy.x, centerxy.y);
 
-	Client *chosenc = selmon->switcheraction.sxy2client(sx, sy);
+	Client *chosenc = selmon->switcheraction.sxy2client(sx, sy, 0);
 	if (chosenc) {
 		LOG_FORMAT("movemouseswitcher c:%s", chosenc->name);
 		if (oldc) {
@@ -7799,7 +7849,8 @@ void stsspawn(const Arg *arg){
 
 void 
 stispawn(const Arg *arg){
-	char workingdir[512] = "";
+	char workingdir[512];
+	strcpy(workingdir, "~");
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
@@ -7807,8 +7858,14 @@ stispawn(const Arg *arg){
 		}
 	}
 	char *cmd[] = {"st","-d",workingdir,NULL};
-	const Arg a = {.v = cmd};
-	ispawn(&a);
+	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+b" , "key", "ctrl+b", NULL};
+	if(selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
+		const Arg a = {.v = cmd2};
+		ispawn(&a);
+	}else{
+		const Arg a = {.v = cmd};
+		ispawn(&a);
+	}
 }
 
 void reltag(const Arg *arg)
@@ -8960,7 +9017,11 @@ pyresort3(Container *cs[], int n, int resorted[])
 	resp.size = 0;
 	resp.code = CURLE_OK;
 	int ok = httppost(url,params, &resp);
-	if (!ok) return 0;
+	if (!ok) 
+	{
+		free(resp.content);
+		return 0;
+	}
 
 	int j = 0;
 	char *temp = strtok(resp.content,",");
@@ -8993,7 +9054,9 @@ createcontainerc(Client *c)
 	container->cn ++;
 	container->masterfactor = 2.4;
 	container->masterfactorh = 2.4;
-	container->nmaster = 2;
+	container->masterfactor_old = 2.4;
+	container->masterfactorh_old = 2.4;
+	container->nmaster = nmaster;
 	container->arrange = container_layout_tile_v;
 	/*container->arrange = container_layout_mosaic;*/
 	c->container = container;
@@ -9253,6 +9316,18 @@ tile7(Monitor *m)
 			/*c->placed = 1;*/
 		}
 
+		for (c = m->clients; c; c = c->next)
+		{
+			if(c->isfloating) 
+			{
+				if(c->x < selmon->wx) c->x = selmon->wx;
+				if(c->x + c->w > selmon->wx + selmon->ww) c->x = selmon->wx + selmon->ww - c->w;
+				if(c->y < selmon->wy) c->y = selmon->wy;
+				if(c->y + c->h > selmon->wy + selmon->wh) c->y = selmon->wy  + selmon->wh - c->h;
+				resizeclient(c, c->x, c->y, c->w, c->h);
+			}
+		}
+
 
 		// 多屏兼容
 		// for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
@@ -9305,7 +9380,7 @@ tile7maximize_approximate(const Arg *arg){
 		}else {
 			container->masterfactor = container->masterfactor_old;
 			container->masterfactorh = container->masterfactorh_old;
-			container->nmaster = 2;
+			container->nmaster = nmaster;
 		}
 		arrange(selmon);
 		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
@@ -9413,6 +9488,7 @@ container_layout_tile_v(Container *container)
 		for (j = 0; j < container->cn; j++)
 		{
 			LOG_FORMAT("container_layout_tile 2 start");
+			LOG_FORMAT("container_layout_tile 2 %f,%d", masterfactorh_slave, nextmasterw);
 			int ismaster = j < container->nmaster ? 1:0;
 			c = container->cs[j];
 			int my_masterw = nextmasterw * masterfactorh_slave;
@@ -10528,13 +10604,45 @@ togglefloating(const Arg *arg)
 void
 tile5togglefloating(const Arg *arg)
 {
-	if (!selmon->sel)
+	Client *cc = selmon->sel;
+	if (!cc)
 		return;
-	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
+	if (cc->isfullscreen) /* no support for fullscreen windows */
 		return;
-	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
-	if (selmon->sel->isfloating) selmon->sel->zlevel = 1;
-	if (!selmon->sel->isfloating) selmon->sel->zlevel = 0;
+
+	Client *c;
+	Container *container;
+	for(c=selmon->clients;c;c=c->next)
+	{
+		if(c->isfloating) 
+		{
+			cc = c;
+			break;
+		}
+	}
+	if(cc->isfloating){
+		if(selmon->lt[selmon->sellt]->arrange == tile7){
+			for(c=nexttiled(selmon->clients);c;c=nexttiled(c->next))
+			{
+				if(c == cc) continue;
+				container = c->container;
+				if(cc->x > container->x && cc->x < container->x + container->w
+					&& cc->y > container->y && cc->y < container->y + container->h)
+				{
+					mergetocontainerof(cc, c);
+					break;
+				}
+			}
+		}
+		cc->zlevel = 0;
+		cc->isfloating = 0;
+	}else{
+		if(selmon->lt[selmon->sellt]->arrange == tile7){
+			separatefromcontainer(cc);
+		}
+		cc->zlevel = 1;
+		cc->isfloating = 1;
+	}
 	arrange(selmon);
 }
 
@@ -13337,7 +13445,11 @@ i_maxwindow(const Arg *arg)
 				}
 			}
 		}else{
-			tile7maximize(arg);
+			if (container->masterfactor >= masterfactor_max || container->masterfactorh  >= masterfactorh_max) {
+				tile7maximize_approximate(arg);
+			}else {
+				tile7maximize(arg);
+			}
 		}
 	}
 }
