@@ -200,6 +200,13 @@ static const char *smartleftcmd[] = {"/home/beyond/software/smartleft.sh", NULL}
 static const char *smartrightcmd[] = {"/home/beyond/software/smartright.sh", NULL};
 static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NULL};
 static const char *smartrefreshcmd[] = {"/home/beyond/software/smartrefresh.sh", NULL};
+static const char *highlightcmd[] = {"/home/beyond/software/smartdispatch.sh", "highlight", NULL};
+static const char *searchwordcmd[] = {"/home/beyond/software/smartdispatch.sh", "searchword", NULL};
+
+//static const char *smartleftcmd[] = {"/home/beyond/software/smartdispatch.sh", "smartleft", NULL};
+//static const char *smartrightcmd[] = {"/home/beyond/software/smartdispatch.sh", "smartright", NULL};
+//static const char *smartupcmd[] = {"/home/beyond/software/smartdispatch.sh", "smartup", NULL};
+//static const char *smartdowncmd[] = {"/home/beyond/software/smartdispatch.sh", "smartdown", NULL};
 
 
 static const TaskGroup taskgroup1 = {
@@ -220,9 +227,13 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
+	
 
-	{ 0,                       XK_F1,      spawn,      { .v = smartclosecmd } },
-	{ 0,                       XK_F2,      spawn,      { .v = smartrefreshcmd } },
+	//{ 0,                       XK_F1,      spawn,      { .v = smartclosecmd } },
+	//{ 0,                       XK_F2,      spawn,      { .v = smartrefreshcmd } },
+	//{ 0,                       XK_F3,      spawn,      { .v = searchwordcmd } },
+	//{ 0,                       XK_F4,      spawn,      { .v = highlightcmd } },
 	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
@@ -390,7 +401,6 @@ static Key keys[] = {
 	//{ 0,                       XK_Super_L,      empty,      {0} },
 	{ 0,                       XK_Super_L,      toggleswitchers,      {0} },
 	{ 0,                       XK_Super_R,      toggleswitchers,      {0} },
-	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
 	// { MODKEY,                       XK_grave,      tile6maximizewithsticky,      {0} },
 	{ MODKEY,                       XK_F1,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
@@ -620,8 +630,6 @@ static Button buttons[] = {
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button3,        resizemouse,    {0} },
 	{ ClkClientWin,         0,              Button2,        spawn,    {.v = smartclosecmd} },
-	{ ClkClientWin,         Mod1Mask,              Button1,        spawn,    {.v = smartleftcmd} },
-	{ ClkClientWin,         Mod1Mask,              Button3,        spawn,    {.v = smartrightcmd} },
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
