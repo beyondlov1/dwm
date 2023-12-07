@@ -33,6 +33,7 @@
 依赖:
 ```
 sudo apt install libxft-dev libxinerama-dev libimlib2-dev
+sudo apt-get install yajl-tools  libyajl-dev
 
 少包到  
 https://packages.ubuntu.com/search?mode=exactfilename&suite=focal&section=all&arch=any&keywords=X11%2Fextensions%2FXinerama.h&searchon=contents
