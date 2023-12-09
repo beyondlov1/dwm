@@ -387,6 +387,7 @@ struct TaskGroupItem
 	char titlepattern[256];
 	char **cmd;
 	unsigned int tag;
+	int group_id;
 
 	char cmdbuf[256];
 	regex_t *classregx;
@@ -1311,7 +1312,8 @@ buttonpress(XEvent *e)
 			switchermove(&arg);
 			return;
 		}
-		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state)) movemouseswitcher(&arg);
+		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state) && ev->button == Button1) movemouseswitcher(&arg);
+		else if(CLEANMASK(MODKEY) == CLEANMASK(ev->state) && ev->button == Button3) movemouseswitcher(&arg);
 		else destroyswitcher(selmon);
 		return;
 	}else if(ev->window == selmon->switcherstickywin && ev->button == Button3){
@@ -5044,11 +5046,50 @@ killclientc(Client* c)
 	}
 }
 
+int 
+KillClientCmp(const void *a,const void *b)
+{
+	Client *c = *((Client **)a); 
+	Client *d = *((Client **)b); 
+	if(c->isfloating - d->isfloating == 0){
+		if(c->zlevel - d->zlevel == 0){
+			return d->id - c->id;
+		}else{
+			return d->zlevel - c->zlevel;
+		}
+	}else{
+		return d->isfloating - c->isfloating;
+	}
+}
 
 void
 killclient(const Arg *arg)
 {
-	killclientc(selmon->sel);
+	Client *cc = selmon->sel;
+	if(!cc) return;
+
+	Client *c;
+	int px;
+	int py;
+	getrootptr(&px, &py);
+	if(cc->x < px && cc->x+cc->w > px && cc->y < py && cc->y + cc->h > py)
+		killclientc(selmon->sel);
+	else{
+		int n = 0;
+		for (c = selmon->clients; c; c = c->next) n++;
+		Client *cs[n];
+		int i;
+		for (i = 0,c = selmon->clients; c; i++, c = c->next) cs[i] = c;
+		qsort(cs, n, sizeof(Client *),  KillClientCmp);
+		for (i = 0; i < n; i++)
+		{
+			c = cs[i];
+			if(c->x < px && c->x+c->w > px && c->y < py && c->y + cc->h > py){
+				killclientc(c);
+				return;
+			}
+		}
+	}
 }
 
 void
@@ -5523,6 +5564,7 @@ manage(Window w, XWindowAttributes *wa)
 	XMapWindow(dpy, c->win);
 	XRaiseWindow(dpy,c->win);
 	focus(c);
+	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
 	// centertocamera(c->x + c->w/2, c->y + c->h/2);
 	tile5viewcomplete(0);
 
@@ -6075,6 +6117,11 @@ separatefromcontainerx(Client *oldc, Container *result[]){
 	if (oldc->indexincontainer < 0) {
 		return;
 	}
+	if (oldc->container->cn <= 1)
+	{
+		return;
+	}
+	
 	Container *oldcontainer = oldc->container;
 	Container *newcontainer = NULL;
 	Client *newc = NULL;
@@ -6095,7 +6142,7 @@ separatefromcontainerx(Client *oldc, Container *result[]){
 			Client *c = oldcontainer->cs[i];
 			if(c == oldc) continue;
 			removeclientfromcontainer(oldcontainer, c);
-			mergetocontainerof(newc, c);
+			mergetocontainerof(c, newc);
 		}
 	}else{
 		removeclientfromcontainer(oldcontainer, oldc);
@@ -6120,31 +6167,31 @@ separatefromcontainer(Client *oldc)
 }
 
 void 
-mergetocontainerof(Client *oldc, Client *chosenc){
-	LOG_FORMAT("mergetocontainerof -2, cn:%d", chosenc->container->cn);
-	if(chosenc->container->cn >= CONTAINER_MAX_N) return;
-	if(chosenc == oldc) return;
+mergetocontainerof(Client *fromc, Client *toc){
+	LOG_FORMAT("mergetocontainerof -2, cn:%d", toc->container->cn);
+	if(toc->container->cn >= CONTAINER_MAX_N) return;
+	if(toc == fromc) return;
 	LOG_FORMAT("mergetocontainerof -1");
-	Container *container1 = oldc->container;
-	Container *container2 = chosenc->container;
+	Container *container1 = fromc->container;
+	Container *container2 = toc->container;
 	if (container1 == container2) return;
 	LOG_FORMAT("mergetocontainerof 0");
-	freecontainerc(oldc->container, oldc);
-	oldc->container = chosenc->container;
-	oldc->container->cs[oldc->container->cn] = oldc;
-	// 如果在左边,则交换, 把oldc放到chosen的位置
-	/*if(oldc->x < chosenc->x){*/
+	freecontainerc(fromc->container, fromc);
+	fromc->container = toc->container;
+	fromc->container->cs[fromc->container->cn] = fromc;
+	// 如果在左边,则交换, 把fromc放到chosen的位置
+	/*if(fromc->x < toc->x){*/
 		/*int i;*/
-		/*for(i=0;i<oldc->container->cn;i++)*/
+		/*for(i=0;i<fromc->container->cn;i++)*/
 		/*{*/
-			/*if(oldc->container->cs[i] == chosenc) break;*/
+			/*if(fromc->container->cs[i] == toc) break;*/
 		/*}*/
-		/*oldc->container->cs[oldc->container->cn] = chosenc;*/
-		/*oldc->container->cs[i] = oldc;*/
+		/*fromc->container->cs[fromc->container->cn] = toc;*/
+		/*fromc->container->cs[i] = fromc;*/
 	/*}*/
-	oldc->container->cn ++;
-	if(chosenc->container->cn > 1 && chosenc->container->arrange == container_layout_full){
-		chosenc->container->arrange = chosenc->container->oldarrange;
+	fromc->container->cn ++;
+	if(toc->container->cn > 1 && toc->container->arrange == container_layout_full){
+		toc->container->arrange = toc->container->oldarrange;
 	}
 	LOG_FORMAT("mergetocontainerof 1");
 	updateindexincontainer(container1);
@@ -13407,23 +13454,14 @@ matchstr(char *pattern, char *target, regex_t **regptr)
 int
 match(Client *c,TaskGroupItem *item)
 {
-	XClassHint ch = { NULL, NULL };
-
-	XGetClassHint(dpy, c->win, &ch);
-	char *class    = ch.res_class ? ch.res_class : broken;
-	char *instance = ch.res_name  ? ch.res_name  : broken;
+	char *class    = c->class;
+	char *name = c->name;
 	
 	if (matchstr(item->classpattern, class, &item->classregx)) {
-		if (matchstr(item->titlepattern, c->name, &item->titleregx)) {
+		if (matchstr(item->titlepattern, name, &item->titleregx)) {
 			return 1;
 		}
 	}
-
-	if (ch.res_class)
-		XFree(ch.res_class);
-	if (ch.res_name)
-		XFree(ch.res_name);
-
 	return 0;
 }
 
@@ -13435,24 +13473,25 @@ int readtaskgroup(char *path,TaskGroup *taskgroup)
 	return 1;
     }
 
-    char row[256];
+    char row[512];
     char *token;
 
     int i=0;
-    while (fgets(row, 256, fp) != NULL) {
+    while (fgets(row, 512, fp) != NULL) {
         LOG_FORMAT("Row: %s", row);
         token = strtok(row, "	"); 
-	int j = 0;
-        while (token != NULL) {
-		if(j == 0) strcpy(taskgroup->items[i].classpattern,token);
-		if(j == 1) strcpy(taskgroup->items[i].titlepattern,token);
-		if(j == 2) strcpy(taskgroup->items[i].cmdbuf,token);
-		if(j == 3) taskgroup->items[i].tag = 1 << atoi(token);
-	    LOG_FORMAT("Token: %s", token);
-	    token = strtok(NULL, "	");
-	    j++;
-        }
-	i++;
+		int j = 0;
+		while (token != NULL) {
+			if(j == 0) strcpy(taskgroup->items[i].classpattern,token);
+			if(j == 1) strcpy(taskgroup->items[i].titlepattern,token);
+			if(j == 2) strcpy(taskgroup->items[i].cmdbuf,token);
+			if(j == 3) taskgroup->items[i].tag = 1 << atoi(token);
+			if(j == 4) taskgroup->items[i].group_id = atoi(token);
+			LOG_FORMAT("Token: %s", token);
+			token = strtok(NULL, "	");
+			j++;
+		}
+		i++;
     }
 	LOG_FORMAT("Token: %p %s ", taskgroup, taskgroup->items[0].titlepattern);
 
@@ -13478,6 +13517,7 @@ assemble(const Arg *arg)
 		strcpy(taskgroupv.items[i].titlepattern , taskgrouparg->items[i].titlepattern);
 		taskgroupv.items[i].cmd = taskgrouparg->items[i].cmd;
 		taskgroupv.items[i].tag = taskgrouparg->items[i].tag;
+		taskgroupv.items[i].group_id = taskgrouparg->items[i].group_id;
 		memcpy(taskgroupv.items[i].cmdbuf , taskgrouparg->items[i].cmdbuf, sizeof(taskgrouparg->items[i].cmdbuf));
 	}
 	taskgroupv.n = n;
@@ -13496,30 +13536,61 @@ assemble(const Arg *arg)
 			}
 		}
 	}
-	for(i = 0;i<taskgroupv.n;i++)
-	{
-		item = &(taskgroupv.items[i]);
-		if (item->c) {
-			item->c->tags = item->tag;
-			if (item->tag) {
-				Arg argview = {.i = item->tag};
-				view(&argview);
+
+	if (selmon->lt[selmon->sellt]->arrange == tile7){
+		Client *lastc = NULL;
+		Client *firstc = NULL;
+		TaskGroupItem *lastitem = NULL;
+		for(i = 0;i<taskgroupv.n;i++)
+		{
+			item = &(taskgroupv.items[i]);
+			if (item->c) {
+				if (lastitem && item->group_id == lastitem->group_id){
+					mergetocontainerof(item->c,lastc);
+					LOG_FORMAT("merge %s %d %d", item->c->name, item->group_id, lastitem->group_id);
+				}else{
+					separatefromcontainer(item->c);
+				}
+				lastc = item->c;
+				lastitem = item;
+			}else{
+				if (item->cmdbuf) {
+					Arg argspawn = SHCMD(item->cmdbuf);
+					spawn(&argspawn);
+				}
+				if (item->cmd) {
+					Arg argspawn ={.v=item->cmd};
+					spawn(&argspawn);
+				}
 			}
-		}else{
-			if (item->tag) {
-				Arg argview = {.i = item->tag};
-				view(&argview);
-			}
-			if (item->cmdbuf) {
-				Arg argspawn = SHCMD(item->cmdbuf);
-				spawn(&argspawn);
-			}
-			if (item->cmd) {
-				Arg argspawn ={.v=item->cmd};
-				spawn(&argspawn);
+		}
+	}else{
+		for(i = 0;i<taskgroupv.n;i++)
+		{
+			item = &(taskgroupv.items[i]);
+			if (item->c) {
+				item->c->tags = item->tag;
+				if (item->tag) {
+					Arg argview = {.i = item->tag};
+					view(&argview);
+				}
+			}else{
+				if (item->tag) {
+					Arg argview = {.i = item->tag};
+					view(&argview);
+				}
+				if (item->cmdbuf) {
+					Arg argspawn = SHCMD(item->cmdbuf);
+					spawn(&argspawn);
+				}
+				if (item->cmd) {
+					Arg argspawn ={.v=item->cmd};
+					spawn(&argspawn);
+				}
 			}
 		}
 	}
+	
 	focus(NULL);
 	arrange(selmon);
 }

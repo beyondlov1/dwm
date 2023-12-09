@@ -37,6 +37,7 @@ dump_client(yajl_gen gen, Client *c)
     YSTR("tags"); YINT(c->tags);
     YSTR("window_id"); YINT(c->win);
     YSTR("monitor_number"); YINT(c->mon->num);
+    YSTR("container_id"); YINT(c->container->id);
 
     YSTR("geometry"); YMAP(
       YSTR("current"); YMAP (
