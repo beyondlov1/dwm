@@ -201,8 +201,70 @@ mmax(int num, ...)
 	return result;
 }
 
+
+struct Client{
+	int i;
+	struct Client *next;
+};
+typedef struct Client Client ;
+
 int main(int argc, char const *argv[])
 {
+
+	Client fcp;
+	Client fc;
+	Client scp;
+	Client sc;
+	fcp.i = 1;
+	fcp.next = NULL;
+	fc.i = 2;
+	fc.next = NULL;
+	scp.i = 3;
+	scp.next = NULL;
+	sc.i = 4;
+	sc.next = NULL;
+
+
+	fcp.next = &fc;
+	scp.next = &sc;
+	fc.next = &scp;
+
+	/*fcp.next = &fc;*/
+	/*fc.next = &sc;*/
+
+	Client *fcpa = &fcp;
+	Client *fca = &fc;
+	Client *scpa = &scp;
+	Client *sca = &sc;
+
+	Client *tmp;
+	Client **pp1;
+	Client **pp2;
+	pp1 = &(fcpa->next);
+	pp2 = &(scpa->next);
+	(*pp1)->i;
+	/*printf("%d", (*pp1)->i);*/
+	tmp = *pp1;
+	*pp1 = *pp2;
+	*pp2 = tmp;
+
+	pp1 = &(fca->next);
+	pp2 = &(sca->next);
+	tmp = *pp1;
+	*pp1 = *pp2;
+	*pp2 = tmp;
+
+	Client head;
+	head.i = 0;
+	head.next = fcpa;
+	Client *tmp1 = &head;
+	while (tmp1) {
+		printf("%d", tmp1->i);
+		tmp1 = tmp1->next;
+	}
+
+	printf("\n");
+	
 
 	double coln = sqrt(4);
 	printf("%d",coln == (int)coln);

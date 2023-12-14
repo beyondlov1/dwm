@@ -189,7 +189,7 @@ struct Client {
 	int hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed, isdialog;
 	// 暂时没用
 	int hidden;
 	int zlevel;
@@ -658,6 +658,9 @@ static void tile7expandy(const Arg *arg);
 static void tile7switchermovecontainer(const Arg *arg);
 static void container_layout_full(Container *container);
 static void setcontainerlayout(const Arg *arg);
+static int tile7swapclientx(Client *c1, Client *c2);
+static void tile7swapclient(Client *c1, Client *c2);
+static void tile7makemaster(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -1313,7 +1316,10 @@ buttonpress(XEvent *e)
 			return;
 		}
 		if(CLEANMASK(MODKEY) == CLEANMASK(ev->state) && ev->button == Button1) movemouseswitcher(&arg);
-		else if(CLEANMASK(MODKEY) == CLEANMASK(ev->state) && ev->button == Button3) movemouseswitcher(&arg);
+		else if(CLEANMASK(MODKEY) == CLEANMASK(ev->state) && ev->button == Button3){
+			if(selmon->sel)
+				tile7swapclient(selmon->sel, selmon->sel->container->cs[0]);
+		}
 		else destroyswitcher(selmon);
 		return;
 	}else if(ev->window == selmon->switcherstickywin && ev->button == Button3){
@@ -4631,6 +4637,7 @@ focusgrid5(const Arg *arg)
 	}
 }
 
+// manage时还未attach, 所以不能在manage中使用
 void 
 swapclient(Client *c1, Client *c2, Monitor *m)
 {
@@ -4639,6 +4646,10 @@ swapclient(Client *c1, Client *c2, Monitor *m)
 	Client *c;
 	Client head;
 	head.next = m->clients;
+
+	for(c = m->clients; c; c = c->next){
+		LOG_FORMAT("swapclient2: %s", c->name);
+	}
 
 	// 排序, fc为第一个, sc为第二个
 	Client *fc;
@@ -4658,7 +4669,7 @@ swapclient(Client *c1, Client *c2, Monitor *m)
 
 	Client *fcp = &head;
 	Client *scp = &head;
-	for(c = m->clients; c; c = c->next){
+	for(c = &head; c; c = c->next){
 		if(c->next == fc){
 			fcp = c;
 		}
@@ -4667,16 +4678,47 @@ swapclient(Client *c1, Client *c2, Monitor *m)
 		}
 	}
 
-	Client *tmp;
-	tmp = fcp->next;
-	fcp->next = scp->next;
-	scp->next = tmp;
+	LOG_FORMAT("swapclient3: %s", fcp->name);
+	LOG_FORMAT("swapclient3: %s", fc->name);
+	LOG_FORMAT("swapclient3: %s", scp->name);
+	LOG_FORMAT("swapclient3: %s", sc->name);
 
-	tmp = fc->next;
-	fc->next = sc->next;
-	sc->next = tmp;
+
+	/*Client *fcnext;*/
+	/*Client *scnext;*/
+	/*fcnext = fc->next;*/
+	/*scnext = sc->next;*/
+	/*fcp->next = sc;*/
+	/*sc->next = fcnext;*/
+	/*scp->next = fc;*/
+	/*fc->next = scnext;*/
+
+	Client *tmp;
+	Client **pp1;
+	Client **pp2;
+	pp1 = &(fcp->next);
+	pp2 = &(scp->next);
+	tmp = *pp1;
+	*pp1 = *pp2;
+	*pp2 = tmp;
+
+	pp1 = &(fc->next);
+	pp2 = &(sc->next);
+	tmp = *pp1;
+	*pp1 = *pp2;
+	*pp2 = tmp;
+
+
+	for(c = m->clients; c; c = c->next){
+		LOG_FORMAT("swapclient1: %s", c->name);
+	}
 
 	m->clients = head.next;
+
+	
+	for(c = m->clients; c; c = c->next){
+		LOG_FORMAT("swapclient: %s", c->name);
+	}
 }
 
 void
@@ -5403,6 +5445,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->custom_oldw = c->custom_oldh = 0;
 	c->lastfocustime = 0;
 	c->hidden = 0;
+	c->isdialog = 0;
+	c->nstub = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -5423,6 +5467,11 @@ manage(Window w, XWindowAttributes *wa)
 	updatetitle(c);
 	updateclass(c);
 	updatenote(c);
+
+	// 根据window信息设置c	
+	updatewindowtype(c);
+	updatesizehints(c);
+	updatewmhints(c);
 
 	LOG_FORMAT("manage 1");
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
@@ -5458,7 +5507,7 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 
-	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N) {
+	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N && !c->isfloating) {
 		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
@@ -5476,8 +5525,15 @@ manage(Window w, XWindowAttributes *wa)
 		c->container->masterfactor = 7;
 	}
 
+	// if c stub>sel stub, sel stub is master -> c to master
+	if(selmon->sel && c->nstub > selmon->sel->nstub && selmon->sel->container == c->container 
+	&& selmon->sel->indexincontainer < selmon->sel->container->nmaster
+	&& c->indexincontainer >= c->container->nmaster){
+		tile7swapclientx(c, selmon->sel);
+	}
+
 	// 浮动窗口固定在右下角
-	if (c->isfloating) {
+	if (c->isfloating && !c->isdialog) {
 		c->x = c->mon->ww - c->w;
 		c->y = c->mon->wh - c->h;
 	}
@@ -5521,14 +5577,11 @@ manage(Window w, XWindowAttributes *wa)
 		c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
 	}
 	
-
+	// 根据c配置window
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
 	XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColBorder].pixel);
 	configure(c); /* propagates border_width, if size doesn't change */
-	updatewindowtype(c);
-	updatesizehints(c);
-	updatewmhints(c);
 	
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
@@ -5557,8 +5610,6 @@ manage(Window w, XWindowAttributes *wa)
 		nextscratchcmd = NULL;
 	}
 	LOG_FORMAT("manage 6");
-
-
 
 	arrange(c->mon);
 	XMapWindow(dpy, c->win);
@@ -6213,6 +6264,40 @@ replacercincontainer(Client *oldc, Client *chosenc){
 		separatefromcontainer(chosenc);
 		mergetocontainerof(oldc, oric);
 	}
+}
+
+int
+tile7swapclientx(Client *c1, Client *c2)
+{
+	if(!c1 || !c2) return 0;
+	if(c1 == c2) return 0;
+	Container *ct1 = c1->container;
+	Container *ct2 = c2->container;
+	ct1->cs[c1->indexincontainer] = c2;
+	ct2->cs[c2->indexincontainer] = c1;
+	c2->container = ct1;
+	c1->container = ct2;
+	updateindexincontainer(ct1);
+	updateindexincontainer(ct2);
+	/*swapclient(c1, c2, selmon);*/
+	return 1;
+}
+
+void
+tile7swapclient(Client *c1, Client *c2)
+{
+	if(tile7swapclientx(c1, c2))
+	{
+		arrange(selmon);
+		selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+	}
+}
+
+void
+tile7makemaster(const Arg *arg)
+{
+	if(selmon->sel)
+		tile7swapclient(selmon->sel, selmon->sel->container->cs[0]);
 }
 
 
@@ -12504,6 +12589,7 @@ updatewindowtype(Client *c)
 	if (wtype == netatom[NetWMWindowTypeDialog]){
 		c->isfloating = 1;
 		c->nstub = 0;
+		c->isdialog = 1;
 	}
 }
 

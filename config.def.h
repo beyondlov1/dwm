@@ -187,7 +187,7 @@ static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
-static const char *copyqcmd[] = {"copyq", "toggle", NULL };
+static const char *copyqcmd[] = {"copyq", "show", NULL };
 //static const char *browsercmd[] = {"firefox", NULL};
 static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
 static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
@@ -227,6 +227,9 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
+
+	{ Mod1Mask,                       XK_m,      tile7makemaster,      { 0 } },
+
 	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
 	
 
@@ -281,7 +284,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
-	{ ControlMask,                  XK_space, itspawn,          {.v = copyqcmd } },
+	{ ControlMask,                  XK_space, tsspawn,          {.v = copyqcmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
 	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
