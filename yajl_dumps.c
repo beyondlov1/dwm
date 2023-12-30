@@ -36,6 +36,7 @@ dump_client(yajl_gen gen, Client *c)
     YSTR("name"); YSTR(c->name);
     YSTR("tags"); YINT(c->tags);
     YSTR("window_id"); YINT(c->win);
+    YSTR("pid"); YINT(c->pid);
     YSTR("monitor_number"); YINT(c->mon->num);
     YSTR("container_id"); YINT(c->container->id);
 
@@ -93,6 +94,16 @@ dump_client(yajl_gen gen, Client *c)
   )
   // clang-format on
 
+  return 0;
+}
+
+int 
+dump_clients(yajl_gen gen, Client *cs[],int n)
+{
+  YARR(
+    for (int i = 0; i < n; i++)
+        dump_client(gen, cs[i]);
+  );
   return 0;
 }
 

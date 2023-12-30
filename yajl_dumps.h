@@ -28,6 +28,8 @@ int dump_tags(yajl_gen gen, const char *tags[], int tags_len);
 
 int dump_client(yajl_gen gen, Client *c);
 
+int dump_clients(yajl_gen gen, Client *cs[],int n);
+
 int dump_monitor(yajl_gen gen, Monitor *mon, int is_selected);
 
 int dump_monitors(yajl_gen gen, Monitor *mons, Monitor *selmon);

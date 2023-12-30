@@ -62,6 +62,7 @@
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
+#define HIDDEN(C)               ((getstate(C->win) == IconicState))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
@@ -662,6 +663,11 @@ static int tile7swapclientx(Client *c1, Client *c2);
 static void tile7swapclient(Client *c1, Client *c2);
 static void tile7makemaster(const Arg *arg);
 
+static void hide(Client *c);
+static void show(Client *c);
+static void hidewin(const Arg *arg);
+static void restorewin(const Arg *arg);
+
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
 static void i_maxwindow(const Arg *arg);
@@ -745,6 +751,10 @@ static float lasttile6initwinfactor = 0.9;
 static int showstickyswitcher = 0;
 static int switchersticky_container_onlymaster = 0;
 static int global_client_id = 1;
+
+#define hiddenWinStackMax 100
+static int hiddenWinStackTop = -1;
+static Client* hiddenWinStack[hiddenWinStackMax];
 
 #ifdef VERSION
 #include "IPCClient.c"
@@ -2858,7 +2868,7 @@ void switcherxy2clientxy_pertag(XY sxys[], int n, XY cxys[], int tagindexout[], 
 		int miny = INT_MAX;
 		for (c = selmon->clients; c; c = c->next)
 		{
-			if ((c->tags & (1 << i)) == 0)
+			if ((c->tags & (1 << i)) == 0 || HIDDEN(c) || c->isfloating)
 			{
 				continue;
 			}
@@ -2928,7 +2938,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 	int n = 0;
 	for (c = selmon->clients; c; c = c->next)
 	{
-		if ((c->tags & tags) == 0)
+		if ((c->tags & tags) == 0 || HIDDEN(c))
 			continue;
 		n++;
 	}
@@ -2940,7 +2950,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 	int i;
 	for (c = selmon->clients, i = 0; c; c = c->next)
 	{
-		if ((c->tags & tags) == 0)
+		if ((c->tags & tags) == 0 || HIDDEN(c))
 			continue;
 		cs[i] = c;
 		i++;
@@ -3136,16 +3146,19 @@ sxy2client_tag(int rx, int ry, int include_floating)
 	int tagindexout[1];
 	selmon->switcheraction.switcherxy2xy(sxys, 1, cxys, tagindexout);
 
+	LOG_FORMAT("sxy2client 4, %d %d", cxys[0].x, cxys[0].y);
+	
 	Client *found = NULL;
 	Client *c;
 	for (c = selmon->clients; c; c = c->next)
 	{
 		if ((c->tags & (1<<tagindexout[0])) == 0) continue;
+		if (HIDDEN(c)) continue;
 		if (cxys[0].x > c->x && cxys[0].x < c->x + c->w && cxys[0].y > c->y && cxys[0].y < c->y + c->h)
 		{
 			LOG_FORMAT("sxy2client 3, c:%s, z:%d", c->name, c->zlevel);
 			// 不再选中floating client
-			if(!include_floating && c->isfloating) continue;
+			if (!include_floating && c->isfloating) continue;
 			if (!found) found =c;
 			else if (found->zlevel < c->zlevel ) {
 				found = c;
@@ -3461,11 +3474,41 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 void 
 clientswitchermove_tag2(const Arg *arg)
 {
+	if (scratchgroupptr && scratchgroupptr->isfloating) {
+		/*scratchmove(arg);*/
+		int n = 0;
+		int i = 0;
+		ScratchItem * si;
+		ScratchGroup *sg = scratchgroupptr;
+		if (sg->tail && sg->tail->prev && sg->tail->prev->c) {
+			focus(sg->tail->prev->c);
+		}
+		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		{
+			n++;
+		}
+		Client *cs[n];
+		XY xys[n];
+		int curri = 0;
+		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		{
+			if(si->c == selmon->sel) curri = i;
+			Client *c = si->c;
+			cs[i] =  c;
+			xys[i].x = c->x + c->w/2;
+			xys[i].y = c->y + c->h/2;
+			i++;
+		}
+		int closest = nextclosestanglexy(arg, n, xys, curri);
+		if(closest < 0) return;
+		focus(cs[closest]);
+		return;
+	}
 	int n = 0;
 	Client *c;
 	for(c = selmon->clients;c;c=c->next)
 	{
-		if(!c->isfloating) n++;
+		if(!c->isfloating && !HIDDEN(c)) n++;
 	}
 	int i=0;
 
@@ -3477,7 +3520,7 @@ clientswitchermove_tag2(const Arg *arg)
 	memset(zlevels, 0, sizeof(zlevels));
 	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
-		if(!c->isfloating){
+		if(!c->isfloating && !HIDDEN(c)){
 			if(selmon->sel == c) curi = i;
 			cxys[i].x = c->x + c->w/2;
 			cxys[i].y = c->y + c->h/2;
@@ -3958,10 +4001,10 @@ toggleswitchers(const Arg *arg)
 	if (selmon->switcherstickywin) {
 		return;
 	}
-	ScratchGroup *sg = scratchgroupptr;
-	if(sg->isfloating){
-		hidescratchgroup(sg);
-	}
+	/*ScratchGroup *sg = scratchgroupptr;*/
+	/*if(sg->isfloating){*/
+		/*hidescratchgroup(sg);*/
+	/*}*/
 	if(selmon->switcher){
 		destroyswitcher(selmon);
 	}else{
@@ -4144,9 +4187,13 @@ void
 focus(Client *c)
 {
 	if (!c || !ISVISIBLE(c)){
+		// 先floating
 		for (c = selmon->stack; c; c = c->snext)
-			if (c->isfloating && ISVISIBLE(c)) break;
-		if (!c) for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+			if (c->isfloating && ISVISIBLE(c) && !HIDDEN(c)) break;
+		// 再VISABLE
+		if (!c) 
+			for (c = selmon->stack; c; c = c->snext) 
+				if(ISVISIBLE(c) && !HIDDEN(c)) break;
 		// NULL then focus master
 		/*if (!c) for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);*/
 	}
@@ -5055,6 +5102,7 @@ keyrelease(XEvent *e)
 			XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
 		}
 		destroyswitcher(selmon);
+		return;
 	}
 
 	int offsetx = 0;
@@ -5507,7 +5555,7 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 
-	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N && !c->isfloating) {
+	if (isispawn && selmon->sel && selmon->sel->container->cn < CONTAINER_MAX_N && !c->isfloating && !selmon->sel->isscratched) {
 		mergetocontainerof(c,selmon->sel);
 		ispawnpids[0] = 0;
 		ispawntimes[0] = 0;
@@ -5520,7 +5568,7 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 
-	if (selmon->sel && strcmp(selmon->sel->class, "St") == 0 && strcmp(c->class, "St") != 0 && selmon->sel->container->cn > 1 && !c->isfloating) {
+	if (selmon->sel && strcmp(selmon->sel->class, "St") == 0 && strcmp(c->class, "St") != 0 && selmon->sel->container->cn > 1 && !c->isfloating && !selmon->sel->isscratched) {
 		mergetocontainerof(selmon->sel, c);
 		c->container->masterfactor = 7;
 	}
@@ -6837,14 +6885,14 @@ movemouseswitcher(const Arg *arg)
 Client *
 snexttiled(Client *c)
 {
-	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->snext);
+	for (; c && (c->isfloating || !ISVISIBLE(c)|| HIDDEN(c)); c = c->snext);
 	return c;
 }
 
 Client *
 nexttiled(Client *c)
 {
-	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->next);
+	for (; c && (c->isfloating || !ISVISIBLE(c) || HIDDEN(c)); c = c->next);
 	return c;
 }
 
@@ -7850,6 +7898,63 @@ seturgent(Client *c, int urg)
 	XFree(wmh);
 }
 
+
+void
+hide(Client *c) {
+	if (!c || HIDDEN(c))
+		return;
+
+	Window w = c->win;
+	static XWindowAttributes ra, ca;
+
+	// more or less taken directly from blackbox's hide() function
+	XGrabServer(dpy);
+	XGetWindowAttributes(dpy, root, &ra);
+	XGetWindowAttributes(dpy, w, &ca);
+	// prevent UnmapNotify events
+	XSelectInput(dpy, root, ra.your_event_mask & ~SubstructureNotifyMask);
+	XSelectInput(dpy, w, ca.your_event_mask & ~StructureNotifyMask);
+	XUnmapWindow(dpy, w);
+	setclientstate(c, IconicState);
+	XSelectInput(dpy, root, ra.your_event_mask);
+	XSelectInput(dpy, w, ca.your_event_mask);
+	XUngrabServer(dpy);
+
+	focus(NULL);
+	/*arrange(c->mon);*/
+	hiddenWinStack[++hiddenWinStackTop] = c;
+}
+
+void
+show(Client *c)
+{
+	if (!c || !HIDDEN(c))
+		return;
+
+	XMapWindow(dpy, c->win);
+	setclientstate(c, NormalState);
+	// arrange(c->mon);
+}
+
+// noused
+void restorewin(const Arg *arg) {
+	int i = hiddenWinStackTop;
+	while (i > -1) {
+		if (HIDDEN(hiddenWinStack[i]) && hiddenWinStack[i]->tags == selmon->tagset[selmon->seltags]) {
+			show(hiddenWinStack[i]);
+			focus(hiddenWinStack[i]);
+			restack(selmon);
+			for (int j = i; j < hiddenWinStackTop; ++j) {
+				hiddenWinStack[j] = hiddenWinStack[j + 1];
+			}
+			--hiddenWinStackTop;
+			return;
+		}
+		--i;
+	}
+}
+
+
 void
 showhide(Client *c)
 {
@@ -8108,8 +8213,14 @@ void stsspawn(const Arg *arg){
 		}
 	}
 	char *cmd[] = {"st","-d",workingdir,NULL};
-	const Arg a = {.v = cmd};
-	sspawn(&a);
+	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+b" , "key", "ctrl+b", NULL};
+	if(selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
+		const Arg a = {.v = cmd2};
+		sspawn(&a);
+	}else{
+		const Arg a = {.v = cmd};
+		sspawn(&a);
+	}
 }
 
 void 
@@ -8129,7 +8240,8 @@ stispawn(const Arg *arg){
 		ispawn(&a);
 	}else{
 		const Arg a = {.v = cmd};
-		ispawn(&a);
+		if (scratchgroupptr && scratchgroupptr->isfloating) sspawn(&a);
+		else ispawn(&a);
 	}
 }
 
@@ -11001,7 +11113,11 @@ showscratchgroup(ScratchGroup *sg)
 	ScratchItem *si;
 	int tsn;
 	for(tsn = 0, si = sg->head->next; si && si != sg->tail; si = si->next, tsn++);
-	if(tsn == 0) return;
+	if(tsn == 0)
+	{
+		stsspawn(0);
+		return;
+	}
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t sc;
@@ -11022,9 +11138,9 @@ showscratchgroup(ScratchGroup *sg)
 
 		c->isfloating = 1;
 		if(!sg->isfloating) si->pretags = c->tags;
-		c->tags = 0xFFFFFFFF;
-		int neww = selmon->ww * 0.45;
-		int newh = selmon->wh * 0.6;
+		/*c->tags = 0xFFFFFFFF;*/
+		int neww = selmon->ww * 0.75;
+		int newh = selmon->wh * 0.75;
 		// int neww = selmon->ww * 0.3;
 		// int newh = selmon->wh * 0.3;
 		
@@ -11069,6 +11185,9 @@ showscratchgroup(ScratchGroup *sg)
 		if(si->c) si->c->isfloating = 1;
 		// focus(si->c);
 		// arrange(selmon);
+		freecontainerc(si->c->container, si->c);
+		createcontainerc(si->c);
+		show(si->c);
 		XRaiseWindow(dpy, si->c->win);
 		resize(si->c,si->x,si->y, si->w,si->h,0);
 	}
@@ -11210,15 +11329,15 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		Client *c = si->c;
 		if (!c)
 			continue;
-		if (si->pretags)
-			c->tags = si->pretags;
-		else
-			c->tags = selmon->tagset[selmon->seltags];
+		// if (si->pretags)
+		// 	c->tags = si->pretags;
+		// else
+		// 	c->tags = selmon->tagset[selmon->seltags];
 
-		if (c->tags == selmon->tagset[selmon->seltags])
-		{
-			c->tags = 1 << (LENGTH(tags) - 1);
-		}
+		// if (c->tags == selmon->tagset[selmon->seltags])
+		// {
+		// 	c->tags = 1 << (LENGTH(tags) - 1);
+		// }
 
 		if (c->isfloating){
 			si->x = c->x;
@@ -11229,7 +11348,13 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		}
 	}
 	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
-		if(si->c) si->c->isfloating = 0;
+	{
+		if(si->c) 
+		{
+			si->c->isfloating = 1;
+			hide(si->c);
+		}	
+	}
 	if(isarrange){
 		int curtags = selmon->tagset[selmon->seltags];
 		Client *c;
@@ -11304,6 +11429,7 @@ removefromscratchgroupc(Client *c)
 		if (c == scratchgroupptr->lastfocused)
 			scratchgroupptr->lastfocused = NULL;
 		free_si(found);
+		arrange(c->mon);
 	}else{
 		if(c == scratchgroupptr->lastfocused) 
 			scratchgroupptr->lastfocused = NULL;
@@ -13749,7 +13875,10 @@ i_maxwindow(const Arg *arg)
 	if (selmon->lt[selmon->sellt]->arrange == tile5) {
 		tile5maximize(arg);
 	}
-	
+	if (selmon->lt[selmon->sellt]->arrange == tile7) {
+		tile7maximize(arg);
+		return;
+	}
 	if (selmon->lt[selmon->sellt]->arrange == tile7) {
 		float masterfactor_max = 7;
 		float masterfactorh_max = 7;

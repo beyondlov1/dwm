@@ -720,6 +720,43 @@ ipc_get_dwm_client(IPCClient *ipc_client, const char *msg, const Monitor *mons)
   return -1;
 }
 
+
+
+/**
+ * Called when an IPC_TYPE_GET_DWM_CLIENT message is received from a client. It
+ * prepares a JSON reply with the properties of the client with the specified
+ * window XID.
+ *
+ * Returns 0 if the message was successfully parsed and if the client with the
+ *   specified window XID was found
+ * Returns -1 if the message could not be parsed
+ */
+static int
+ipc_get_dwm_clients(IPCClient *ipc_client, const char *msg, const Monitor *mons)
+{
+  yajl_gen gen;
+  ipc_reply_init_message(&gen);
+
+  int n = 0;
+  int i = 0;
+  Client *c;
+  Monitor *m;
+  for (m = mons; m; m = m->next)
+    for (c = m->clients; c; c = c->next)
+      n++;
+
+  Client *cs[n];
+  for (m = mons; m; m = m->next)
+    for (c = m->clients; c; c = c->next)
+      cs[i++] = c;
+
+  dump_clients(gen, cs, n);
+
+  ipc_reply_prepare_send_message(gen, ipc_client,
+                                IPC_TYPE_GET_DWM_CLIENTS);
+  return -1;
+}
+
 /**
  * Called when an IPC_TYPE_SUBSCRIBE message is received from a client. It
  * subscribes/unsubscribes the client from the specified event and replies with
@@ -1173,6 +1210,8 @@ ipc_handle_client_epoll_event(struct epoll_event *ev, Monitor *mons,
       ipc_send_events(mons, lastselmon, selmon);
     } else if (msg_type == IPC_TYPE_GET_DWM_CLIENT) {
       if (ipc_get_dwm_client(c, msg, mons) < 0) return -1;
+    } else if (msg_type == IPC_TYPE_GET_DWM_CLIENTS) {
+      if (ipc_get_dwm_clients(c, msg, mons) < 0) return -1;
     } else if (msg_type == IPC_TYPE_SUBSCRIBE) {
       if (ipc_subscribe(c, msg) < 0) return -1;
     } else {
