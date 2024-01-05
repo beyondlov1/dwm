@@ -231,6 +231,7 @@ static Key keys[] = {
 
 	//{ Mod1Mask,                       XK_m,      tile7makemaster,      { 0 } },
 
+	//{ 0,                       XK_Caps_Lock,      toggleswitchers,      {0} },
 	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
 	
 
@@ -273,7 +274,7 @@ static Key keys[] = {
 	
 
 	{Mod1Mask,                       XK_q, spawn,          { .v = rofiwebsearchcmd } },
-	{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
+	//{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{ControlMask|Mod1Mask,			XK_g, tile6maximizewithsticky, {0}},
 	// { MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
@@ -285,7 +286,9 @@ static Key keys[] = {
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
+
 	{ ControlMask,                  XK_space, tsspawn,          {.v = copyqcmd } },
+
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },
 	{ MODKEY,                       XK_x, tsspawn,          {.v = enotecmd} },
@@ -383,7 +386,8 @@ static Key keys[] = {
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
 	// { MODKEY,             XK_Tab,   toggleswitchers,           {0} },
 	//{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
-	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	//{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	{ MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
 	// { MODKEY,                       XK_Tab,    toggleswitchers,           {0} },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
@@ -477,6 +481,25 @@ static Key keys[] = {
 
 static Key switcherkeys[] = {
 
+	//{ 0,                       XK_Caps_Lock,      toggleswitchers,      {0} },
+	{0, XK_o, quickfocus, {.ui = 'o'}},
+	{0, XK_b, quickfocus, {.ui = 'b'}},
+	{0, XK_y, quickfocus, {.ui = 'y'}},
+	{0, XK_i, quickfocus, {.ui = 'i'}},
+	{0, XK_p, quickfocus, {.ui = 'p'}},
+	{0, XK_n, quickfocus, {.ui = 'n'}},
+	{0, XK_m, quickfocus, {.ui = 'm'}},
+	{0, XK_u, quickfocus, {.ui = 'u'}},
+
+	{0, XK_s, quickfocus, {.ui = 's'}},
+	{0, XK_d, quickfocus, {.ui = 'd'}},
+	{0, XK_f, quickfocus, {.ui = 'f'}},
+	{0, XK_g, quickfocus, {.ui = 'g'}},
+
+	{0, XK_w, quickfocus, {.ui = 'w'}},
+	{0, XK_e, quickfocus, {.ui = 'e'}},
+	{0, XK_r, quickfocus, {.ui = 'r'}},
+
 	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
 	{ MODKEY|ControlMask,                       XK_Right,      tile5expandx,       {.f = 0.1} },
@@ -490,7 +513,7 @@ static Key switcherkeys[] = {
 	{MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
 	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
 	{Mod1Mask,XK_q, spawn,  { .v = rofiwebsearchcmd } },
-	{Mod1Mask, XK_space, spawn, { .v = rofiscriptcmd } },
+	//{Mod1Mask, XK_space, spawn, { .v = rofiscriptcmd } },
 
 	{MODKEY|ShiftMask,XK_b,togglebar,{0} },
 	//{MODKEY, XK_g, toggleswitchersticky, {0}},
@@ -571,7 +594,8 @@ static Key switcherkeys[] = {
 	// { MODKEY|ControlMask,                       XK_Right,      tiledual,       {.i = +1} },
 	// { MODKEY|ControlMask,                       XK_Left,      tiledual,       {.i = -1} },
 	{ MODKEY|ShiftMask,                       XK_n,      setfacty,       {0} },
-	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	//{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	{ MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },

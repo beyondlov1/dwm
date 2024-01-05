@@ -21,6 +21,7 @@
  * To understand everything else, start reading main().
  */
 #include <X11/X.h>
+#include <curl/curl.h>
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
@@ -223,6 +224,8 @@ struct Client {
 
 	long lastfocustime;
 	long lastunfocustime;
+
+	char shortcut[5];
 };
 
 
@@ -662,11 +665,13 @@ static void setcontainerlayout(const Arg *arg);
 static int tile7swapclientx(Client *c1, Client *c2);
 static void tile7swapclient(Client *c1, Client *c2);
 static void tile7makemaster(const Arg *arg);
+static void tile7shiftnext(const Arg *arg);
 
 static void hide(Client *c);
 static void show(Client *c);
 static void hidewin(const Arg *arg);
 static void restorewin(const Arg *arg);
+static void quickfocus(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -751,6 +756,7 @@ static float lasttile6initwinfactor = 0.9;
 static int showstickyswitcher = 0;
 static int switchersticky_container_onlymaster = 0;
 static int global_client_id = 1;
+static char quick_focus_cmd[5] = {'\0',0,0,0,0};
 
 #define hiddenWinStackMax 100
 static int hiddenWinStackTop = -1;
@@ -3044,6 +3050,7 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			}
 		}
 		drw_rect(drw, x, y, w, h, 1, 1);
+
 		int size_level = 1;
 		if (c->ichs[size_level] > h/2) {
 			size_level = 0;
@@ -3077,6 +3084,15 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			th = MIN(th, h / 4);
 			drw_text(drw, x + w/2 - tw/2, y + 3 * h / 4, tw, th, 2, c->note, 0);
 		}
+
+		if(strlen(c->shortcut) > 0){
+			tw = MIN(TEXTW(c->shortcut), w);
+			th = MIN(th, h / 4);
+			if(h / 2 < th) th = h / 2;
+			drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
+			/*drw_text(drw, x + 5, y + h/2 - th/2, tw, th, 2, c->shortcut, 0);*/
+		}
+
 
 		Clr *oldscheme  = drw->scheme;
 		if(c->container->arrange == container_layout_full && c->container->cn > 1){
@@ -3800,6 +3816,75 @@ drawswitcher(Monitor *m)
 	// int wh = m->wh/3;
 
 	Client *c;
+	int i;
+
+	// quickfocus, most support 64+16+4
+	/*char candidatesn = 4;*/
+	/*char candidates[3][4] = {*/
+		/*{'h','j','k','o'},*/
+		/*{'s','d','f','v'},*/
+		/*{'g','r','e','w'},*/
+	/*};*/
+	/*for(i = 0, c = selmon->clients;c;c = c->next, i++)*/
+	/*{*/
+		/*double t = ((double)i) * (candidatesn - 1) / (candidatesn) + 1;*/
+		/*int n_level = (int) (log(t) / log(candidatesn));*/
+		/*if(n_level > 3){*/
+			/*// too many clients*/
+			/*c->shortcut[0] = '\0';*/
+			/*continue;*/
+		/*}*/
+		/*int upleveli = i - (1-pow(candidatesn, n_level)) / (1-candidatesn) * candidatesn;*/
+		/*for(int j=n_level;j>=0;j--)*/
+		/*{*/
+			/*int thisleveli = upleveli % candidatesn;*/
+			/*c->shortcut[j] = candidates[n_level - j][thisleveli];*/
+			/*upleveli = ((int)upleveli / candidatesn);*/
+		/*}*/
+		/*c->shortcut[n_level + 1] = '\0';*/
+	/*}*/
+
+	// quickfocus
+	char candidates[][10] = {
+		{'i','u','n','m', 'o','p','y','b'},
+		{'s','d','f','g'},
+		{'r','e','w'},
+	};
+	int candidatesns[] = {8,4,3};
+	int N = 3;
+	int lvlstart[N+1];
+	lvlstart[0] = 0;
+	for(int b=1;b<N+1;b++)
+	{
+		int m = 1;
+		for(int d=0;d<b;d++) m*= candidatesns[d];
+		lvlstart[b] = lvlstart[b-1] + m;
+	}
+	
+	for(i = 0, c = selmon->clients;c;c = c->next, i++)
+	{
+		int a;
+		for (a = 0; a<N+1; a++) if(i < lvlstart[a]) break;
+		int n_level = a-1;
+		if(n_level > 3){
+			// too many clients
+			c->shortcut[0] = '\0';
+			continue;
+		}
+		int leftfill = i - lvlstart[n_level];
+		for(int j=n_level;j>=0;j--)
+		{
+			int d = 1;
+			for(int b = 0; b < j; b ++) d *= candidatesns[b];
+			int leveli = (int)(leftfill / d);
+			char tc = candidates[j][leveli];
+			c->shortcut[n_level - j] = tc;
+			leftfill = leftfill % d;
+		}
+		c->shortcut[n_level + 1] = '\0';
+	}
+
+
 	int cminx = INT_MAX, cminy= INT_MAX, cmaxx= INT_MIN, cmaxy= INT_MIN;
 	for(c = nexttiled(selmon->clients);c;c = nexttiled(c->next))
 	{
@@ -3834,7 +3919,6 @@ drawswitcher(Monitor *m)
 	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	LOG_FORMAT("validtagn %d", validtagn);
 	int minx = INT_MAX, miny= INT_MAX, maxx= INT_MIN, maxy= INT_MIN;
-	int i;
 	for (i = 0; i < validtagn; i++)
 	{
 		int t = tagi2t[i];
@@ -3925,6 +4009,8 @@ destroyswitcher(Monitor *m)
 	XDestroyWindow(dpy, m->switcherbarwin);
 	selmon->switcherbarwin = 0L;	
 	// updatesystray();
+	
+	quick_focus_cmd[0] = '\0';
 }
 
 void
@@ -4038,6 +4124,34 @@ switchermove(const Arg *arg)
 		}
 	}
 	focusgrid5(arg);
+}
+
+
+
+void
+quickfocus(const Arg *arg)
+{
+	int i;
+	char ch = arg->ui;
+	for(i=0;i<5;i++)
+		if(quick_focus_cmd[i] == '\0')
+			break;
+	if(i>=4){
+		strcpy(quick_focus_cmd, "");
+		return;
+	}
+	quick_focus_cmd[i] = ch;
+	quick_focus_cmd[i+1] = '\0';
+
+	Client *c;
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+	{
+		if (strcmp(quick_focus_cmd, c->shortcut) == 0) {
+			focus(c);
+			destroyswitcher(selmon);
+			break;
+		}
+	}
 }
 
 void
@@ -5158,6 +5272,15 @@ killclient(const Arg *arg)
 	Client *cc = selmon->sel;
 	if(!cc) return;
 
+	if(cc->isscratched){
+		removefromscratchgroupc(cc);
+		killclientc(cc);
+		if (scratchgroupptr->head->next == scratchgroupptr->tail) {
+			hidescratchgroup(scratchgroupptr);
+		}
+		return;
+	}
+
 	Client *c;
 	int px;
 	int py;
@@ -5176,7 +5299,7 @@ killclient(const Arg *arg)
 			c = cs[i];
 			if(c->x < px && c->x+c->w > px && c->y < py && c->y + cc->h > py){
 				killclientc(c);
-				return;
+				break;
 			}
 		}
 	}
@@ -5495,6 +5618,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->hidden = 0;
 	c->isdialog = 0;
 	c->nstub = 0;
+	c->shortcut[0] = '\0';
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -6348,6 +6472,28 @@ tile7makemaster(const Arg *arg)
 		tile7swapclient(selmon->sel, selmon->sel->container->cs[0]);
 }
 
+void
+tile7shiftnext(const Arg *arg)
+{
+	if(selmon->sel)
+	{
+		Container *container = selmon->sel->container;
+		int currindex = 0;
+		int i;
+		for(i=0;i<container->cn;i++)
+		{
+			Client *c = container->cs[i];
+			c->zlevel = 0;
+			if(c == selmon->sel){
+				currindex = i;
+			}
+		}
+		int nextindex = (currindex + 1) % container->cn;
+		container->cs[nextindex]->zlevel  = 1;
+		focus(container->cs[nextindex]);
+		arrange(selmon);
+	}
+}
 
 void
 pysmoveclient(Client *target, int sx, int sy)
@@ -8213,7 +8359,7 @@ void stsspawn(const Arg *arg){
 		}
 	}
 	char *cmd[] = {"st","-d",workingdir,NULL};
-	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+b" , "key", "ctrl+b", NULL};
+	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+e" , "key", "ctrl+e", NULL};
 	if(selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
 		const Arg a = {.v = cmd2};
 		sspawn(&a);
@@ -8234,7 +8380,7 @@ stispawn(const Arg *arg){
 		}
 	}
 	char *cmd[] = {"st","-d",workingdir,NULL};
-	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+b" , "key", "ctrl+b", NULL};
+	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+e" , "key", "ctrl+e", NULL};
 	if(selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
 		const Arg a = {.v = cmd2};
 		ispawn(&a);

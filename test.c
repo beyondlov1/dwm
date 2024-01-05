@@ -208,9 +208,57 @@ struct Client{
 };
 typedef struct Client Client ;
 
+
+int
+test2(){
+	int i = 16;
+	
+	char candidates[][10] = {
+		{'h','j','k','l','p','u','n','m', 'i', 'c'},
+		{'s','a','d','f'},
+		{'g','r','e','w'},
+	};
+	int candidatesns[] = {10,4,4};
+	int N = 3;
+	int lvlstart[N];
+	lvlstart[0] = 0;
+	for(int b=1;b<N+1;b++)
+	{
+		int m = 1;
+		for(int d=0;d<b;d++) m*= candidatesns[d];
+		lvlstart[b] = lvlstart[b-1] + m;
+	}
+	int a;
+	for (a = 0; a<N+1; a++) {
+		if(i < lvlstart[a]) break;
+	}
+	int n_level = a-1;
+	int leftfill = i - lvlstart[n_level];
+	char result[3];
+	for(int j=n_level;j>=0;j--)
+	{
+		int c = 1;
+		for(int b = 0; b < j; b ++)
+		{
+			c *= candidatesns[b];
+		}
+		int leveli = (int)(leftfill / c);
+		char tc = candidates[j][leveli];
+		printf("level%d:%c\n", j, tc);
+		result[n_level - j] = tc;
+		leftfill = leftfill % c;
+	}
+	for(int j=0;j<=n_level;j++)
+	{
+		printf("%c", result[j]);
+	}
+	return 1;
+}
+
 int main(int argc, char const *argv[])
 {
 
+	test2();
 	Client fcp;
 	Client fc;
 	Client scp;
