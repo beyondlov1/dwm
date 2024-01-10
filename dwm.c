@@ -757,6 +757,7 @@ static int showstickyswitcher = 0;
 static int switchersticky_container_onlymaster = 0;
 static int global_client_id = 1;
 static char quick_focus_cmd[5] = {'\0',0,0,0,0};
+static char quick_pointer_cmd[4] = {'\0',0,0,0};
 
 #define hiddenWinStackMax 100
 static int hiddenWinStackTop = -1;
