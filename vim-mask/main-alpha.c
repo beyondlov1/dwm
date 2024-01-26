@@ -23,34 +23,35 @@ static int keep_running = 1;
 static int success = 0;
 
 void
-draw(Display *display, GC gc, Window win, int width, int height, char *candidates, XY *result) {
+draw(Display *display, GC gc, Window win, int width, int height, char candidates[3][17], XY *result) {
 
   XFontStruct* font;
-  font = XLoadQueryFont(display,"*-helvetica-*-18-*");
+  font = XLoadQueryFont(display,"*-helvetica-*-24-*");
   XSetFont(display, gc, font->fid);
 
-  int unit = 3;
-  int xunit = unit * unit * unit;
-  int yunit = unit * unit * unit;
+  int unit_row = 3;
+  int unit_col = 3;
+  int xunit = unit_row * unit_row * unit_row;
+  int yunit = unit_col * unit_col * unit_col;
   int selectcnt = 0;
   int lastx = 0;
   int lasty = 0;
   for (int i = 0; i < xunit; i++) {
     for (int j = 0; j < yunit; j++) {
-      int row1 = i / (xunit / unit);
-      int col1 = j / (yunit / unit);
-      int level1 = row1 * unit + col1;
-      int row2 = (i - row1 * (xunit/unit)) / unit;
-      int col2 = (j - col1 * (yunit/unit)) / unit;
-      int level2 = row2 * unit + col2;
-      int row3 = (i - row1 * (xunit/unit) - row2 * (xunit/unit/unit));
-      int col3 = (j - col1 * (yunit/unit) - col2 * (yunit/unit/unit));
-      int level3 = row3 * unit + col3;
+      int row1 = i / (xunit / unit_row);
+      int col1 = j / (yunit / unit_col);
+      int level1 = row1 * unit_col + col1;
+      int row2 = (i - row1 * (xunit/unit_row)) / unit_row;
+      int col2 = (j - col1 * (yunit/unit_col)) / unit_col;
+      int level2 = row2 * unit_col + col2;
+      int row3 = (i - row1 * (xunit/unit_row) - row2 * (xunit/unit_row/unit_row));
+      int col3 = (j - col1 * (yunit/unit_col) - col2 * (yunit/unit_col/unit_col));
+      int level3 = row3 * unit_col + col3;
       // int awidth = width / 63;
       // int aheight = height / 63;
-      int awidth = width / xunit;
-      int aheight = height / yunit;
-      char msg[4] = {candidates[level1], candidates[level2], candidates[level3], '\0'};
+      int awidth = width / yunit;
+      int aheight = height / xunit;
+      char msg[4] = {candidates[0][level1], candidates[1][level2], candidates[2][level3], '\0'};
       if (strlen(cmd) > 0 && strncmp(cmd, msg, strlen(cmd)) == 0) {
         XSetForeground(display, gc, 0x80300000);
         selectcnt ++;
@@ -61,7 +62,7 @@ draw(Display *display, GC gc, Window win, int width, int height, char *candidate
       }
       XFillRectangle(display, win, gc, awidth * j, aheight * i, awidth,  aheight);
       if (strlen(cmd)&& strncmp(cmd, msg, strlen(cmd)) == 0) {
-        XSetForeground(display, gc, 0x803fffff);
+        XSetForeground(display, gc, 0x403fffff);
       // }else if (cmdcursor == 0|| cmdcursor ==  3){
       //   XSetForeground(display, gc, 0x80ffffff);
       // }
@@ -71,7 +72,7 @@ draw(Display *display, GC gc, Window win, int width, int height, char *candidate
       }
       // 文字以左下角为基准
       int textw = XTextWidth(font, msg, strlen(msg));
-      XDrawString(display, win, gc, awidth * j + awidth/2 - textw/2, aheight * i + aheight/2 + 9, msg, strlen(msg));
+      XDrawString(display, win, gc, awidth * j + awidth/2 - textw/2, aheight * i + aheight/2 + 12, msg, strlen(msg));
       strcpy(g[i][j], msg);
     }
   }
@@ -152,7 +153,7 @@ void simulate_mouse_key(int fd, int keycode)
 }
 
 int keypress(XEvent event, Display *display,  GC gc,Window root,  Window win, int width,
-             int height, char *candidates) {
+             int height, char candidates[3][17]) {
   unsigned int keycode = event.xkey.keycode;
   // printf("%d", keycode);
   /*return keycode;*/
@@ -258,7 +259,7 @@ int main(int argc, char *argv[]) {
   /*XSetForeground(display,gc, 0x80ffffff);*/
   /*XFillRectangle(display, win, gc, 20, 20, 10, 10);*/
 
-  char candidates[17] = "abcdefghijklmnop";
+  char candidates[][17] = {"asdfwerqgtjkluiop","jlkuiohnmasdfgrew","asdfwerqgtjkluiop"};
   XY xy = {0};
 
   // 窗口事件监听尝试
