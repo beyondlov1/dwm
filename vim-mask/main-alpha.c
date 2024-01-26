@@ -2,13 +2,187 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <X11/Xatom.h>
+#include <linux/input.h>  
+#include <linux/uinput.h>  
+#include <unistd.h>
+#include <fcntl.h>  
 
-int keypress(XEvent event) {
+typedef struct XY {
+  int x;
+  int y;
+} XY; 
+
+static char g[64][64][4];
+static char cmd[4] = { '\0'};
+static int cmdcursor = 0;
+static int keep_running = 1;
+static int success = 0;
+
+void
+draw(Display *display, GC gc, Window win, int width, int height, char *candidates, XY *result) {
+
+  XFontStruct* font;
+  font = XLoadQueryFont(display,"*-helvetica-*-18-*");
+  XSetFont(display, gc, font->fid);
+
+  int unit = 3;
+  int xunit = unit * unit * unit;
+  int yunit = unit * unit * unit;
+  int selectcnt = 0;
+  int lastx = 0;
+  int lasty = 0;
+  for (int i = 0; i < xunit; i++) {
+    for (int j = 0; j < yunit; j++) {
+      int row1 = i / (xunit / unit);
+      int col1 = j / (yunit / unit);
+      int level1 = row1 * unit + col1;
+      int row2 = (i - row1 * (xunit/unit)) / unit;
+      int col2 = (j - col1 * (yunit/unit)) / unit;
+      int level2 = row2 * unit + col2;
+      int row3 = (i - row1 * (xunit/unit) - row2 * (xunit/unit/unit));
+      int col3 = (j - col1 * (yunit/unit) - col2 * (yunit/unit/unit));
+      int level3 = row3 * unit + col3;
+      // int awidth = width / 63;
+      // int aheight = height / 63;
+      int awidth = width / xunit;
+      int aheight = height / yunit;
+      char msg[4] = {candidates[level1], candidates[level2], candidates[level3], '\0'};
+      if (strlen(cmd) > 0 && strncmp(cmd, msg, strlen(cmd)) == 0) {
+        XSetForeground(display, gc, 0x80300000);
+        selectcnt ++;
+        lastx = awidth * j + awidth/2;
+        lasty = aheight * i + aheight/2;
+      } else {
+        XSetForeground(display, gc, 0x80000000);
+      }
+      XFillRectangle(display, win, gc, awidth * j, aheight * i, awidth,  aheight);
+      if (strlen(cmd)&& strncmp(cmd, msg, strlen(cmd)) == 0) {
+        XSetForeground(display, gc, 0x803fffff);
+      // }else if (cmdcursor == 0|| cmdcursor ==  3){
+      //   XSetForeground(display, gc, 0x80ffffff);
+      // }
+      }else{
+        XSetForeground(display, gc, 0x80ffffff);
+        // XSetForeground(display, gc, 0x80F5CA40);
+      }
+      // 文字以左下角为基准
+      int textw = XTextWidth(font, msg, strlen(msg));
+      XDrawString(display, win, gc, awidth * j + awidth/2 - textw/2, aheight * i + aheight/2 + 9, msg, strlen(msg));
+      strcpy(g[i][j], msg);
+    }
+  }
+  if(selectcnt == 1){
+    result->x = lastx;
+    result->y = lasty;
+  }
+}
+
+void simulate_key(int fd,int kval)  
+{  
+    struct input_event event;  
+    event.type = EV_KEY;  
+    event.value = 1;  
+    event.code = kval;  
+
+    gettimeofday(&event.time,0);  
+    write(fd,&event,sizeof(event)) ;  
+
+    event.type = EV_SYN;  
+    event.code = SYN_REPORT;  
+    event.value = 0;  
+    write(fd, &event, sizeof(event));  
+
+    memset(&event, 0, sizeof(event));  
+    gettimeofday(&event.time, NULL);  
+    event.type = EV_KEY;  
+    event.code = kval;  
+    event.value = 0;  
+    write(fd, &event, sizeof(event));  
+    event.type = EV_SYN;  
+    event.code = SYN_REPORT;  
+    event.value = 0;  
+    write(fd, &event, sizeof(event));  
+}  
+
+void simulate_mouse_key(int fd, int keycode)  
+{  
+  struct input_event event;  
+  memset(&event, 0, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_MSC;  
+  event.code = 4;  
+  event.value = 90001;  
+  write(fd, &event, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_KEY;  
+  event.code = keycode;  
+  event.value = 1;  
+  write(fd, &event, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_SYN;  
+  event.code = SYN_REPORT;  
+  event.value = 0;  
+  write(fd, &event, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_MSC;  
+  event.code = 4;  
+  event.value = 90001;  
+  write(fd, &event, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_KEY;  
+  event.code = keycode;  
+  event.value = 0;  
+  write(fd, &event, sizeof(event));  
+
+  gettimeofday(&event.time, NULL);  
+  event.type = EV_SYN;  
+  event.code = SYN_REPORT;  
+  event.value = 0;  
+  write(fd, &event, sizeof(event));  
+
+}
+
+int keypress(XEvent event, Display *display,  GC gc,Window root,  Window win, int width,
+             int height, char *candidates) {
   unsigned int keycode = event.xkey.keycode;
-  /*printf("%d", keycode);*/
+  // printf("%d", keycode);
   /*return keycode;*/
+  // printf("%s", g[5][2]);
+  // printf("%c", keycode);
+  int keysyms_per_keycode;
+  KeySym *keysym =
+      XGetKeyboardMapping(display, keycode, 1, &keysyms_per_keycode);
+  if (*keysym <= XK_z && *keysym >= XK_a) {
+    char *result = XKeysymToString(keysym[0]);
+    if (cmdcursor == 3) {
+      cmdcursor = 0;
+    }
+    cmd[cmdcursor] = result[0];
+    cmdcursor++;
+    cmd[cmdcursor] = '\0';
+    // printf("%s", result);
+    // printf("%s", cmd);
+    XY xy = {0};
+    draw(display, gc, win, width, height, candidates,&xy);
+    if(xy.x != 0 && xy.y != 0){
+		  XWarpPointer(display, None, root, 0, 0, 0, 0, xy.x, xy.y);
+		  keep_running = 0;
+		  success = 1;
+    }
+  }
+  if(*keysym == XK_Escape) {
+    keep_running = 0;
+    success = 0;
+  }
   return 0;
 }
 
@@ -28,6 +202,7 @@ int main(int argc, char *argv[]) {
 
   // 取输出设备的长宽像素
   int screen = DefaultScreen(display);
+	Window root = RootWindow(display, screen);
   int height = DisplayHeight(display, screen);
   int width = DisplayWidth(display, screen);
 
@@ -42,14 +217,28 @@ int main(int argc, char *argv[]) {
                                            KeyPressMask | PointerMotionMask};
   Window win = XCreateWindow(
       display, DefaultRootWindow(display), 0, 0, width, height, 0,
-      /*DefaultDepth(display, screen),*/
+      // DefaultDepth(display, screen),
       vinfo.depth,
-      /*InputOutput,*/
+      // InputOutput,
       CopyFromParent,
       /*DefaultVisual(display, screen),*/
       vinfo.visual,
       /*CWOverrideRedirect|CWBackPixmap|CWEventMask, */
       CWColormap | CWBorderPixel | CWBackPixel | CWEventMask, &attr);
+
+  // XSetTransientForHint(display, win, root);
+	Atom netWMWindowTypeDialog = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+	Atom netWMWindowTypeFullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
+	Atom netWMWindowType = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+	Atom netWMState = XInternAtom(display, "_NET_WM_STATE", False);
+	// XChangeProperty(display, win, netWMWindowType, XA_ATOM, 32,
+	// 		PropModeReplace, (unsigned char*)&netWMWindowTypeDialog, 1);
+	XChangeProperty(display, win, netWMState, XA_ATOM, 32,
+			PropModeReplace, (unsigned char*)&netWMWindowTypeFullscreen, 1);
+
+	XClassHint ch = { "vimmask" , "vimmask"};
+	XSetClassHint(display, win, &ch);
+
   XSelectInput(display, win, StructureNotifyMask | ExposureMask | KeyPressMask);
   GC gc = XCreateGC(display, win, 0, 0);
 
@@ -65,15 +254,13 @@ int main(int argc, char *argv[]) {
   XMoveWindow(display, win, 0, 0);
 
   XFlush(display); // 刷新输出设备
-  int keep_running = 1;
   XEvent event;
   /*XSetForeground(display,gc, 0x80ffffff);*/
   /*XFillRectangle(display, win, gc, 20, 20, 10, 10);*/
 
-  char tmp;
-  char cmd[4] = {0};
-
   char candidates[17] = "abcdefghijklmnop";
+  XY xy = {0};
+
   // 窗口事件监听尝试
   while (keep_running) {
     XNextEvent(display, &event);
@@ -86,33 +273,10 @@ int main(int argc, char *argv[]) {
         keep_running = 0;
       break;
     case Expose:
-      for (int i = 0; i < 64; i++) {
-        for (int j = 0; j < 64; j++) {
-          int row1 = i / 16;
-          int col1 = j / 16;
-          int level1 = row1 * 4 + col1;
-          int row2 = (i - row1 * 16) / 4;
-          int col2 = (j - col1 * 16) / 4;
-          int level2 = row2 * 4 + col2;
-          int row3 = (i - row1 * 16 - row2 * 4);
-          int col3 = (j - col1 * 16 - col2 * 4);
-          int level3 = row3 * 4 + col3;
-          int awidth = width / 63;
-          int aheight = height / 63;
-          XSetForeground(display, gc, 0x80000000);
-          XFillRectangle(display, win, gc, awidth * i, aheight * j, awidth,
-                         aheight);
-          XSetForeground(display, gc, 0x80ffffff);
-          char msg[4] = {candidates[level1], candidates[level2],
-                         candidates[level3], '\0'};
-          /*char msg[4] = {candidates[level1], '\0'};*/
-          XDrawString(display, win, gc, awidth * i, aheight * j, msg,
-                      strlen(msg));
-        }
-      }
+      draw(display, gc, win, width, height, candidates, &xy);
       break;
     case KeyPress:
-      keypress(event);
+      keypress(event, display, gc,root, win, width, height, candidates);
       break;
     default:
       break;
@@ -121,6 +285,22 @@ int main(int argc, char *argv[]) {
 
   // 结束销毁
   XDestroyWindow(display, win);
+  XSync(display, 0);
+
+  if (success) 
+  {
+    char outDevicePath[64];
+    strcpy(outDevicePath, "/dev/input/");
+    strcat(outDevicePath, argv[1]);
+    int outDeviceFd = open(outDevicePath, O_RDWR);
+     if (outDeviceFd == -1)
+     {
+        perror("Failed to open input device");
+        return 1;
+     }
+    simulate_mouse_key(outDeviceFd, 272);
+  }
   XCloseDisplay(display);
+
   return 0;
 }

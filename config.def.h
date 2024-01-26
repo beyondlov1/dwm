@@ -203,6 +203,7 @@ static const char *smartclosecmd[] = {"/home/beyond/software/smartclose.sh", NUL
 static const char *smartrefreshcmd[] = {"/home/beyond/software/smartrefresh.sh", NULL};
 static const char *highlightcmd[] = {"/home/beyond/software/smartdispatch.sh", "highlight", NULL};
 static const char *searchwordcmd[] = {"/home/beyond/software/smartdispatch.sh", "searchword", NULL};
+static const char *vimmaskcmd[] = {"/home/beyond/software/vimmask.sh",  NULL};
 
 //static const char *smartleftcmd[] = {"/home/beyond/software/smartdispatch.sh", "smartleft", NULL};
 //static const char *smartrightcmd[] = {"/home/beyond/software/smartdispatch.sh", "smartright", NULL};
@@ -240,10 +241,10 @@ static Key keys[] = {
 	//{ 0,                       XK_F3,      spawn,      { .v = searchwordcmd } },
 	//{ 0,                       XK_F4,      spawn,      { .v = highlightcmd } },
 	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
-	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
 	{ Mod1Mask,                       XK_n,      spawn,      { .v = notecurrwincmd } },
+	{ Mod1Mask,                       XK_semicolon,      spawn,      { .v = vimmaskcmd } },
 
 	// for tile5
 	// { MODKEY|ShiftMask,                       XK_j,      tile5move,       {.i = -2} },

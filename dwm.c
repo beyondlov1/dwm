@@ -5620,6 +5620,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->isdialog = 0;
 	c->nstub = 0;
 	c->shortcut[0] = '\0';
+	c->isfullscreen = 0;
+	c->isfloating = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -5641,11 +5643,6 @@ manage(Window w, XWindowAttributes *wa)
 	updateclass(c);
 	updatenote(c);
 
-	// 根据window信息设置c	
-	updatewindowtype(c);
-	updatesizehints(c);
-	updatewmhints(c);
-
 	LOG_FORMAT("manage 1");
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
@@ -5657,6 +5654,10 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	LOG_FORMAT("manage 2");
 
+	// 根据window信息设置c	
+	updatewindowtype(c);
+	updatesizehints(c);
+	updatewmhints(c);
 
 	if (c->istemp)
 	{
