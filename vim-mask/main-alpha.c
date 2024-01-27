@@ -2,7 +2,7 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <math.h>
+// #include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <X11/Xatom.h>
@@ -26,7 +26,10 @@ void
 draw(Display *display, GC gc, Window win, int width, int height, char candidates[3][17], XY *result) {
 
   XFontStruct* font;
-  font = XLoadQueryFont(display,"*-helvetica-*-24-*");
+  // font = XLoadQueryFont(display,"*-helvetica-medium-*-24-*");
+  // font = XLoadQueryFont(display,"fixed");
+  // font = XLoadQueryFont(display,"*-lucidatypewriter-medium-*-24-*");
+  font = XLoadQueryFont(display,"-*-*-*-*-*-*-24-*-*-*-*-*-iso8859-1");
   XSetFont(display, gc, font->fid);
 
   int unit_row = 3;
