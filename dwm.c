@@ -5696,7 +5696,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (selmon->sel && strcmp(selmon->sel->class, "St") == 0 && strcmp(c->class, "St") != 0 && selmon->sel->container->cn > 1 && !c->isfloating && !selmon->sel->isscratched) {
 		mergetocontainerof(selmon->sel, c);
-		c->container->masterfactor = 7;
+		// c->container->masterfactor = 7; // 携带st过去， 并自动放大主窗口
 	}
 
 	// if c stub>sel stub, sel stub is master -> c to master
