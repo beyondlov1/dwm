@@ -39,7 +39,7 @@ sudo apt-get install yajl-tools  libyajl-dev
 https://packages.ubuntu.com/search?mode=exactfilename&suite=focal&section=all&arch=any&keywords=X11%2Fextensions%2FXinerama.h&searchon=contents
 查询
 ```
-- sudo make clean install
+- sudo -E make clean install  ## -E 代表携带当前用户环境变量
   sudo cp dwm.desktop /usr/share/xsessions
 - mkdir -p ~/.config/dwm/script && echo 'compton 
 ibus-daemon -r -d -x
