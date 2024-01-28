@@ -74,13 +74,16 @@ void draw(Display *display, GC gc, Window win, int width, int height,
         //   XSetForeground(display, gc, 0x80ffffff);
         // }
       } else {
-        XSetForeground(display, gc, 0x80ffffff);
+        // XSetForeground(display, gc, 0x80ffffff);
+        XSetForeground(display, gc, 0xffffffff);
         // XSetForeground(display, gc, 0x80F5CA40);
       }
       // 文字以左下角为基准
       int textw = XTextWidth(font, msg, strlen(msg));
       XDrawString(display, win, gc, awidth * j + awidth / 2 - textw / 2,
                   aheight * i + aheight / 2 + 12, msg, strlen(msg));
+      XSetForeground(display, gc, 0xffff0000);
+      XFillRectangle(display, win, gc,awidth * j + awidth / 2 - 2 , aheight * i + aheight / 2 -2 , 4,4);
       strcpy(g[i][j], msg);
     }
   }
@@ -119,7 +122,8 @@ void draw(Display *display, GC gc, Window win, int width, int height,
         //   XSetForeground(display, gc, 0x80ffffff);
         // }
       } else {
-        XSetForeground(display, gc, 0x80ffffff);
+        // XSetForeground(display, gc, 0x80ffffff);
+        XSetForeground(display, gc, 0xffffffff);
         // XSetForeground(display, gc, 0x80F5CA40);
       }
       // 文字以左下角为基准
@@ -127,6 +131,9 @@ void draw(Display *display, GC gc, Window win, int width, int height,
       XDrawString(
           display, win, gc, awidth * j + awidth / 2 - textw / 2 + awidth / 2,
           aheight * i + aheight / 2 + aheight / 2 + 12, msg, strlen(msg));
+      
+      XSetForeground(display, gc, 0xffff0000);
+      XFillRectangle(display, win, gc,awidth * j + awidth  - 2 , aheight * i + aheight  -2 , 4,4);
       strcpy(g[i][j], msg);
     }
   }
