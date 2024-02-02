@@ -51,6 +51,9 @@ install: all
 	cp -f vim-mask/main-alpha ${DESTDIR}${PREFIX}/bin/vimmask
 	chmod 755 ${DESTDIR}${PREFIX}/bin/vimmask
 	cp -f software/vimmask.sh ${HOME}/software
+	gcc simulate-key/simulate_key.c -o simulate-key/simulate_key
+	cp -f simulate-key/simulate_key ${HOME}/software
+	chmod +x ${HOME}/software/simulate_key
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dwm \

@@ -8,3 +8,5 @@ util.o
 log/*
 .vscode/*
 __pycache__/*
+dwm-msg
+vim-mask/main-alpha
