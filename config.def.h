@@ -128,7 +128,7 @@ static const Rule subjrules[] = {
 static const float mfact     = 0.60; /* factor of master area size [0.05..0.95] */
 static const float factx     = 0.05; /* factor of master area size [0.05..0.95] */
 static const float facty     = 0.05; /* factor of master area size [0.05..0.95] */
-static const int nmaster     = 1;    /* number of clients in master area (没什么用, 但是不能删, 有旧功能占用着) */
+static const int nmaster     = 2;    /* number of clients in master area (没什么用, 但是不能删, 有旧功能占用着) */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 
@@ -566,6 +566,7 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
 	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
+	{ MODKEY,                       XK_m,      removefromscratchgroup,  {0 } },
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 

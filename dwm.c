@@ -5779,7 +5779,8 @@ manage(Window w, XWindowAttributes *wa)
 		ScratchItem* si = addtoscratchgroupc(c);
 		c->tags = curtags;
 		isnextscratch = 0;
-		si->pretags = 1 << (LENGTH(tags) - 1);
+		// si->pretags = 1 << (LENGTH(tags) - 1);
+		si->pretags = c->tags;  // 隐藏scratch的时候会回到pretags, 之前设置的是最后一个tag, 但是现在可以隐藏窗口, 所以这里直接回到当前的tag就可以了
 		si->cmd = nextscratchcmd;
 		nextscratchcmd = NULL;
 	}
@@ -9577,12 +9578,16 @@ createcontainerc(Client *c)
 	container->id = c->id;
 	container->cs[container->cn] = c;
 	container->cn ++;
-	container->masterfactor = 2.4;
-	container->masterfactorh = 2.4;
+	// container->masterfactor = 2.4;
+	// container->masterfactorh = 2.4;
+	// container->masterfactor_old = 2.4;
+	// container->masterfactorh_old = 2.4;
+	container->masterfactor = 1.0;
+	container->masterfactorh = 1.0;
 	container->masterfactor_old = 2.4;
 	container->masterfactorh_old = 2.4;
 	container->nmaster = nmaster;
-	container->nmaster_old = nmaster;
+	container->nmaster_old = 1;
 	container->arrange = container_layout_tile_v;
 	/*container->arrange = container_layout_mosaic;*/
 	c->container = container;
