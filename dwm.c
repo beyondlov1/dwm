@@ -5672,9 +5672,9 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	if(!c->isfloating){
-		if(c->w * c->h < selmon->ww * selmon->wh / 2){
-			isispawn = 1;
-		}
+		// if(c->w * c->h < selmon->ww * selmon->wh / 2){
+		// 	isispawn = 1;
+		// }
 
 		if(strcmp(c->class, "St") == 0 && selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
 			isispawn = 1;
@@ -8380,6 +8380,17 @@ stispawn(const Arg *arg){
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
 			getstworkingdir(workingdir, currpid);
+		}
+		int i ;
+		for ( i = 0; i < LENGTH(widescreen_classes); i++) {
+			char *cls = widescreen_classes[i];
+			if(strcmp(cls, selmon->sel->class) == 0){
+				selmon->sel->container->nmaster = 1;
+				selmon->sel->container->masterfactor_old = selmon->sel->container->masterfactor;
+				selmon->sel->container->masterfactorh_old = selmon->sel->container->masterfactorh;
+				selmon->sel->container->masterfactor = 2.4;
+				selmon->sel->container->masterfactorh = 2.4;
+			}
 		}
 	}
 	char *cmd[] = {"st","-d",workingdir,NULL};

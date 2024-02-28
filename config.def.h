@@ -1,4 +1,5 @@
 /* Include */
+#include <X11/X.h>
 #include <X11/XF86keysym.h>
 /* See LICENSE file for copyright and license details. */
 
@@ -63,6 +64,7 @@ static const char *gradual_colors[][3] = {
 // };
 
 
+static const char *widescreen_classes[] = {"Code", "Google-chrome", "firefox"};
 
 /* tagging */
 static const char *tags[] = { "  1-term  ", "2-browser ", "  3-dev1  ", "  4-dev2  ", "5-datasource", " 6-learn  ", "    7     ", "    8     ", "    9     " };
@@ -285,6 +287,8 @@ static Key keys[] = {
 	// { Mod1Mask,                       XK_Tab, focuslast,          { 0 } },
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
+	{ MODKEY|ShiftMask,                       XK_Return, stspawn,          { 0 } },
+	{ MODKEY|ShiftMask,                       XK_KP_Enter, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 
@@ -557,6 +561,8 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_minus, tile6zoom,          { .f = -0.1} },
 	{ MODKEY,                       XK_Return, stispawn,          { 0 } },
 	{ MODKEY,                       XK_KP_Enter, stispawn,          { 0 } },
+	{ MODKEY|ShiftMask,                       XK_Return, stspawn,          { 0 } },
+	{ MODKEY|ShiftMask,                       XK_KP_Enter, stspawn,          { 0 } },
 	{ MODKEY,                       XK_b, assemblecsv,          { .v = &taskgrouppath } },
 	//{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
