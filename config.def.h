@@ -170,20 +170,18 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, "-l", "10", NULL };
+static const char *rofiruncmd[] = { "rofi", "-show", "run", NULL};
 //static const char *termcmd[]  = { "st", NULL };
 static const char scratchpadname[] = "scratchpad";
 // static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
 static const char *scratchpadcmd[] = {"jumpapp", "chrome", NULL };
-//static const char *roficmd[] = {"rofi","-auto-select","-show","window",NULL};
-static const char *roficmd[] = {"rofi","-auto-select","-show","fb","-modes ","fb:~/software/bin/rofi-script/switchwin.sh" ,"-matching","prefix_s", "-hover-select", "-me-select-entry", "", "-me-accept-entry","MousePrimary",NULL};
 static const char *firefoxcmd[] = {"/usr/bin/firefox",NULL};
 static const char *flameshotcmd[] = {"flameshot","gui",NULL};
 static const char *browser[] = {"sidk.sh",NULL};
 static const char *notecmd[] = {"qt-note.sh",NULL};
 static const char *querycmd[] = {"/home/beyond/software/queryclip.sh", "http://cn.bing.com/search?q=%s", NULL};
 static const char *querybrowsercmd[] = {"/home/beyond/software/browserclip.sh", "https://cn.bing.com/search?q=%s", NULL};
-static const char *rofiwebsearchcmd[] = {"/home/beyond/software/rofiwebsearch.sh",  NULL};
 //static const char *dictcmd[] = {"/home/beyond/software/queryclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://youdao.com/result?word=%s&lang=en", NULL};
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
@@ -196,7 +194,6 @@ static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
 static const char *fmcmd[] = {"/home/beyond/software/fm", NULL};
 static const char *fmclipcmd[] = {"/home/beyond/software/fmclip", NULL};
 
-static const char *rofiscriptcmd[] = {"/home/beyond/software/rofiscript", NULL};
 static const char *notecurrwincmd[] = {"/home/beyond/software/notecurrwin.sh", NULL};
 static const char *ocrcmd[] = {"/home/beyond/software/ocr.sh", NULL};
 static const char *smartleftcmd[] = {"/home/beyond/software/smartleft.sh", NULL};
@@ -229,6 +226,8 @@ static const char *taskgrouppath = "/home/beyond/software/bin/dwm-taskgroup/1.cs
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
+	// { Mod1Mask,                       XK_a,      spawn,       {.v=dmenucmd} },
+	{ Mod1Mask,                       XK_a,      spawn,       {.v=rofiruncmd} },
 	//{ MODKEY,                       XK_Return, sspawn,          {.v = terminal } },
 	//{ MODKEY,                       XK_Return, stsspawn,          { 0 } },
 
@@ -275,9 +274,6 @@ static Key keys[] = {
 	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
 	// { Mod1Mask,                       XK_grave,      tile5viewcomplete,       {0} },
 	
-
-	{Mod1Mask,                       XK_q, spawn,          { .v = rofiwebsearchcmd } },
-	//{Mod1Mask,                       XK_space, spawn,          { .v = rofiscriptcmd } },
 	{MODKEY,			XK_F2, killclientforce, {0}},
 	{ControlMask|Mod1Mask,			XK_g, tile6maximizewithsticky, {0}},
 	// { MODKEY,                       XK_q, ispawn,          {.v = browsercmd} },
@@ -412,7 +408,6 @@ static Key keys[] = {
 	// { MODKEY,                       XK_d,    relview,           {.i=1} },
 	// { MODKEY,                       XK_q,      relview,          {.i = -1 } },
 	// { MODKEY,                       XK_w,      relview,          {.i = 1 } },
-	//{ MODKEY,                       XK_grave,    spawn,           {.v = roficmd} },
 	//{ 0,                       XK_Super_L,      empty,      {0} },
 	{ 0,                       XK_Super_L,      toggleswitchers,      {0} },
 	{ 0,                       XK_Super_R,      toggleswitchers,      {0} },
@@ -429,7 +424,6 @@ static Key keys[] = {
 	// { MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	//{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
 	// { MODKEY,                       XK_b,      destroyswitchers,      {0} },
-	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_space,  tile5toggleshift,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  tile5togglefloating, {0} },
 	{ Mod1Mask|ShiftMask,             XK_space,  tile5togglefloating, {0} },
@@ -517,8 +511,6 @@ static Key switcherkeys[] = {
 
 	{MODKEY,                       XK_equal,      tile5expand,       {.f=0.1} },
 	{ MODKEY,                       XK_minus,      tile5expand,       {.f=-0.1} },
-	{Mod1Mask,XK_q, spawn,  { .v = rofiwebsearchcmd } },
-	//{Mod1Mask, XK_space, spawn, { .v = rofiscriptcmd } },
 
 	{MODKEY|ShiftMask,XK_b,togglebar,{0} },
 	//{MODKEY, XK_g, toggleswitchersticky, {0}},
@@ -624,7 +616,6 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_g,      setcontainerlayout,      {0} },
 	{ MODKEY,                       XK_v,      setlayout,      {.v=&layouts[8]} },
 	//{ MODKEY,                       XK_g,      toggleswitchers,      {0} },
-	{ MODKEY,                       XK_semicolon,      spawn,           {.v = roficmd} },
 	{ MODKEY,                       XK_space,  tile5toggleshift,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  tile5togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
