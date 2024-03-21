@@ -3535,12 +3535,33 @@ clientswitchermove_tag2(const Arg *arg)
 	int curi = 0;
 	int zlevels[n];
 	memset(zlevels, 0, sizeof(zlevels));
+	int selcx = selmon->sel->x + selmon->sel->w/2;
+	int selcy = selmon->sel->y + selmon->sel->h/2;
 	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
 		if(!c->isfloating && !HIDDEN(c)){
 			if(selmon->sel == c) curi = i;
 			cxys[i].x = c->x + c->w/2;
 			cxys[i].y = c->y + c->h/2;
+			int relx = cxys[i].x - selcx;
+			int rely = cxys[i].y - selcy;
+			if(c->container == selmon->sel->container){
+				cxys[i].x = cxys[i].x - relx / 2.5;
+				cxys[i].y = cxys[i].y - rely / 2.5;
+			}else {
+				// 离sel近的移动的更多, 类似于万有引力, 近的更近
+				int unitx = selmon->mw / 2;
+				int unity = selmon->mh / 2;
+				float relux = 1.0 * relx / unitx;
+				float reluy = 1.0 * rely / unity;
+				cxys[i].x = cxys[i].x - ((int)(1 / relux * selmon->sel->w / 6));
+				cxys[i].y = cxys[i].y - ((int)(1 / reluy * selmon->sel->h / 6));
+			}
+			// 放置重心跑出物体框
+			if(cxys[i].x < c->x) cxys[i].x = c->x + c->w / 6;
+			if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
+			if(cxys[i].y < c->y) cxys[i].y = c->y + c->h / 6;
+			if(cxys[i].y > c->y + c->h) cxys[i].y = c->y + c->h - c->h / 6;
 			tagindexin[i] = gettagindex(c->tags);
 			zlevels[i] = c->zlevel;
 			i++;
