@@ -175,6 +175,7 @@ struct Container {
 	int nmaster_old;
 	// 暂时没用
 	int hiddencn;
+	int spirali;
 	void (*arrange)(Container *container); 
 	void (*oldarrange)(Container *container); 
 };
@@ -6225,6 +6226,24 @@ movemouse(const Arg *arg)
 }
 
 int
+spiralplace(Container *containers[], int n, MXY targetpos[])
+{
+	LOG_FORMAT("targetpos[0] = %d, %d", targetpos[0].row, targetpos[0].col);
+	int i;
+	int j;
+	for (i=0;i<n;i++) {
+		for(j=0;j<LENGTH(spiral_index);j++)
+		{
+			if(targetpos[i].row == spiral_index[j].row && targetpos[i].col == spiral_index[j].col)
+			{
+				containers[i]->spirali = j;
+				break;
+			}
+		}
+	}
+}
+
+int
 pyplace(int targetindex[], int n, MXY targetpos[], int clientids[])
 {
 	if(n==0) return 0;
@@ -6566,6 +6585,7 @@ pysmoveclient(Client *target, int sx, int sy)
 			MXY targetpos[n];
 			int clientids[n];
 			int foundspiralindex = spiralsearch(centerxy);
+			LOG_FORMAT("foundspiralindex %d", foundspiralindex);
 			if (foundspiralindex >= 0) {
 				/*clientids[0] = oldc->id;*/
 				if(oldc->container->cn > 1){
@@ -6588,6 +6608,7 @@ pysmoveclient(Client *target, int sx, int sy)
 					targetpos[1] = oldmxy;
 					clientids[1] = sepcontainers[1]->id;
 					LOG_FORMAT("movemouseswitcher 3.5 newmxy:%d,%d", newmxy.row, newmxy.col);
+					spiralplace(sepcontainers, 2, targetpos);
 					pyplace(targetindex, 2, targetpos, clientids);
 					LOG_FORMAT("movemouseswitcher 4");
 				}else{
@@ -6595,7 +6616,10 @@ pysmoveclient(Client *target, int sx, int sy)
 					targetindex[0] = oldc->container->launchindex;
 					targetpos[0] = spiral_index[foundspiralindex];
 					clientids[0] = oldc->container->id;
-					pyplace(targetindex, 1, targetpos, clientids);
+					Container *cs[1];
+					cs[0] = oldc->container;
+					spiralplace(cs, 1, targetpos); // c实现的移动
+					pyplace(targetindex, 1, targetpos, clientids); // 用python移动, 但是不启动python服务就什么都不会发生, 
 					LOG_FORMAT("movemouseswitcher 8");
 				}
 
@@ -9625,6 +9649,7 @@ createcontainerc(Client *c)
 	c->container = container;
 	c->indexincontainer = 0;
 	container->hiddencn = 0;
+	container->spirali = -1;
 	return container;
 }
 
@@ -9786,6 +9811,39 @@ tile7(Monitor *m)
 	}
 	else 
 	{
+		// spiral 固定位置
+		int spiraln =  LENGTH(spiral_index);
+		Container *spiralsits[spiraln];
+		memset(spiralsits, 0, sizeof(spiralsits));
+		// 安排已经有位置的入座
+		for(i = 0;i<spiraln;i++)
+		{
+			for (j = 0; j < ctn; j++) {
+				container = tiledcs[j];
+				if(container->spirali == i)
+				{
+					spiralsits[i] = container;
+					break;
+				}
+			}
+		}
+		// 安排没有位置的入座
+		for(j = 0;j<ctn;j++)
+		{
+			container = tiledcs[j];
+			if(container->spirali < 0)
+			{
+				for(i = 0;i<spiraln;i++)
+				{
+					if(!spiralsits[i])
+					{
+						container->spirali = i;
+						spiralsits[i] = container;
+						break;
+					}
+				}
+			}
+		}
 		LOG_FORMAT("tile7 10");
 		for(i = 0;i<ctn;i++)
 		{
@@ -9805,7 +9863,8 @@ tile7(Monitor *m)
 			rect_t r;
 			LOG_FORMAT("tile7 12");
 			int ok = 0;
-			ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			// ok = fillspiral(sc, neww, newh, i, ts, i, &r);
+			ok = fillspiral(sc, neww, newh, container->spirali, ts, i, &r);
 			LOG_FORMAT("tile7 13");
 			if(!ok)
 			{
@@ -9819,7 +9878,7 @@ tile7(Monitor *m)
 			container->y = r.y;
 			container->w = r.w;
 			container->h = r.h;
-			container->matcoor = spiral_index[i];
+			container->matcoor = spiral_index[container->spirali];
 
 			ts[i].x = container->x;
 			ts[i].y = container->y;
