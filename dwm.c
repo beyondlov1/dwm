@@ -3385,7 +3385,7 @@ angley(XY xy1, XY xy2)
 {
 	if(xy1.y - xy2.y == 0) return INT_MAX - 1;
 	// 上下
-	if(abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 1.2) return 2.5*distancexy(xy1, xy2);
+	if(abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 2.0) return 4.5*distancexy(xy1, xy2);
 	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + 1.5*distancexy(xy1, xy2);
 }
 
