@@ -9833,13 +9833,32 @@ tile7(Monitor *m)
 			container = tiledcs[j];
 			if(container->spirali < 0)
 			{
-				for(i = 0;i<spiraln;i++)
-				{
-					if(!spiralsits[i])
+				if (selmon->sel->snext && selmon->sel->snext->container->spirali >= 0){
+					// 找离sel最近的位置入座
+					int mindist = INT_MAX;
+					MXY selxy = spiral_index[selmon->sel->snext->container->spirali];
+					for(i = 0;i<spiraln;i++)
 					{
-						container->spirali = i;
-						spiralsits[i] = container;
-						break;
+						if(!spiralsits[i])
+						{
+							MXY xy = spiral_index[i] ;
+							int dist = (pow(xy.row - selxy.row, 2) + pow(xy.col - selxy.col, 2));
+							if(dist < mindist){
+								mindist = dist;
+								container->spirali = i;
+							}
+						}
+					}
+					spiralsits[container->spirali] = container;
+				}else{
+					for(i = 0;i<spiraln;i++)
+					{
+						if(!spiralsits[i])
+						{
+							container->spirali = i;
+							spiralsits[i] = container;
+							break;
+						}
 					}
 				}
 			}
