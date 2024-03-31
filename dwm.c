@@ -227,6 +227,8 @@ struct Client {
 	long lastunfocustime;
 
 	char shortcut[5];
+	Client *subclient;
+	Client *parentclient;
 };
 
 
@@ -558,6 +560,7 @@ static void sspawn(const Arg *arg);
 static void stspawn(const Arg *arg);
 static void stsspawn(const Arg *arg);
 static void stispawn(const Arg *arg);
+static void stsubspawn(const Arg *arg);
 static void swap(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
@@ -681,6 +684,7 @@ static void i_expandx(const Arg *arg);
 static void i_expandy(const Arg *arg);
 static void i_switcherfocuschange(const Arg *arg);
 
+int ispointin(int x, int y, rect_t t);
 
 static void LOG(char *content,char *content2);
 
@@ -742,6 +746,7 @@ static const char **nexttempcmd;
 static long lastnexttemptime;
 static long lastmanagetime;
 static long lastspawntime;
+static volatile int isnextsubclient = 0;
 static volatile int isnextinner = 0;
 static long lastnextinnertime;
 static pid_t ispawnpids[] = {0};
@@ -3555,10 +3560,20 @@ clientswitchermove_tag2(const Arg *arg)
 				int unity = selmon->mh / 2;
 				float relux = 1.0 * relx / unitx;
 				float reluy = 1.0 * rely / unity;
-				cxys[i].x = cxys[i].x - ((int)(1 / relux * selmon->sel->w / 6));
-				cxys[i].y = cxys[i].y - ((int)(1 / reluy * selmon->sel->h / 6));
+				if(relx != 0)
+					cxys[i].x = cxys[i].x - ((int)(0.8 / relux * selmon->sel->w / 6));
+				if(rely != 0)
+					cxys[i].y = cxys[i].y - ((int)(0.8 / reluy * selmon->sel->h / 6));
 			}
-			// 放置重心跑出物体框
+			LOG_FORMAT("clientswitchermove_tag2 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
+			LOG_FORMAT("clientswitchermove_tag2 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
+			// 防止进入到sel的区域
+			rect_t selrect = {selmon->sel->x, selmon->sel->y, selmon->sel->w,selmon->sel->h};
+			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x < (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x - 10;
+			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x >= (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x + selmon->sel->w + 10;
+			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y < (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y - 10;
+			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y >= (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y + selmon->sel->h + 10;
+			// 防止重心跑出物体框
 			if(cxys[i].x < c->x) cxys[i].x = c->x + c->w / 6;
 			if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
 			if(cxys[i].y < c->y) cxys[i].y = c->y + c->h / 6;
@@ -5644,6 +5659,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->shortcut[0] = '\0';
 	c->isfullscreen = 0;
 	c->isfloating = 0;
+	c->subclient = 0;
+	c->parentclient = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -5785,8 +5802,14 @@ manage(Window w, XWindowAttributes *wa)
 	// 	c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
+
+	if (isnextsubclient) {
+		selmon->sel->subclient = c;
+		c->parentclient = selmon->sel;
+	}	
 	attach(c);
 	attachstack(c);
+
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -5818,6 +5841,8 @@ manage(Window w, XWindowAttributes *wa)
 
 
 	isnexttemp = 0;
+	isnextsubclient = 0;
+	isnextinner = 0;
 	// 这个要放到最后, 否则 isnexttemp 将不能被正确设置, see keypress
 	if (c->istemp)
 	{
@@ -8299,6 +8324,16 @@ tsspawn(const Arg *arg)
 	lastspawntime = lastnexttemptime;
 }
 
+void 
+subspawn(const Arg *arg)
+{
+	isnextsubclient = 1;
+	isnextinner = 1;
+	lastnextinnertime = getcurrusec();
+	pid_t pid = forkrun(arg);
+	ispawnpids[0] = pid;
+	ispawntimes[0] = getcurrusec();
+}
 
 void 
 ispawn(const Arg *arg)
@@ -8378,6 +8413,39 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 		}
 	}
 	closedir(dirp);
+}
+
+void 
+stsubspawn(const Arg *arg){
+	char workingdir[512];
+	strcpy(workingdir, "~");
+	if (selmon->sel) {
+		pid_t currpid = selmon->sel->pid;
+		if (currpid) {
+			getstworkingdir(workingdir, currpid);
+		}
+		int i ;
+		for ( i = 0; i < LENGTH(widescreen_classes); i++) {
+			char *cls = widescreen_classes[i];
+			if(strcmp(cls, selmon->sel->class) == 0){
+				selmon->sel->container->nmaster = 1;
+				selmon->sel->container->masterfactor_old = selmon->sel->container->masterfactor;
+				selmon->sel->container->masterfactorh_old = selmon->sel->container->masterfactorh;
+				selmon->sel->container->masterfactor = 2.4;
+				selmon->sel->container->masterfactorh = 2.4;
+			}
+		}
+	}
+	char *cmd[] = {"st","-d",workingdir,NULL};
+	char *cmd2[] = {"xdotool","sleep","0.2","key", "ctrl+e" , "key", "ctrl+e", NULL};
+	if(selmon->sel && strcmp(selmon->sel->class, "Code") == 0){
+		const Arg a = {.v = cmd2};
+		subspawn(&a);
+	}else{
+		const Arg a = {.v = cmd};
+		if (scratchgroupptr && scratchgroupptr->isfloating) subspawn(&a);
+		else subspawn(&a);
+	}
 }
 
 void stspawn(const Arg *arg){
@@ -9947,7 +10015,7 @@ tile7(Monitor *m)
 			updateindexincontainer(container);
 		}
 
-        	// 单屏使用
+    // 单屏使用
 		for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		{
 			// c->bw = 0;
@@ -10085,12 +10153,27 @@ container_layout_tile_v(Container *container)
 {
 	Client *c;
 	int j;
+	Client *subcs[container->cn];
+	Client *tilecs[container->cn];
+	int subcn = 0;
+	int tilecn = 0;
+	for (j = 0; j < container->cn; j++)
+	{
+		c = container->cs[j];
+		if(c->parentclient){
+			subcs[subcn] = c;
+			subcn ++;
+		}else{
+			tilecs[tilecn] = c;
+			tilecn ++;
+		}
+	}
 
-	int splited = container->cn > 1;
+	int splited = tilecn > 1;
 	if(!splited)
 	{
 		LOG_FORMAT("container_layout_tile 3");
-		c = container->cs[0];
+		c = tilecs[0];
 		c->x = container->x;
 		c->y = container->y;
 		c->w = container->w;
@@ -10106,19 +10189,19 @@ container_layout_tile_v(Container *container)
 		int slavew = container->w;
 		int masterh = container->h;
 		int slaveh = container->h;
-		int ismastervsplit = container->cn > 1 ? 1:0;
+		int ismastervsplit = tilecn > 1 ? 1:0;
 		if(ismastervsplit) 
 		{
 			masterh = container->h;
 		}
-		int isslavevsplit = container->cn > container->nmaster ? 1:0;
+		int isslavevsplit = tilecn > container->nmaster ? 1:0;
 		if(isslavevsplit) 
 		{
 			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
 			slaveh = container->h - masterh;
 		}
-		masterw = container->w / MIN(container->cn, container->nmaster);
-		slavew = container->w / MAX(1, container->cn - container->nmaster);
+		masterw = container->w / MIN(tilecn, container->nmaster);
+		slavew = container->w / MAX(1, tilecn - container->nmaster);
 
 		int masternexty = 0;
 		int slavenexty = 0;
@@ -10128,16 +10211,16 @@ container_layout_tile_v(Container *container)
 		float masterfactorh_slave = 1/container->masterfactorh;
 		int nextmasterw = container->w;
 		if(masterfactorh_slave == 1){
-			nextmasterw = container->w  / MIN(container->cn, container->nmaster);
+			nextmasterw = container->w  / MIN(tilecn, container->nmaster);
 		}else{
-			nextmasterw = container->w *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(container->cn, container->nmaster))) / masterfactorh_slave;
+			nextmasterw = container->w *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(tilecn, container->nmaster))) / masterfactorh_slave;
 		}
-		for (j = 0; j < container->cn; j++)
+		for (j = 0; j < tilecn; j++)
 		{
 			LOG_FORMAT("container_layout_tile 2 start");
 			LOG_FORMAT("container_layout_tile 2 %f,%d", masterfactorh_slave, nextmasterw);
 			int ismaster = j < container->nmaster ? 1:0;
-			c = container->cs[j];
+			c = tilecs[j];
 			int my_masterw = nextmasterw * masterfactorh_slave;
 			c->w = ismaster ? my_masterw : slavew;
 			c->h = ismaster ? masterh : slaveh;
@@ -10171,6 +10254,22 @@ container_layout_tile_v(Container *container)
 		LOG_FORMAT("container_layout_tile 3");
 	}
 	
+	for (j = 0; j < subcn; j++)
+	{
+		c = subcs[j];
+		Client *p = c->parentclient;
+		c->w = p->w / 2.5;
+		c->h = p->h / 2.5;
+		c->x = p->x + p->w - c->w;
+		c->y = p->y + p->h - c->h - p->h/6;
+		c->zlevel = p->zlevel + 1;
+		c->isfloating = 0;
+		c->matcoor = p->container->matcoor;
+		if(selmon->sel == c)
+			c->bw = borderpx;
+		else
+			c->bw = borderpx - 1;
+	}
 }
 
 /**
