@@ -3546,7 +3546,18 @@ clientswitchermove_tag2(const Arg *arg)
 	for(i = 0, c = selmon->clients;c;c=c->next)
 	{
 		if(!c->isfloating && !HIDDEN(c)){
-			if(selmon->sel == c) curi = i;
+			if(selmon->sel == c) 
+			{
+				curi = i;
+				cxys[i].x = c->x + c->w/2;
+				cxys[i].y = c->y + c->h/2;
+				tagindexin[i] = gettagindex(c->tags);
+				zlevels[i] = c->zlevel;
+				i ++;
+				continue;
+			}
+			tagindexin[i] = gettagindex(c->tags);
+			zlevels[i] = c->zlevel;
 			cxys[i].x = c->x + c->w/2;
 			cxys[i].y = c->y + c->h/2;
 			int relx = cxys[i].x - selcx;
@@ -3578,13 +3589,18 @@ clientswitchermove_tag2(const Arg *arg)
 			if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
 			if(cxys[i].y < c->y) cxys[i].y = c->y + c->h / 6;
 			if(cxys[i].y > c->y + c->h) cxys[i].y = c->y + c->h - c->h / 6;
-			tagindexin[i] = gettagindex(c->tags);
-			zlevels[i] = c->zlevel;
+			LOG_FORMAT("clientswitchermove_tag4 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
+			LOG_FORMAT("clientswitchermove_tag4 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
 			i++;
 		}
 	}
 
 	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
+	for(i = 0; i < n; i++)
+	{
+		LOG_FORMAT("clientswitchermove_tag4 %d %d",  sxys[i].x, sxys[i].y);
+	}
+	LOG_FORMAT("clientswitchermove_tag4 %d",  curi);
 	int closest = nextclosestanglexyz(arg, n, sxys, curi, zlevels);
 	if (closest < 0) return;
 	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
