@@ -7430,6 +7430,14 @@ resizerequest(XEvent *e)
 	}
 }
 
+int 
+ZlevelCmp(const void *a,const void *b)
+{
+	struct Client *c = (Client *)a; 
+	struct Client *d = (Client *)b; 
+	return c->zlevel - d->zlevel;
+}
+
 void
 restack(Monitor *m)
 {
@@ -7442,6 +7450,22 @@ restack(Monitor *m)
 		return;
 	if (m->sel->isfloating || m->sel->zlevel > 0 || !m->lt[m->sellt]->arrange)
 		XRaiseWindow(dpy, m->sel->win);
+
+	// 按zlevel 排序
+	Client *sortedcs[m->sel->container->cn];
+	memcpy(sortedcs, m->sel->container->cs, sizeof(sortedcs));
+	qsort(sortedcs, m->sel->container->cn,sizeof(Client *), ZlevelCmp);
+	int i;
+	for(i=0;i<m->sel->container->cn; i++)
+		XRaiseWindow(dpy, sortedcs[i]->win);
+	// subclient放在parent上边,不过有了上边的排序,就不需要这个了
+	// for(i=0;i<m->sel->container->cn; i++)
+	// {
+	// 	c = m->sel->container->cs[i];
+	// 	if(c->parentclient && c->parentclient == m->sel){
+	// 		XRaiseWindow(dpy, c->win);
+	// 	}
+	// }
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
@@ -10133,6 +10157,25 @@ container_layout_full(Container *container)
 		c->h = container->h;
 		c->matcoor = container->matcoor;
 		c->bw = 0;
+	}
+
+	for (j = 0; j < container->cn; j++)
+	{
+		c = container->cs[j];
+		if(c->parentclient){
+			Client *p = c->parentclient;
+			c->w = p->w / 2.5;
+			c->h = p->h / 2.5;
+			c->x = p->x + p->w - c->w;
+			c->y = p->y + p->h - c->h - p->h/6;
+			c->zlevel = p->zlevel + 1;
+			c->isfloating = 0;
+			c->matcoor = p->container->matcoor;
+			if(selmon->sel == c)
+				c->bw = borderpx;
+			else
+				c->bw = borderpx - 1;
+		}
 	}
 }
 
