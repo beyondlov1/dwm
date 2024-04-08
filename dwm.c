@@ -10162,7 +10162,7 @@ container_layout_full(Container *container)
 	for (j = 0; j < container->cn; j++)
 	{
 		c = container->cs[j];
-		if(c->parentclient){
+		if(c->parentclient && c != selmon->sel){
 			Client *p = c->parentclient;
 			c->w = p->w / 2.5;
 			c->h = p->h / 2.5;
