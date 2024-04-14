@@ -3563,9 +3563,14 @@ clientswitchermove_tag2(const Arg *arg)
 			int relx = cxys[i].x - selcx;
 			int rely = cxys[i].y - selcy;
 			if(c->container == selmon->sel->container){
-				if(cxys[i].x != selcx && cxys[i].y != selcy){
+				if(abs(cxys[i].x - selcx) > 5 || abs(cxys[i].y - selcy) > 5){
 					cxys[i].x = cxys[i].x - relx / 2.5;
 					cxys[i].y = cxys[i].y - rely / 2.5;
+				}else{
+					cxys[i].x = selcx;
+					cxys[i].y = selcy;
+					i ++;
+					continue;
 				}
 			}else {
 				// 离sel近的移动的更多, 类似于万有引力, 近的更近
@@ -3573,6 +3578,8 @@ clientswitchermove_tag2(const Arg *arg)
 				int unity = selmon->mh / 2;
 				float relux = 1.0 * relx / unitx;
 				float reluy = 1.0 * rely / unity;
+			// LOG_FORMAT("clientswitchermove_tag2 %f", relux);
+			// LOG_FORMAT("clientswitchermove_tag2 %f", reluy);
 				if(relx != 0)
 					cxys[i].x = cxys[i].x - ((int)(0.8 / relux * selmon->sel->w / 6));
 				if(rely != 0)
