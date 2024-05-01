@@ -193,6 +193,7 @@ struct Client {
 	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isfocused, istemp, isdoublepagemarked, isdoubled,placed, isdialog;
+	int issidecar;
 	// 暂时没用
 	int hidden;
 	int zlevel;
@@ -676,6 +677,7 @@ static void show(Client *c);
 static void hidewin(const Arg *arg);
 static void restorewin(const Arg *arg);
 static void quickfocus(const Arg *arg);
+static void nextsidecar(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -752,7 +754,9 @@ static long lastnextinnertime;
 static pid_t ispawnpids[] = {0};
 static long ispawntimes[] = {0};
 static volatile int isnextreplace = 0;
+static volatile int isnextsidecar = 0;
 static long lastnextreplacetime;
+static long lastnextsidecartime;
 
 static int switchercurtagindex;
 
@@ -5634,6 +5638,12 @@ ischildof(unsigned long pid, unsigned long ppid)
 }
 
 void
+nextsidecar(const Arg *arg){
+	isnextsidecar = 1;
+	lastnextsidecartime = getcurrusec();
+}
+
+void
 manage(Window w, XWindowAttributes *wa)
 {
 	lastmanagetime = getcurrusec(); 
@@ -5647,6 +5657,9 @@ manage(Window w, XWindowAttributes *wa)
 	int isrispawn = isnextreplace;
 	isnextreplace = 0;
 
+	isnextsidecar = isnextsidecar && (lastmanagetime - lastnextsidecartime <= 1000000*5);
+	int issidecarspawn = isnextsidecar;
+	isnextsidecar = 0;
 
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
@@ -5686,6 +5699,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->isfloating = 0;
 	c->subclient = 0;
 	c->parentclient = 0;
+	c->issidecar = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -5700,6 +5714,7 @@ manage(Window w, XWindowAttributes *wa)
 				}
 			}
 	 } else c->istemp = 0;
+
 
 	updateicon(c);
 	updateicons(c);
@@ -5731,6 +5746,12 @@ manage(Window w, XWindowAttributes *wa)
 			c->isfloating = True;
 		}
 	}
+
+	if(issidecarspawn){
+		c->issidecar = 1;
+		c->isfloating = 1;
+	}
+
 	if (!strcmp(c->name, scratchpadname)) {
 		c->isfloating = True;
 	}
@@ -5806,6 +5827,17 @@ manage(Window w, XWindowAttributes *wa)
 		c->h = c->mon->wh / 2;
 		c->x = c->mon->wx + (c->mon->ww - WIDTH(c));
 		c->y = c->mon->wy + (c->mon->wh - HEIGHT(c))/2;
+	}
+
+	if (c->issidecar)
+	{
+		if (!isispawn) {
+			c->tags = TAGMASK;
+		}
+		c->w = c->mon->ww * 0.4;
+		c->h = c->mon->wh;
+		c->x = c->mon->wx + (c->mon->ww - WIDTH(c));
+		c->y = c->mon->wy + (c->mon->wh - HEIGHT(c));
 	}
 	
 	selmon->tagset[selmon->seltags] &= ~scratchtag;
@@ -10236,6 +10268,24 @@ container_layout_tile_v(Container *container)
 			tilecn ++;
 		}
 	}
+	int iscontainersel = 0;
+	for (j = 0; j < container->cn; j++)
+	{
+		c = container->cs[j];
+		if(c==selmon->sel){
+			iscontainersel = 1;
+			break;
+		}
+	}
+
+	int shrink = 0;
+	float shrinkxfactor = 0.6;
+	for(c=selmon->clients;c;c=c->next){
+		if(c->issidecar && iscontainersel){
+			shrink = 1;
+			break;
+		}
+	}
 
 	int splited = tilecn > 1;
 	if(!splited)
@@ -10246,6 +10296,12 @@ container_layout_tile_v(Container *container)
 		c->y = container->y;
 		c->w = container->w;
 		c->h = container->h;
+
+		if(shrink){
+			c->w = c->w * shrinkxfactor;
+			c->x = container->x + (c->x - container->x) * shrinkxfactor;
+		}
+
 		c->matcoor = container->matcoor;
 		c->bw = 0;
 		LOG_FORMAT("container_layout_tile 4");
@@ -10299,6 +10355,11 @@ container_layout_tile_v(Container *container)
 			c->h = c->h - c->mon->gap->gappx / 2;
 			c->x = c->x + c->mon->gap->gappx / 4;
 			c->y = c->y + c->mon->gap->gappx / 4;
+
+			if(shrink){
+				c->w = c->w * shrinkxfactor;
+				c->x = container->x + (c->x - container->x) * shrinkxfactor;
+			}
 
 			if(selmon->sel == c)
 				c->bw = borderpx;
