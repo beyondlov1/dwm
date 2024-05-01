@@ -34,6 +34,7 @@ dump_client(yajl_gen gen, Client *c)
   // clang-format off
   YMAP(
     YSTR("name"); YSTR(c->name);
+    YSTR("class"); YSTR(c->class);
     YSTR("tags"); YINT(c->tags);
     YSTR("window_id"); YINT(c->win);
     YSTR("pid"); YINT(c->pid);
