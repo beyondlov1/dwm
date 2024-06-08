@@ -422,6 +422,7 @@ static void attachstack(Client *c);
 static void addtoscratchgroup(const Arg *arg);
 static void assemble(const Arg *arg);
 static void assemblecsv(const Arg *arg);
+static ScratchItem* _addtoscratchgroupc(Client *c, int isshow);
 static ScratchItem* addtoscratchgroupc(Client *c);
 static ScratchItem * alloc_si(void);
 static void buttonpress(XEvent *e);
@@ -763,8 +764,10 @@ static pid_t ispawnpids[] = {0};
 static long ispawntimes[] = {0};
 static volatile int isnextreplace = 0;
 static volatile int isnextsidecar = 0;
+static volatile int isnexthide = 0;
 static long lastnextreplacetime;
 static long lastnextsidecartime;
+static long lastnexthidetime;
 
 static int switchercurtagindex;
 
@@ -5657,18 +5660,26 @@ nextmanagetype(const Arg *arg){
 	int type = arg->ui;
 	if (type & (1 << 0)) {
 		isnextscratch = 1;
-	}else if (type & (1 << 1)) {
+	}
+	if (type & (1 << 1)) {
 		isnexttemp = 1;
 		lastnexttemptime = getcurrusec();
-	}else if (type & (1 << 2)) {
+	} 
+	if (type & (1 << 2)) {
 		isnextinner = 1;
 		lastnextinnertime = getcurrusec();
-	}else if (type & (1 << 3)) {
+	} 
+	if (type & (1 << 3)) {
 		isnextreplace = 1;
 		lastnextreplacetime = getcurrusec();
-	}else if (type & (1 << 4)) {
+	} 
+	if (type & (1 << 4)) {
 		isnextsidecar = 1;
 		lastnextsidecartime = getcurrusec();
+	}
+	if (type & (1 << 5)) {
+		isnexthide = 1;
+		lastnexthidetime = getcurrusec();
 	}
 }
 
@@ -5689,6 +5700,10 @@ manage(Window w, XWindowAttributes *wa)
 	isnextsidecar = isnextsidecar && (lastmanagetime - lastnextsidecartime <= 1000000*5);
 	int issidecarspawn = isnextsidecar;
 	isnextsidecar = 0;
+
+	isnexthide = isnexthide && (lastmanagetime - lastnexthidetime <= 1000000*5);
+	int isnexthidespawn = isnexthide;
+	isnexthide = 0;
 
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
@@ -5847,7 +5862,7 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	
-	if (c->istemp)
+	if (c->istemp && !isnextscratch)
 	{
 		if (!isispawn) {
 			c->tags = TAGMASK;
@@ -5907,7 +5922,9 @@ manage(Window w, XWindowAttributes *wa)
 	// for sspawn
 	if(isnextscratch){
 		unsigned int curtags = c->tags;
-		ScratchItem* si = addtoscratchgroupc(c);
+		ScratchItem* si = _addtoscratchgroupc(c, 0);
+		if(!c->istemp) 
+			showscratchgroup(scratchgroupptr);
 		c->tags = curtags;
 		isnextscratch = 0;
 		// si->pretags = 1 << (LENGTH(tags) - 1);
@@ -5917,14 +5934,18 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	LOG_FORMAT("manage 6");
 
-	arrange(c->mon);
-	XMapWindow(dpy, c->win);
-	XRaiseWindow(dpy,c->win);
-	focus(c);
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
-	// centertocamera(c->x + c->w/2, c->y + c->h/2);
-	tile5viewcomplete(0);
-
+	if(isnexthidespawn){
+		XMapWindow(dpy, c->win);
+		hide(c);
+	}else{
+		arrange(c->mon);
+		XMapWindow(dpy, c->win);
+		XRaiseWindow(dpy,c->win);
+		focus(c);
+		XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
+		// centertocamera(c->x + c->w/2, c->y + c->h/2);
+		tile5viewcomplete(0);
+	}
 
 	isnexttemp = 0;
 	isnextsubclient = 0;
@@ -11904,7 +11925,7 @@ hidescratchgroup(ScratchGroup *sg)
 }
 
 ScratchItem*
-addtoscratchgroupc(Client *c)
+_addtoscratchgroupc(Client *c, int isshow)
 {
 	if (!c) return NULL;
 	ScratchItem* scratchitemptr;
@@ -11923,8 +11944,15 @@ addtoscratchgroupc(Client *c)
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
-	showscratchgroup(scratchgroupptr);
+	if(isshow)
+		showscratchgroup(scratchgroupptr);
 	return scratchitemptr;
+}
+
+ScratchItem*
+addtoscratchgroupc(Client *c)
+{
+	return _addtoscratchgroupc(c, 1);
 }
 
 void 
