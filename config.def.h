@@ -82,28 +82,28 @@ static const Launcher launchers[] = {
 /* Lockfile */
 static char lockfile[] = "/tmp/dwm.lock";
 
-static const Rule defaultrule = { "",              NULL,       NULL,       NULL,       0,           -1 , 0,              0};
+static const Rule defaultrule = { "",              NULL,       NULL,       0,       0,           -1 , 0,              0};
 static const Rule rules[] = {
 	/* xprop(1):
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub */
-	{"firefox", NULL, NULL, NULL, 0, -1, 5, 2},
-	{"Google-chrome", NULL, NULL, NULL, 0, -1, 5, 2},
-	{"Sidekick-browser", NULL, NULL, NULL, 0, -1, 5, 2},
-	{"Brave-browser-nightly", NULL, NULL, NULL, 0, -1, 5, 2},
-	{"X-terminal-emulator", NULL, NULL, NULL, 0, -1, 1, -1},
-	{"Terminator", NULL, NULL, NULL, 0, -1, 1, -1},
-	{"St", NULL, NULL, NULL, 0, -1, 1, -1},
-	{"Code", NULL, NULL, NULL, 0, -1, 5, 0},
-	{"jetbrains-idea", NULL, NULL, NULL, 0, -1, 5, 0},
-	{"jetbrains-datagrip", NULL, NULL, NULL, 0, -1, 5, 2},
-	{"Evince", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"firefox", NULL, NULL, 0, 0, -1, 5, 2},
+	{"Google-chrome", NULL, NULL, 0, 0, -1, 5, 2},
+	{"Sidekick-browser", NULL, NULL, 0, 0, -1, 5, 2},
+	{"Brave-browser-nightly", NULL, NULL, 0, 0, -1, 5, 2},
+	{"X-terminal-emulator", NULL, NULL, 0, 0, -1, 1, -1},
+	{"Terminator", NULL, NULL, 0, 0, -1, 1, -1},
+	{"St", NULL, NULL, 0, 0, -1, 1, -1},
+	{"Code", NULL, NULL, 0, 0, -1, 5, 0},
+	{"jetbrains-idea", NULL, NULL, 0, 0, -1, 5, 0},
+	{"jetbrains-datagrip", NULL, NULL, 0, 0, -1, 5, 2},
+	{"Evince", NULL, NULL, 0, 0, -1, 5, 2},
 	{"flameshot", NULL, NULL, 0xFF, 1, -1, 5, 0},
-	{"Fragcode", NULL, NULL, NULL, 1, -1, 5, 0},
-	{"Thunar", NULL, NULL, NULL, 1, -1, 5, 0},
-	{"ToDesk", NULL, NULL, NULL, 0, -1, 5, 2},
+	{"Fragcode", NULL, NULL, 0, 1, -1, 5, 0},
+	{"Thunar", NULL, NULL, 0, 1, -1, 5, 0},
+	{"ToDesk", NULL, NULL, 0, 0, -1, 5, 2},
 };
 
 static const Rule subjrules[] = {
@@ -214,10 +214,10 @@ static const TaskGroup taskgroup1 = {
 	2,
 	{
 		{
-			"^St$","^dwm$",&((char *[]){"st",NULL}),1<<5,NULL,NULL,NULL,
+			"^St$","^dwm$",(char **)((char *[]){"st",NULL}),1<<5,0,NULL,NULL,NULL,NULL
 		},
 		{
-			"^St$","^.*rofi.*$",&((char *[]){"st",NULL}),1<<5,NULL,NULL,NULL
+			"^St$","^.*rofi.*$",(char **)((char *[]){"st",NULL}),1<<5,0,NULL,NULL,NULL,NULL
 		},
 	}
 };
@@ -682,6 +682,7 @@ static IPCCommand ipccommands[] = {
   IPCCOMMAND(  setmfact,            1,      {ARG_TYPE_FLOAT}  ),
   IPCCOMMAND(  setlayoutsafe,       1,      {ARG_TYPE_PTR}    ),
   IPCCOMMAND(  nextsidecar,         1,      {ARG_TYPE_NONE}    ),
+  IPCCOMMAND(  nextmanagetype,         1,      {ARG_TYPE_UINT}    ),
 //   IPCCOMMAND(  setcontainerlayout,  1,      {ARG_TYPE_PTR}    ),
   IPCCOMMAND(  quit,                1,      {ARG_TYPE_NONE}   )
 };

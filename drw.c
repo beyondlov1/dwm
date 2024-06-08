@@ -7,6 +7,7 @@
 #include <Imlib2.h>
 #include <errno.h>
 #include <time.h>
+#include <err.h>
 
 #include "drw.h"
 #include "util.h"

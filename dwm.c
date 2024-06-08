@@ -257,7 +257,7 @@ struct SwitcherAction{
 	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
 	Client *(*sxy2client)(int rx, int ry, int include_floating);
-	void *(*pointerfunc)(int rx, int ry);
+	void (*pointerfunc)(int rx, int ry);
 	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[], int tagindexin[]);
 	void (*switcherxy2xy)(XY sxy[], int n, XY cxy[], int tagindexout[]);
 	void (*switcherfactors)(float factor[], int tagcx[], int tagcy[], int tagsx[], int tagsy[], int tagsww[], int tagswh[]);
@@ -397,7 +397,8 @@ struct TaskGroupItem
 	unsigned int tag;
 	int group_id;
 
-	char cmdbuf[256];
+	// char cmdbuf[256];
+	char *cmdbuf;
 	regex_t *classregx;
 	regex_t *titleregx;
 	Client *c;
@@ -566,7 +567,7 @@ static void swap(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
-static void scratchmove(Arg *arg);
+static void scratchmove(const Arg *arg);
 static void switchermove(const Arg *arg);
 static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
@@ -678,6 +679,13 @@ static void hidewin(const Arg *arg);
 static void restorewin(const Arg *arg);
 static void quickfocus(const Arg *arg);
 static void nextsidecar(const Arg *arg);
+static void nextmanagetype(const Arg *arg);
+static void freeicon(Client *c);
+static void freeicons(Client *c);
+static int fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
+static void drawclientswitcherwin(Window win, int ww, int wh);
+static void removefromscratchgroupc(Client *c);
+
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -2047,7 +2055,7 @@ drawswitcherbar(Window switcherbarwin, int ww, int wh)
 	drw_map(drw, switcherbarwin, 0, 0, ww, wh);
 }
 
-Client * 
+void
 switcherbaraction(int rx, int ry)
 {
 	Monitor *m = selmon;
@@ -2083,7 +2091,6 @@ switcherbaraction(int rx, int ry)
 			}
 		}
 	}
-	return NULL;
 }
 
 // ------------------ switcher --------------------
@@ -2333,20 +2340,21 @@ matrixmove(const Arg *arg,int selindex, int row, int col, int result[])
 	int y = selindex%col;
 	result[0] = x;
 	result[1] = y;
+	int **arrp = (int**)arr;
 	if (arg->i == 1) {
-		right(arr, row, col, x, y, result);
+		right(arrp, row, col, x, y, result);
 		selindex = result[0] * col + result[1];
 	}
 	if (arg->i == -1) {
-		left(arr, row, col, x, y, result);
+		left(arrp, row, col, x, y, result);
 		selindex = result[0] * col + result[1];
 	}
 	if (arg->i == 2) {
-		up(arr, row, col, x, y, result);
+		up(arrp, row, col, x, y, result);
 		selindex = result[0] * col + result[1];
 	}
 	if (arg->i == -2) {
-		down(arr, row, col, x, y, result);
+		down(arrp, row, col, x, y, result);
 		selindex = result[0] * col + result[1];
 	}
 	LOG_FORMAT("maxtrix move %d %d %d", arg->i, result[0], result[1]);
@@ -3754,7 +3762,7 @@ tile5switcherpointfunc(int sx, int sy)
 
 
 void
-tile5switcherfocuschangefunc(Arg *arg)
+tile5switcherfocuschangefunc(const Arg *arg)
 {
 
 	int n = 0;
@@ -5641,6 +5649,27 @@ void
 nextsidecar(const Arg *arg){
 	isnextsidecar = 1;
 	lastnextsidecartime = getcurrusec();
+}
+
+
+void 
+nextmanagetype(const Arg *arg){
+	int type = arg->ui;
+	if (type & (1 << 0)) {
+		isnextscratch = 1;
+	}else if (type & (1 << 1)) {
+		isnexttemp = 1;
+		lastnexttemptime = getcurrusec();
+	}else if (type & (1 << 2)) {
+		isnextinner = 1;
+		lastnextinnertime = getcurrusec();
+	}else if (type & (1 << 3)) {
+		isnextreplace = 1;
+		lastnextreplacetime = getcurrusec();
+	}else if (type & (1 << 4)) {
+		isnextsidecar = 1;
+		lastnextsidecartime = getcurrusec();
+	}
 }
 
 void
@@ -11693,7 +11722,7 @@ showscratchgroup(ScratchGroup *sg)
 }
 
 void
-scratchmove(Arg *arg)
+scratchmove(const Arg *arg)
 {
 	ScratchGroup *sg = scratchgroupptr;
 	if(!sg || !sg->isfloating) return;
@@ -11877,7 +11906,7 @@ hidescratchgroup(ScratchGroup *sg)
 ScratchItem*
 addtoscratchgroupc(Client *c)
 {
-	if (!c) return;
+	if (!c) return NULL;
 	ScratchItem* scratchitemptr;
 	scratchitemptr = findingroup(scratchgroupptr, c);
 	if(!scratchitemptr){
@@ -13839,7 +13868,8 @@ setcurrentdesktop(void){
 }
 void setdesktopnames(void){
 	XTextProperty text;
-	Xutf8TextListToTextProperty(dpy, tags, TAGSLENGTH, XUTF8StringStyle, &text);
+	char ** tagstmp = (char **)(&tags);
+	Xutf8TextListToTextProperty(dpy, tagstmp, TAGSLENGTH, XUTF8StringStyle, &text);
 	XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
 }
 
@@ -14038,20 +14068,21 @@ tagswitchermove2(const Arg *arg)
 	int result[2];
 	result[0] = x;
 	result[1] = y;
+	int **arrp = (int **)arr;
 	if (arg->i == 1) {
-		right(arr, row, col, x, y, result);
+		right(arrp, row, col, x, y, result);
 		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == -1) {
-		left(arr, row, col, x, y, result);
+		left(arrp, row, col, x, y, result);
 		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == 2) {
-		up(arr, row, col, x, y, result);
+		up(arrp, row, col, x, y, result);
 		selcurtagindex = result[0] * col + result[1];
 	}
 	if (arg->i == -2) {
-		down(arr, row, col, x, y, result);
+		down(arrp, row, col, x, y, result);
 		selcurtagindex = result[0] * col + result[1];
 	}
 	/*if(arg->i == -1) selcurtagindex -= 1;*/
@@ -14307,7 +14338,7 @@ assemblecsv(const Arg *arg){
 
 	TaskGroup taskgroupv;
 	memset(&taskgroupv, 0, sizeof(TaskGroup));
-	readtaskgroup(*(char ***)arg->v, &taskgroupv);
+	readtaskgroup((char *)arg->v, &taskgroupv);
 	/*readtaskgroup("/home/beyond/software/bin/dwm-taskgroup/1.csv", &taskgroupv);*/
 	LOG_FORMAT("taskgroup from csv %s %s", taskgroupv.items[0].classpattern, taskgroupv.items[0].titlepattern);
 	Arg a = {.v=&taskgroupv};

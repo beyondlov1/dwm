@@ -25,7 +25,7 @@ gapgridsorted(Monitor *m)
 	for(i = 0, c = nexttiled(m->clients); c; i++, c = nexttiled(c->next)) {
 		sorted[i] = c;
 	}
-	sort(sorted, n, cmp);
+	sort((void **)sorted, n, (int (*)(const void *, const void *))cmp);
 
 	for(i = 0; i < n; i++) {
 		c = sorted[i];
