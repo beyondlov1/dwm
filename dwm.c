@@ -8548,7 +8548,7 @@ void getstworkingdir(char *workingdir, pid_t currpid){
 
 void 
 stsubspawn(const Arg *arg){
-	char workingdir[512];
+	char workingdir[PATH_MAX];
 	strcpy(workingdir, "~");
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
@@ -8580,7 +8580,7 @@ stsubspawn(const Arg *arg){
 }
 
 void stspawn(const Arg *arg){
-	char workingdir[128] = "";
+	char workingdir[PATH_MAX] = "";
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
@@ -8598,7 +8598,7 @@ void stspawn(const Arg *arg){
 	}
 }
 void stsspawn(const Arg *arg){
-	char workingdir[128] = "";
+	char workingdir[PATH_MAX] = "";
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
@@ -8618,7 +8618,7 @@ void stsspawn(const Arg *arg){
 
 void 
 stispawn(const Arg *arg){
-	char workingdir[512];
+	char workingdir[PATH_MAX];
 	strcpy(workingdir, "~");
 	if (selmon->sel) {
 		pid_t currpid = selmon->sel->pid;
