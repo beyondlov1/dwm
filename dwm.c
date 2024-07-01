@@ -197,6 +197,8 @@ struct Client {
 	// 暂时没用
 	int hidden;
 	int zlevel;
+	// restack 之后记录这个值, 下次restack判断这个值有没有变化, 用来减少不必要的restack
+	int lastrestackzlevel;
 	Client *next;
 	Client *snext;
 	Client *lastfocus;
@@ -5732,6 +5734,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->indexincontainer = 0;
 	c->container = createcontainerc(c);
 	c->zlevel = 0;
+	c->lastrestackzlevel = 0;
 	c->thumb = 0;
 	c->custom_oldw = c->custom_oldh = 0;
 	c->lastfocustime = 0;
@@ -7537,24 +7540,41 @@ restack(Monitor *m)
 	drawbar(m);
 	if (!m->sel)
 		return;
+	if(m->switcher)
+	{
+		XRaiseWindow(dpy, m->switcher);
+		return;
+	}
 	if (m->sel->isfloating || m->sel->zlevel > 0 || !m->lt[m->sellt]->arrange)
 		XRaiseWindow(dpy, m->sel->win);
 
 	// 按zlevel 排序
-	Client *sortedcs[m->sel->container->cn];
-	memcpy(sortedcs, m->sel->container->cs, sizeof(sortedcs));
-	qsort(sortedcs, m->sel->container->cn,sizeof(Client *), ZlevelCmp);
 	int i;
+	int needzlevelrestack = 0;
 	for(i=0;i<m->sel->container->cn; i++)
-		XRaiseWindow(dpy, sortedcs[i]->win);
-	// subclient放在parent上边,不过有了上边的排序,就不需要这个了
-	// for(i=0;i<m->sel->container->cn; i++)
-	// {
-	// 	c = m->sel->container->cs[i];
-	// 	if(c->parentclient && c->parentclient == m->sel){
-	// 		XRaiseWindow(dpy, c->win);
-	// 	}
-	// }
+	{
+		c = m->sel->container->cs[i];
+		if(c->zlevel != c->lastrestackzlevel)
+		{
+			needzlevelrestack = 1;
+			break;
+		}
+	}
+	if(needzlevelrestack){
+		Client *sortedcs[m->sel->container->cn];
+		memcpy(sortedcs, m->sel->container->cs, sizeof(sortedcs));
+		qsort(sortedcs, m->sel->container->cn,sizeof(Client *), ZlevelCmp);
+		for(i=0;i<m->sel->container->cn; i++)
+			XRaiseWindow(dpy, sortedcs[i]->win);
+		// subclient放在parent上边,不过有了上边的排序,就不需要这个了
+		// for(i=0;i<m->sel->container->cn; i++)
+		// {
+		// 	c = m->sel->container->cs[i];
+		// 	if(c->parentclient && c->parentclient == m->sel){
+		// 		XRaiseWindow(dpy, c->win);
+		// 	}
+		// }
+	}
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
@@ -7564,10 +7584,12 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
-	if(m->switcher)
-		XRaiseWindow(dpy, m->switcher);
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+	// 记录 lastrestackzlevel
+	for(c = m->clients; c; c=c->next) {
+		c->lastrestackzlevel = c->zlevel;
+	}
 }
 
 void
