@@ -7545,8 +7545,6 @@ restack(Monitor *m)
 		XRaiseWindow(dpy, m->switcher);
 		return;
 	}
-	if (m->sel->isfloating || m->sel->zlevel > 0 || !m->lt[m->sellt]->arrange)
-		XRaiseWindow(dpy, m->sel->win);
 
 	// 按zlevel 排序
 	int i;
@@ -7575,6 +7573,8 @@ restack(Monitor *m)
 		// 	}
 		// }
 	}
+	if (m->sel->isfloating)
+		XRaiseWindow(dpy, m->sel->win);
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
