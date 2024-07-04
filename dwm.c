@@ -786,6 +786,8 @@ static char quick_pointer_cmd[4] = {'\0',0,0,0};
 static int hiddenWinStackTop = -1;
 static Client* hiddenWinStack[hiddenWinStackMax];
 
+static int stickswitcher = 1;
+
 #ifdef VERSION
 #include "IPCClient.c"
 #include "yajl_dumps.c"
@@ -4191,6 +4193,7 @@ toggleswitchersticky(const Arg *arg)
 void 
 switchermove(const Arg *arg)
 {
+	stickswitcher = 0;
 	if (selmon->switcherstickywin) {
 		if (selmon->switcherstickyaction.movefunc) {
 			selmon->switcherstickyaction.movefunc(arg);
@@ -5290,12 +5293,14 @@ keyrelease(XEvent *e)
 
 	ev = &e->xkey;
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-	if(selmon->switcher && (keysym == XK_Super_L || keysym == XK_Super_R))
+	if(selmon->switcher && (keysym == XK_Super_L || keysym == XK_Super_R) )
 	{
+		if(stickswitcher) return;
 		if (selmon->sel && selmon->sel->container->cn > 1) {
 			XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w /2, c->h /2);
 		}
 		destroyswitcher(selmon);
+		stickswitcher = 1;
 		return;
 	}
 
