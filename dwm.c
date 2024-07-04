@@ -482,6 +482,7 @@ static void freecontainerc(Container *container, Client *c);
 static void gap_copy(Gap *to, const Gap *from);
 static Atom getatomprop(Client *c, Atom prop);
 static unsigned int getmaxtags();
+static int getwindowptr(int *x, int *y, Window win);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static unsigned int getsystraywidth();
@@ -2570,6 +2571,11 @@ void
 clientswitcheraction(int rx, int ry)
 {
 	if (!selmon->switcher) return;
+	int ptrx = 0;
+	int ptry = 0;
+	getwindowptr(&ptrx, &ptry, selmon->switcher);
+	if( abs(ptrx - rx) + abs(ptry - ry) > 10)
+		stickswitcher = 0;
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
 	Client *c = selmon->switcheraction.sxy2client(rx, ry, 1);
@@ -5090,6 +5096,15 @@ getstatusbarpid()
 	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
 	return strtol(buf, NULL, 10);
+}
+
+int
+getwindowptr(int *x, int *y, Window win)
+{
+	int di;
+	unsigned int dui;
+
+	return XQueryPointer(dpy, root, &win, &win, x, y, &di, &di, &dui);
 }
 
 int
