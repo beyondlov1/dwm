@@ -788,6 +788,8 @@ static int hiddenWinStackTop = -1;
 static Client* hiddenWinStack[hiddenWinStackMax];
 
 static int stickswitcher = 1;
+static int showswitcherptrx = 0;
+static int showswitcherptry = 0;
 
 #ifdef VERSION
 #include "IPCClient.c"
@@ -2571,10 +2573,8 @@ void
 clientswitcheraction(int rx, int ry)
 {
 	if (!selmon->switcher) return;
-	int ptrx = 0;
-	int ptry = 0;
-	getwindowptr(&ptrx, &ptry, selmon->switcher);
-	if( abs(ptrx - rx) + abs(ptry - ry) > 10)
+	// LOG_FORMAT("clientswitcheraction %d %d", showswitcherptrx, rx);
+	if( abs(showswitcherptrx - rx) + abs(showswitcherptry - ry) > 3)
 		stickswitcher = 0;
 	int ww = selmon->switcherww;
 	int wh = selmon->switcherwh;
@@ -4183,6 +4183,7 @@ toggleswitchers(const Arg *arg)
 		destroyswitcher(selmon);
 	}else{
 		drawswitcher(selmon);
+		getwindowptr(&showswitcherptrx, &showswitcherptry, selmon->switcher);
 	}
 }
 
@@ -4199,7 +4200,6 @@ toggleswitchersticky(const Arg *arg)
 void 
 switchermove(const Arg *arg)
 {
-	stickswitcher = 0;
 	if (selmon->switcherstickywin) {
 		if (selmon->switcherstickyaction.movefunc) {
 			selmon->switcherstickyaction.movefunc(arg);
@@ -5103,8 +5103,9 @@ getwindowptr(int *x, int *y, Window win)
 {
 	int di;
 	unsigned int dui;
+	Window dummy;
 
-	return XQueryPointer(dpy, root, &win, &win, x, y, &di, &di, &dui);
+	return XQueryPointer(dpy, win, &dummy, &dummy,&di, &di, x, y, &dui);
 }
 
 int
@@ -5276,11 +5277,15 @@ keypress(XEvent *e)
 			(unsigned char *) &(selmon->switcher), 1);
 		XSync(dpy, False);
 
-		for (i = 0; i < LENGTH(switcherkeys); i++)
+		for (i = 0; i < LENGTH(switcherkeys); i++){
 			if (keysym == switcherkeys[i].keysym
 			&& CLEANMASK(switcherkeys[i].mod) == CLEANMASK(ev->state)
-			&& switcherkeys[i].func)
+			&& switcherkeys[i].func){
 				switcherkeys[i].func(&(switcherkeys[i].arg));
+				if(switcherkeys[i].mod & MODKEY)
+					stickswitcher = 0;
+			}
+		}
 	}
 	// for tsspawn
 	else if(selmon->sel && selmon->sel->istemp && keysym == XK_Escape){
