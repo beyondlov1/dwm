@@ -255,9 +255,25 @@ test2(){
 	return 1;
 }
 
+int test3(){
+	char cname[256+8] = "";
+	char cmd[256];
+	sprintf(cmd, "pstree %lu", c->pid);
+	FILE *fp;
+	char respbuf[1024];
+	if ((fp = popen(cmd, "r"))){
+		fgets(respbuf, sizeof(respbuf), fp);
+		pclose(fp);
+		char runningprogramname[256] = "";
+  	sscanf(respbuf,"st───zsh───%s", runningprogramname);
+  	if(strcmp(runningprogramname, "") != 0)
+			strcpy(cname, "*");
+	}
+	printf("%s", cname);
+}
+
 int main(int argc, char const *argv[])
 {
-
 	test2();
 	Client fcp;
 	Client fc;

@@ -5522,28 +5522,26 @@ getwindowpid(Window w)
 
 unsigned long getppidof(unsigned long pid)
 {
-    char dir[1024]={0};
-    char path[1028] = {0};
-    char buf[1024] = {0};
-    int rpid = 0;
-    unsigned long fpid=0;
-    char fpth[1024]={0};
-    ssize_t ret =0;
-    sprintf(dir,"/proc/%ld/",pid);
-    sprintf(path,"%sstat",dir);
+  char dir[1024]={0};
+  char path[1024] = {0};
+  char buf[1024] = {0};
+  int rpid = 0;
+  unsigned long fpid=0;
+  char fpth[1024]={0};
+  ssize_t ret =0;
+  sprintf(dir,"/proc/%ld/",pid);
+  sprintf(path,"%sstat",dir);
 	struct stat st;
 	if(stat(path,&st)!=0)
-    {
-        return 0; 
-	}
-    memset(buf,0,strlen(buf));
-    FILE * fp = fopen(path,"r");
+    return 0; 
+  memset(buf,0,strlen(buf));
+  FILE * fp = fopen(path,"r");
 	if(!fp) return 0;
-    ret += fread(buf + ret,1,300-ret,fp);
-    fclose(fp);
-    sscanf(buf,"%*d %*c%s %*c %d %*s",fpth,&fpid);
-    fpth[strlen(fpth)-1]='\0';
-    return fpid;
+  ret += fread(buf + ret,1,300-ret,fp);
+  fclose(fp);
+  sscanf(buf,"%*d %*c%s %*c %d %*s",fpth,&fpid);
+  fpth[strlen(fpth)-1]='\0';
+  return fpid;
 }
 
 void
