@@ -10,3 +10,4 @@ log/*
 __pycache__/*
 dwm-msg
 vim-mask/main-alpha
+nohup.out
