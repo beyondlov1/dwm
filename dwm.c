@@ -3044,6 +3044,34 @@ scaledownimage(XImage *orig_image, unsigned int cw, unsigned int ch) {
   return scaled_image;
 }
 
+void
+set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int minlastfocustime, int maxlastfocustime){
+	if (c == selmon->sel)
+	{
+		drw_setscheme(drw, scheme[SchemeSel]);
+	}
+	else
+	{
+		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
+		long curr = getcurrusec();
+		if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
+			LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
+			int timescale = 1000 * 1000 * 60;
+			// 归一化
+			float focusperiodfeat = 1.0 * log(1.0*(lastfocusperiod - minlastfocusperiod)/timescale + 1)/log(1.0*(maxlastfocusperiod - minlastfocusperiod)/timescale+ 1);
+			// 归一化后反比
+			float focustimefeat = (exp(5.0 * log(1.0*(c->lastfocustime - minlastfocustime)/timescale + 1) / log(1.0*(curr - minlastfocustime)/timescale + 1)) - 1) / (exp(5.0) - 1);
+			float feat = pow(focustimefeat * focusperiodfeat, 0.5);
+			int clr_level = 0.99 * gradual_colors_count * feat;
+			LOG_FORMAT("lastfocusperiod:%ld %ld %ld %d",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,clr_level);
+			LOG_FORMAT("lastfocusperiod:%f",focusperiodfeat);
+			LOG_FORMAT("lastfocusperiod:%f",focustimefeat);
+			drw_setscheme(drw, gradual_scheme[clr_level]);
+		}else{
+			drw_setscheme(drw, scheme[SchemeNorm]);
+		}
+	}
+}
 
 void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
 {
@@ -3135,32 +3163,13 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			w = w - 2;
 			h = h - 2;
 		}
-		if (c == selmon->sel)
-		{
-			drw_setscheme(drw, scheme[SchemeSel]);
-		}
-		else
-		{
-			long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
-			long curr = getcurrusec();
-			if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
-				LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
-				int timescale = 1000 * 1000 * 60;
-				// 归一化
-				float focusperiodfeat = 1.0 * log(1.0*(lastfocusperiod - minlastfocusperiod)/timescale + 1)/log(1.0*(maxlastfocusperiod - minlastfocusperiod)/timescale+ 1);
-				// 归一化后反比
-				float focustimefeat = (exp(5.0 * log(1.0*(c->lastfocustime - minlastfocustime)/timescale + 1) / log(1.0*(curr - minlastfocustime)/timescale + 1)) - 1) / (exp(5.0) - 1);
-				float feat = pow(focustimefeat * focusperiodfeat, 0.5);
-				int clr_level = 0.99 * gradual_colors_count * feat;
-				LOG_FORMAT("lastfocusperiod:%ld %ld %ld %d",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,clr_level);
-				LOG_FORMAT("lastfocusperiod:%f",focusperiodfeat);
-				LOG_FORMAT("lastfocusperiod:%f",focustimefeat);
-				drw_setscheme(drw, gradual_scheme[clr_level]);
-			}else{
-				drw_setscheme(drw, scheme[SchemeNorm]);
-			}
-		}
+		set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
 		drw_rect(drw, x, y, w, h, 1, 1);
+
+		// preview
+		Picture pic = getwindowpic(c);
+		drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
+		XRenderFreePicture(dpy, pic);
 
 		int size_level = 1;
 		if (c->ichs[size_level] > h/2) {
@@ -3178,13 +3187,9 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			int tw = MIN(TEXTW(c->class), w);
 			int th = bh;
 			if(h / 2 < th) th = h / 2;
-			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - th, tw, th, 0, c->class, 0);
+			drw_text_x(drw, x + w / 2 - tw / 2, y + h / 2 - th, tw, th, 0, c->class, 0, 0);
 		}
 
-		// preview
-		Picture pic = getwindowpic(c);
-		drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
-		XRenderFreePicture(dpy, pic);
 
 
 		int th = bh;
@@ -3195,11 +3200,11 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		th = MIN(th, h / 4);
 
 		// ----- preview 相关修改
-		drw_setscheme(drw, scheme[SchemeNorm]);
-		drw_rect(drw, x , y + 2 * h / 4, w, th, 1, 1);
+		set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
+		drw_rect(drw, x , y + h - th, w, th, 1, 1);
+		drw_text(drw, x + w/2 - tw/2, y + h - th, tw, th, 2, c->name, 0);
 		// -----
-		
-		drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
+		// drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
 
 		if(strlen(c->note) > 0){
 			tw = MIN(TEXTW(c->note), w);
@@ -3213,12 +3218,11 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			if(h / 2 < th) th = h / 2;
 
 			// ----- preview 相关修改
-			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_rect(drw, x, y + h / 2 - th, w, th, 1, 1);
+			set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
+			drw_rect(drw, x, y + h  - 2*th, w, th, 1, 1);
+			drw_text(drw, x + 32, y + h - 2*th, tw, th, 0, c->shortcut, 0);
 			// -----
-
-			drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
-			/*drw_text(drw, x + 5, y + h/2 - th/2, tw, th, 2, c->shortcut, 0);*/
+			// drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
 		}
 
 
