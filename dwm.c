@@ -21,6 +21,7 @@
  * To understand everything else, start reading main().
  */
 #include <X11/X.h>
+#include <X11/extensions/render.h>
 #include <curl/curl.h>
 #include <errno.h>
 #include <limits.h>
@@ -51,6 +52,8 @@
 #include <regex.h>
 #include <stdint.h>
 #include <Imlib2.h>
+#include <X11/extensions/Xcomposite.h>
+#include <X11/extensions/Xrender.h>
 
 #include "http.c"
 #include "drw.h"
@@ -218,6 +221,7 @@ struct Client {
 	float factx, facty;
 	unsigned int icw, ich; Picture icon;
 	unsigned int icws[3], ichs[3]; Picture icons[3];
+	Picture preview;
 	MXY matcoor;
 	int launchindex;
 
@@ -689,6 +693,7 @@ static void freeicons(Client *c);
 static int fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
 static void drawclientswitcherwin(Window win, int ww, int wh);
 static void removefromscratchgroupc(Client *c);
+static Picture getwindowpic(Client *c);
 
 
 static void i_move(const Arg *arg);
@@ -2966,6 +2971,80 @@ ClientZlevelCmp(const void *a,const void *b)
 }
 
 
+Picture
+getwindowpic(Client *c) {
+  XCompositeRedirectWindow(dpy, c->win, CompositeRedirectAutomatic);
+  XWindowAttributes attr;
+  XGetWindowAttributes( dpy, c->win, &attr );
+  XRenderPictFormat *format = XRenderFindVisualFormat( dpy, attr.visual );
+  int hasAlpha = ( format->type == PictTypeDirect && format->direct.alphaMask );
+  XRenderPictureAttributes pa;
+  pa.subwindow_mode = IncludeInferiors;
+  Picture picture = XRenderCreatePicture( dpy, c->win, format, CPSubwindowMode, &pa );
+  return picture;
+}
+
+
+// 未使用
+XImage*
+getwindowximage(Client *c) {
+  XCompositeRedirectWindow(dpy, c->win, CompositeRedirectAutomatic);
+  XWindowAttributes attr;
+  XGetWindowAttributes( dpy, c->win, &attr );
+  XRenderPictFormat *format = XRenderFindVisualFormat( dpy, attr.visual );
+  int hasAlpha = ( format->type == PictTypeDirect && format->direct.alphaMask );
+  XRenderPictureAttributes pa;
+  pa.subwindow_mode = IncludeInferiors;
+  Picture picture = XRenderCreatePicture( dpy, c->win, format, CPSubwindowMode, &pa );
+  Pixmap pixmap = XCreatePixmap(dpy, root, c->w, c->h, 32);
+  XRenderPictureAttributes pa2;
+  XRenderPictFormat *format2 = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+  Picture pixmapPicture = XRenderCreatePicture( dpy, pixmap, format2, 0, &pa2 );
+  XRenderColor color;
+  color.red = 0x0000;
+  color.green = 0x0000;
+  color.blue = 0x0000;
+  color.alpha = 0x0000;
+  XRenderFillRectangle (dpy, PictOpSrc, pixmapPicture, &color, 0, 0, c->w, c->h);
+  XRenderComposite(dpy, hasAlpha ? PictOpOver : PictOpSrc, picture, 0,
+                   pixmapPicture, 0, 0, 0, 0, 0, 0,
+                   c->w, c->h);
+  XImage* temp = XGetImage( dpy, pixmap, 0, 0, c->w, c->h, AllPlanes, ZPixmap );
+  temp->red_mask = format2->direct.redMask << format2->direct.red;
+  temp->green_mask = format2->direct.greenMask << format2->direct.green;
+  temp->blue_mask = format2->direct.blueMask << format2->direct.blue;
+  temp->depth = DefaultDepth(dpy, screen);
+  XCompositeUnredirectWindow(dpy, c->win, CompositeRedirectAutomatic);
+  return temp;
+}
+
+// 未使用
+XImage*
+scaledownimage(XImage *orig_image, unsigned int cw, unsigned int ch) {
+  int factor_w = orig_image->width / cw + 1;
+  int factor_h = orig_image->height / ch + 1;
+  int scale_factor = factor_w > factor_h ? factor_w : factor_h;
+  int scaled_width = orig_image->width / scale_factor;
+  int scaled_height = orig_image->height / scale_factor;
+  XImage *scaled_image = XCreateImage(dpy, DefaultVisual(dpy, DefaultScreen(dpy)),
+                                      orig_image->depth,
+                                      ZPixmap, 0, NULL,
+                                      scaled_width, scaled_height,
+                                      32, 0);
+  scaled_image->data = malloc(scaled_image->height * scaled_image->bytes_per_line);
+  for (int y = 0; y < scaled_height; y++) {
+      for (int x = 0; x < scaled_width; x++) {
+          int orig_x = x * scale_factor;
+          int orig_y = y * scale_factor;
+          unsigned long pixel = XGetPixel(orig_image, orig_x, orig_y);
+          XPutPixel(scaled_image, x, y, pixel);
+      }
+  }
+  scaled_image->depth = orig_image->depth;
+  return scaled_image;
+}
+
+
 void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
 {
 	unsigned int tags = 1<<tagindex;
@@ -3102,12 +3181,23 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			drw_text(drw, x + w / 2 - tw / 2, y + h / 2 - th, tw, th, 0, c->class, 0);
 		}
 
+		// preview
+		Picture pic = getwindowpic(c);
+		drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
+		XRenderFreePicture(dpy, pic);
+
+
 		int th = bh;
 		int tw = w;
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
+
+		// ----- preview 相关修改
+		drw_setscheme(drw, scheme[SchemeNorm]);
+		drw_rect(drw, x , y + 2 * h / 4, w, th, 1, 1);
+		// -----
 		
 		drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
 
@@ -3121,6 +3211,12 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			tw = MIN(TEXTW(c->shortcut), w);
 			th = MIN(th, h / 4);
 			if(h / 2 < th) th = h / 2;
+
+			// ----- preview 相关修改
+			drw_setscheme(drw, scheme[SchemeNorm]);
+			drw_rect(drw, x, y + h / 2 - th, w, th, 1, 1);
+			// -----
+
 			drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
 			/*drw_text(drw, x + 5, y + h/2 - th/2, tw, th, 2, c->shortcut, 0);*/
 		}
@@ -5770,6 +5866,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->subclient = 0;
 	c->parentclient = 0;
 	c->issidecar = 0;
+	c->preview = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {

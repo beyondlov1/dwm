@@ -108,6 +108,18 @@ drw_free(Drw *drw)
 }
 
 Picture
+drw_resize_picture(Drw *drw, Picture pic, unsigned int srcw, unsigned int srch, unsigned int dstw, unsigned int dsth) {
+	XRenderSetPictureFilter(drw->dpy, pic, FilterBilinear, NULL, 0);
+	XTransform xf;
+	xf.matrix[0][0] = (srcw << 16u) / dstw; xf.matrix[0][1] = 0; xf.matrix[0][2] = 0;
+	xf.matrix[1][0] = 0; xf.matrix[1][1] = (srch << 16u) / dsth; xf.matrix[1][2] = 0;
+	xf.matrix[2][0] = 0; xf.matrix[2][1] = 0; xf.matrix[2][2] = 65536;
+	XRenderSetPictureTransform(drw->dpy, pic, &xf);
+	return pic;
+}
+
+
+Picture
 drw_picture_create_resized(Drw *drw, char *src, unsigned int srcw, unsigned int srch, unsigned int dstw, unsigned int dsth) {
 	Pixmap pm;
 	Picture pic;
