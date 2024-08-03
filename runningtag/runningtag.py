@@ -42,13 +42,13 @@ def func():
             name = c["name"]
             if isrunning(c):
                 # change_window_property(c["window_id"], "_NET_MY_NOTE", "running")
-                while name.startswith("*"):
+                while name.startswith(MARK):
                     name = name[1:]
-                name = f"*{name}"
+                name = f"{MARK}{name}"
                 change_window_property(c["window_id"], "_NET_WM_NAME", name)
                 change_window_property(c["window_id"], "WM_NAME", name)
             else:
-                while name.startswith("*"):
+                while name.startswith(MARK):
                     name = name[1:]
                 change_window_property(c["window_id"], "_NET_WM_NAME", name)
                 change_window_property(c["window_id"], "WM_NAME", name)
@@ -65,4 +65,5 @@ def schedule(func, delay):
     scheduler.run()
 
 if __name__ == '__main__':
+    MARK = "●"
     schedule(func, 1)
