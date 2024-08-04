@@ -313,6 +313,7 @@ typedef struct {
 	int monitor;
 	int priority;
 	int nstub;
+	int isscratch;
 } Rule;
 
 typedef struct {
@@ -914,6 +915,8 @@ applyrules(Client *c)
 			c->tags |= r->tags;
 			c->priority = r->priority;
 			c->nstub = r->nstub;
+			if (r->isscratch)
+				isnextscratch = 1;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
@@ -4084,7 +4087,9 @@ drawswitcher(Monitor *m)
 		LOG_FORMAT("c->h %d", c->h);
 	}
 	// 所有窗口缩放到整个屏幕大小的时候, 再缩放1/n
-	float c2sfactor = sqrt(1.0*(cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
+	// float c2sfactor = sqrt(1.0*(cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/5;
+	float c2sfactor = sqrt(1.0*(cmaxx-cminx)*(cmaxy-cminy)/m->ww/m->wh)/4;
+	// float c2sfactor = 1;
 	LOG_FORMAT("c2sfactor %d", c2sfactor);
 	int ww = MIN(m->ww * c2sfactor, m->ww);
 	int wh = MIN(m->wh * c2sfactor, m->wh);

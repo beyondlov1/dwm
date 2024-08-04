@@ -88,22 +88,23 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub */
-	{"firefox", NULL, NULL, 0, 0, -1, 5, 2},
-	{"Google-chrome", NULL, NULL, 0, 0, -1, 5, 2},
-	{"Sidekick-browser", NULL, NULL, 0, 0, -1, 5, 2},
-	{"Brave-browser-nightly", NULL, NULL, 0, 0, -1, 5, 2},
-	{"X-terminal-emulator", NULL, NULL, 0, 0, -1, 1, -1},
-	{"Terminator", NULL, NULL, 0, 0, -1, 1, -1},
-	{"St", NULL, NULL, 0, 0, -1, 1, -1},
-	{"Code", NULL, NULL, 0, 0, -1, 5, 0},
-	{"jetbrains-idea", NULL, NULL, 0, 0, -1, 5, 0},
-	{"jetbrains-datagrip", NULL, NULL, 0, 0, -1, 5, 2},
-	{"Evince", NULL, NULL, 0, 0, -1, 5, 2},
-	{"flameshot", NULL, NULL, 0xFF, 1, -1, 5, 0},
-	{"Fragcode", NULL, NULL, 0, 1, -1, 5, 0},
-	{"Thunar", NULL, NULL, 0, 1, -1, 5, 0},
-	{"ToDesk", NULL, NULL, 0, 0, -1, 5, 2},
+	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub isscratch*/
+	{"firefox", NULL, NULL, 0, 0, -1, 5, 2, 0},
+	{"Google-chrome", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"Sidekick-browser", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"Brave-browser-nightly", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"X-terminal-emulator", NULL, NULL, 0, 0, -1, 1, -1,0},
+	{"Terminator", NULL, NULL, 0, 0, -1, 1, -1,0},
+	{"St", NULL, NULL, 0, 0, -1, 1, -1,0},
+	{"Code", NULL, NULL, 0, 0, -1, 5, 0,0},
+	{"jetbrains-idea", NULL, NULL, 0, 0, -1, 5, 0,0},
+	{"jetbrains-datagrip", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"Evince", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"flameshot", NULL, NULL, 0xFF, 1, -1, 5, 0,0},
+	{"Fragcode", NULL, NULL, 0, 1, -1, 5, 0,0},
+	{"Thunar", NULL, NULL, 0, 1, -1, 5, 0,0},
+	{"ToDesk", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"qclip", NULL, NULL, 0, 1, -1, 1, -1,1},
 };
 
 static const Rule subjrules[] = {
@@ -111,19 +112,20 @@ static const Rule subjrules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub*/
-	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
-	{ "Google-chrome",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
-	{ "Sidekick-browser",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
-	{ "Brave-browser-nightly",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2},
-	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
-	{ "Terminator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
-	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1},
-	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0},
-	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0},
-	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2},
-	{ "Evince",               NULL,       NULL,       1 << 5,       0,           -1 , 5,              2},
-	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0},
+	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub isscratch*/
+	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2, 0},
+	{ "Google-chrome",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
+	{ "Sidekick-browser",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
+	{ "Brave-browser-nightly",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
+	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
+	{ "Terminator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
+	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
+	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0,0},
+	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0,0},
+	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2,0},
+	{ "Evince",               NULL,       NULL,       1 << 5,       0,           -1 , 5,              2,0},
+	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0,0},
+	{ "qclip",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,1},
 };
 
 /* layout(s) */
