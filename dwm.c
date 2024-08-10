@@ -3529,7 +3529,7 @@ angley(XY xy1, XY xy2)
 {
 	if(xy1.y - xy2.y == 0) return INT_MAX - 1;
 	// 上下
-	if(abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 2.0) return 4.5*distancexy(xy1, xy2);
+	if(1.0 * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 2.0) return 4.5*distancexy(xy1, xy2);
 	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + 1.5*distancexy(xy1, xy2);
 }
 
@@ -3538,7 +3538,7 @@ anglex(XY xy1, XY xy2)
 {
 	if(xy1.x - xy2.x == 0) return INT_MAX - 1;
 	// 左右
-	if(abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1) return 3*distancexy(xy1, xy2);
+	if(1.0 * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1) return 3*distancexy(xy1, xy2);
 	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + distancexy(xy1, xy2);
 }
 
@@ -3573,11 +3573,13 @@ nextclosestanglexyz(const Arg *arg, int n, XY xys[], int curi, int zlevels[])
 			if (i != curi && xy.x > curxy.x)
 			{
 				int dist = anglex(xy, curxy);
+				LOG_FORMAT("nextclosestanglexyz %d, %d", dist, min);
 				/*if (min > dist  || (min == dist && zlevels[i] > zlevels[closest]))*/
 				if (min > dist)
 				{
 					closest = i;
 					min = dist;
+					LOG_FORMAT("nextclosestanglexyz %d", closest);
 				}
 			}
 		}
@@ -3642,9 +3644,6 @@ clientswitchermove_tag2(const Arg *arg)
 		int i = 0;
 		ScratchItem * si;
 		ScratchGroup *sg = scratchgroupptr;
-		if (sg->tail && sg->tail->prev && sg->tail->prev->c) {
-			focus(sg->tail->prev->c);
-		}
 		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
 		{
 			n++;
@@ -3652,13 +3651,14 @@ clientswitchermove_tag2(const Arg *arg)
 		Client *cs[n];
 		XY xys[n];
 		int curri = 0;
-		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		for(i=0, si = sg->tail->prev; si && si != sg->head; si = si->prev)
 		{
 			if(si->c == selmon->sel) curri = i;
 			Client *c = si->c;
-			cs[i] =  c;
+			cs[i] = c;
 			xys[i].x = c->x + c->w/2;
 			xys[i].y = c->y + c->h/2;
+			LOG_FORMAT("clientswitchermove_tag2 %d,%d", xys[i].x, xys[i].y);
 			i++;
 		}
 		int closest = nextclosestanglexy(arg, n, xys, curri);
@@ -10538,6 +10538,8 @@ layout_tile_v(int sx, int sy, int sw, int sh, rect_t *cs[], int cn, float master
 			c->h = c->h - selmon->gap->gappx / 2;
 			c->x = c->x + selmon->gap->gappx / 4;
 			c->y = c->y + selmon->gap->gappx / 4;
+
+			LOG_FORMAT("layout_tile_4 %d,%d,%d,%d", c->x, c->y, c->w, c->h);
 
 			if(ismaster){
 				masternextx += my_masterw;
