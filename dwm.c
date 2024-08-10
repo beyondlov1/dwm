@@ -691,7 +691,10 @@ static void nextsidecar(const Arg *arg);
 static void nextmanagetype(const Arg *arg);
 static void freeicon(Client *c);
 static void freeicons(Client *c);
-static int fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
+static int fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, 
+			 						int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
+static int fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, 
+									int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio);
 static void drawclientswitcherwin(Window win, int ww, int wh);
 static void removefromscratchgroupc(Client *c);
 static Picture getwindowpic(Client *c);
@@ -7484,6 +7487,7 @@ removesystrayicon(Client *i)
 	free(i);
 }
 
+// 有点问题, 有时候resize的是错的, 可能和applysizehints有关
 void
 resize(Client *c, int x, int y, int w, int h, int interact)
 {
@@ -10447,6 +10451,98 @@ tile7maximize(const Arg *arg){
 }
 
 /**
+ * sw: 布局的总宽度
+ * sh: 布局的总高度
+ * cs: clients
+ * cn: client n
+ * 
+ */
+ void 
+layout_tile_v(int sx, int sy, int sw, int sh, rect_t *cs[], int cn, float masterfactor, float masterfactorh, float masterfactorv, int nmaster){
+	rect_t *c;
+	int j;
+	rect_t *tilecs[cn];
+	int tilecn = 0;
+	for (j = 0; j < cn; j++)
+	{
+		c = cs[j];
+		tilecs[tilecn] = c;
+		tilecn ++;
+	}
+
+	int splited = tilecn > 1;
+	if(!splited)
+	{
+		LOG_FORMAT("container_layout_tile 3");
+		c = tilecs[0];
+		c->x = sx;
+		c->y = sy;
+		c->w = sw;
+		c->h = sh;
+		LOG_FORMAT("layout_tile 4 %d %d", sw, sh);
+	}
+	else
+	{
+		LOG_FORMAT("container_layout_tile 1");
+		int masterw = sw;
+		int slavew = sw;
+		int masterh = sh;
+		int slaveh = sh;
+		int ismastervsplit = tilecn > 1 ? 1:0;
+		if(ismastervsplit) 
+		{
+			masterh = sh;
+		}
+		int isslavevsplit = tilecn > nmaster ? 1:0;
+		if(isslavevsplit) 
+		{
+			masterh = sh * masterfactor/(masterfactor + 1);
+			slaveh = sh - masterh;
+		}
+		masterw = sw / MIN(tilecn, nmaster);
+		slavew = sw / MAX(1, tilecn - nmaster);
+
+		int masternexty = 0;
+		int slavenexty = 0;
+		int masternextx = 0;
+		int slavenextx = 0;
+		// 右边每一个都是前一个的 q 倍, 等比数列求和 = w
+		float masterfactorh_slave = 1/masterfactorh;
+		int nextmasterw = sw;
+		if(masterfactorh_slave == 1){
+			nextmasterw = sw  / MIN(tilecn, nmaster);
+		}else{
+			nextmasterw = sw *(1-masterfactorh_slave)/(1-pow(masterfactorh_slave, MIN(tilecn, nmaster))) / masterfactorh_slave;
+		}
+		for (j = 0; j < tilecn; j++)
+		{
+			LOG_FORMAT("container_layout_tile 2 start");
+			LOG_FORMAT("container_layout_tile 2 %f,%d", masterfactorh_slave, nextmasterw);
+			int ismaster = j < nmaster ? 1:0;
+			c = tilecs[j];
+			int my_masterw = nextmasterw * masterfactorh_slave;
+			c->w = ismaster ? my_masterw : slavew;
+			c->h = ismaster ? masterh : slaveh;
+			c->y = sy + (ismaster ? 0 : masterh);
+			c->x = sx + (ismaster ? masternextx : slavenextx);
+			
+			c->w = c->w - selmon->gap->gappx / 2;
+			c->h = c->h - selmon->gap->gappx / 2;
+			c->x = c->x + selmon->gap->gappx / 4;
+			c->y = c->y + selmon->gap->gappx / 4;
+
+			if(ismaster){
+				masternextx += my_masterw;
+				nextmasterw *= masterfactorh_slave;
+			}
+			else
+				slavenextx += slavew;
+		}
+		LOG_FORMAT("container_layout_tile 3");
+	}
+}
+
+/**
  * 纵向
  */
 void
@@ -10456,6 +10552,7 @@ container_layout_tile_v(Container *container)
 	int j;
 	Client *subcs[container->cn];
 	Client *tilecs[container->cn];
+	// 区分subclient
 	int subcn = 0;
 	int tilecn = 0;
 	for (j = 0; j < container->cn; j++)
@@ -10469,6 +10566,7 @@ container_layout_tile_v(Container *container)
 			tilecn ++;
 		}
 	}
+	// 区分当前container是否选中
 	int iscontainersel = 0;
 	for (j = 0; j < container->cn; j++)
 	{
@@ -10479,6 +10577,7 @@ container_layout_tile_v(Container *container)
 		}
 	}
 
+	// sidecar
 	int shrink = 0;
 	float shrinkxfactor = 0.6;
 	for(c=selmon->clients;c;c=c->next){
@@ -10584,6 +10683,7 @@ container_layout_tile_v(Container *container)
 		LOG_FORMAT("container_layout_tile 3");
 	}
 	
+	// subclient 布局
 	for (j = 0; j < subcn; j++)
 	{
 		c = subcs[j];
@@ -11802,6 +11902,7 @@ findingroup(ScratchGroup *scratchgroupptr, Client *c)
 void
 showscratchgroup(ScratchGroup *sg)
 {
+	int i;
 	ScratchItem *si;
 	int tsn;
 	for(tsn = 0, si = sg->head->next; si && si != sg->tail; si = si->next, tsn++);
@@ -11812,6 +11913,12 @@ showscratchgroup(ScratchGroup *sg)
 	}
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
+	rect_t *tps[tsn];
+	memset(tps, 0, sizeof(tps));
+	for (i=0;i<tsn;i++) {
+		tps[i] = &ts[i];
+	}
+
 	rect_t sc;
 	// sc.x = selmon->gap->gappx + 10;
 	// sc.y = selmon->gap->gappx + 10;
@@ -11819,58 +11926,91 @@ showscratchgroup(ScratchGroup *sg)
 	// 这里故意偏差1px, 为了不让scratchgroup中的窗口与全屏的窗口x,y重合, 导致键盘focus选不中
 	sc.x = 1;
 	sc.y = 1;
-	sc.w = selmon->ww - 1;
-	sc.h = selmon->wh - 1;
-	int i = 0;
-	LOG_FORMAT("showscratchgroup: before focus and arrange -1");
-	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
-	{
-		Client * c = si->c;
-		if(!c) continue;
+	sc.w = selmon->ww - 2;
+	sc.h = selmon->wh - 2;
 
-		c->isfloating = 1;
-		if(!sg->isfloating) si->pretags = c->tags;
-		/*c->tags = 0xFFFFFFFF;*/
-		int neww = selmon->ww * 0.75;
-		int newh = selmon->wh * 0.75;
-		// int neww = selmon->ww * 0.3;
-		// int newh = selmon->wh * 0.3;
-		
-		rect_t r;
-		int radiostepn = 4;
-		double maxintersectradiostep[] = {0.0, 0.3, 0.6, 0.8};
-		int ok = 0;
-		int radioi;
-		for(radioi = 0;radioi<radiostepn;radioi++){
-			ok = fill2(sc, neww, newh, 9, ts, i, &r, maxintersectradiostep[radioi]);
-			if(ok) break;
-		}
-		if(!ok)
+	if(tsn < 5){
+		float sfactor = 0.8 * (2+tsn) / 4;
+		int sw = MIN(sc.w * 0.95, sc.w * sfactor);
+		int sh = MIN(sc.h * 0.95, sc.h * sfactor);
+		int sx = selmon->sel->container->x + (sc.w - sw) / 2;
+		int sy = selmon->sel->container->y + (sc.h - sh) / 2;
+		layout_tile_v(sx, sy, sw, sh, tps, tsn, 1, 1, 1, 2);
+		i = 0;
+		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
 		{
-			r.x = selmon->ww / 2 - neww / 2;
-			r.y = selmon->wh / 2 - newh / 2;
-			r.w = neww;
-			r.h = newh;
-		}
-
-		if(!si->placed) {
+			Client * c = si->c;
+			if(!c) continue;
+			c->isfloating = 1;
+			if(!sg->isfloating) si->pretags = c->tags;
+			rect_t r = ts[i];
 			si->x = r.x;
 			si->y = r.y;
 			si->w = r.w;
 			si->h = r.h;
+			c->x = si->x;
+			c->y = si->y;
+			// 因为resize有点问题, 所以这里不能设定, 否则 c->w == si->w就不更新了
+			// c->w = si->w;
+			// c->h = si->h;
+			i++;
 		}
+	}else{
+		i = 0;
+		LOG_FORMAT("showscratchgroup: before focus and arrange -1");
+		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+		{
+			Client * c = si->c;
+			if(!c) continue;
 
-		LOG_FORMAT("showscratchgroup: isplaced: %d, si->x: %d, si->y: %d", si->placed, si->x, si->y);
-		c->x = si->x;
-		c->y = si->y;
-		
-		ts[i].x = si->x;
-		ts[i].y = si->y;
-		ts[i].w = si->w;
-		ts[i].h = si->h;
+			c->isfloating = 1;
+			if(!sg->isfloating) si->pretags = c->tags;
+			/*c->tags = 0xFFFFFFFF;*/
+			// int neww = selmon->ww * 0.75;
+			// int newh = selmon->wh * 0.75;
+			int nstub = 1;
+			if(si->c->nstub > 0)
+				nstub = si->c->nstub;
+			int neww = selmon->ww * 0.25 * nstub;
+			int newh = selmon->wh * 0.25 * nstub;
+			
+			rect_t r;
+			int radiostepn = 5;
+			double maxintersectradiostep[] = {0.0, 0.1, 0.3, 0.6, 0.8};
+			int ok = 0;
+			int radioi;
+			for(radioi = 0;radioi<radiostepn;radioi++){
+				ok = fill2(sc, neww, newh, 9, ts, i, &r, maxintersectradiostep[radioi]);
+				if(ok) break;
+			}
+			if(!ok)
+			{
+				r.x = selmon->ww / 2 - neww / 2;
+				r.y = selmon->wh / 2 - newh / 2;
+				r.w = neww;
+				r.h = newh;
+			}
 
-		i++;
+			if(!si->placed) {
+				si->x = r.x;
+				si->y = r.y;
+				si->w = r.w;
+				si->h = r.h;
+			}
+
+			LOG_FORMAT("showscratchgroup: isplaced: %d, si->x: %d, si->y: %d", si->placed, si->x, si->y);
+			c->x = si->x;
+			c->y = si->y;
+			
+			ts[i].x = si->x;
+			ts[i].y = si->y;
+			ts[i].w = si->w;
+			ts[i].h = si->h;
+
+			i++;
+		}
 	}
+
 	LOG_FORMAT("showscratchgroup: before focus and arrange");
 	for(si = sg->head->next; si && si != sg->tail; si = si->next)
 	{
@@ -12494,7 +12634,8 @@ BlockItemCmp(const void *a,const void *b)
  * @return int 
  */
 int
-fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+fill3x(rect_t sc, int centeri, int centerj, int centerw, int centerh, 
+			 int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
 
 	w = w/stepw + (w%stepw==0?0:1);
@@ -12656,7 +12797,8 @@ calcy4(rect_t sc, int starty, int j, int steph, int h)
  * @return int 
  */
 int
-fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
+fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh, 
+			 int w, int h, int stepw, int steph, int n, rect_t ts[], int tsn, rect_t *r, double maxintersectradio)
 {
 
 	LOG_FORMAT("fill4x 0");

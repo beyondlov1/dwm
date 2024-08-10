@@ -95,7 +95,7 @@ static const Rule rules[] = {
 	{"Brave-browser-nightly", NULL, NULL, 0, 0, -1, 5, 2,0},
 	{"X-terminal-emulator", NULL, NULL, 0, 0, -1, 1, -1,0},
 	{"Terminator", NULL, NULL, 0, 0, -1, 1, -1,0},
-	{"St", NULL, NULL, 0, 0, -1, 1, -1,0},
+	{"St", NULL, NULL, 0, 0, -1, 1, 2,0},
 	{"Code", NULL, NULL, 0, 0, -1, 5, 0,0},
 	{"jetbrains-idea", NULL, NULL, 0, 0, -1, 5, 0,0},
 	{"jetbrains-datagrip", NULL, NULL, 0, 0, -1, 5, 2,0},
@@ -104,7 +104,8 @@ static const Rule rules[] = {
 	{"Fragcode", NULL, NULL, 0, 1, -1, 5, 0,0},
 	{"Thunar", NULL, NULL, 0, 1, -1, 5, 0,0},
 	{"ToDesk", NULL, NULL, 0, 0, -1, 5, 2,0},
-	{"qclip", NULL, NULL, 0, 1, -1, 1, -1,1},
+	{"qclip", NULL, NULL, 0, 1, -1, 1, 2,1},
+	{"obsidian", NULL, NULL, 0, 1, -1, 1, 2,1},
 };
 
 static const Rule subjrules[] = {
@@ -119,13 +120,14 @@ static const Rule subjrules[] = {
 	{ "Brave-browser-nightly",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
 	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
 	{ "Terminator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
-	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
+	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              2,0},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0,0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0,0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2,0},
 	{ "Evince",               NULL,       NULL,       1 << 5,       0,           -1 , 5,              2,0},
 	{ "flameshot",            NULL,       NULL,       0xFF,       1,           -1 , 5,              0,0},
-	{ "qclip",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,1},
+	{ "qclip",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              2,1},
+	{ "obsidian",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              2,1},
 };
 
 /* layout(s) */
