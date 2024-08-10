@@ -698,7 +698,8 @@ static int fill4x(rect_t sc, int centerx, int centery, int centerw, int centerh,
 static void drawclientswitcherwin(Window win, int ww, int wh);
 static void removefromscratchgroupc(Client *c);
 static Picture getwindowpic(Client *c);
-
+static void setborderwidth(Client *c, int borderpx);
+static void arrangescratch(ScratchGroup *sg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -1160,12 +1161,17 @@ updateborder(Client *c){
 		if (!c->isdoublepagemarked && !c->isscratched && c != selmon->sel)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
 	
-		if (c->zlevel > 0 && c == selmon->sel)
+		if (!c->isscratched && c->zlevel > 0 && c == selmon->sel)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 
-		if (c->zlevel > 0 && c != selmon->sel)
+		if (!c->isscratched && c->zlevel > 0 && c != selmon->sel)
 			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	
+		if (c->isscratched && c->zlevel > 0 && c == selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
+
+		if (c->isscratched && c->zlevel > 0 && c != selmon->sel)
+			XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
 	}
 }
 
@@ -1180,6 +1186,8 @@ arrangemon(Monitor *m)
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
 	if (m->lt[m->sellt]->arrange)
 		m->lt[m->sellt]->arrange(m);
+
+	arrangescratch(scratchgroupptr);
 }
 
 // unused
@@ -7562,7 +7570,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
-	XSync(dpy, False);
+	// XSync(dpy, False);
 }
 
 void
@@ -11898,19 +11906,14 @@ findingroup(ScratchGroup *scratchgroupptr, Client *c)
 	return NULL;
 }
 
-
 void
-showscratchgroup(ScratchGroup *sg)
-{
+arrangescratch(ScratchGroup *sg){
+	if(!sg->isfloating) return;
 	int i;
 	ScratchItem *si;
 	int tsn;
 	for(tsn = 0, si = sg->head->next; si && si != sg->tail; si = si->next, tsn++);
-	if(tsn == 0)
-	{
-		stsspawn(0);
-		return;
-	}
+	if(tsn == 0) return;
 	rect_t ts[tsn];
 	memset(ts, 0, sizeof(ts));
 	rect_t *tps[tsn];
@@ -11942,6 +11945,7 @@ showscratchgroup(ScratchGroup *sg)
 			Client * c = si->c;
 			if(!c) continue;
 			c->isfloating = 1;
+			c->zlevel = 1;
 			if(!sg->isfloating) si->pretags = c->tags;
 			rect_t r = ts[i];
 			si->x = r.x;
@@ -12006,11 +12010,32 @@ showscratchgroup(ScratchGroup *sg)
 			ts[i].y = si->y;
 			ts[i].w = si->w;
 			ts[i].h = si->h;
-
 			i++;
 		}
 	}
+	// 放置client
+	for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
+	{
+		if(!si->c) continue;
+		Client *c = si->c;
+		resize(c, c->x, c->y, si->w, si->h, 0);
+	}
+}
 
+void
+showscratchgroup(ScratchGroup *sg)
+{
+	int i;
+	ScratchItem *si;
+	int tsn;
+	for(tsn = 0, si = sg->head->next; si && si != sg->tail; si = si->next, tsn++);
+	if(tsn == 0)
+	{
+		stsspawn(0);
+		return;
+	}
+	sg->isfloating = 1;
+	arrangescratch(sg);
 	LOG_FORMAT("showscratchgroup: before focus and arrange");
 	for(si = sg->head->next; si && si != sg->tail; si = si->next)
 	{
@@ -12029,8 +12054,7 @@ showscratchgroup(ScratchGroup *sg)
 	else if (sg->head->next && sg->head->next->c)
 		focus(sg->head->next->c);
 	LOG_FORMAT("showscratchgroup: before focus and arrange 3");
-	arrange(selmon);
-	sg->isfloating = 1;
+	// arrange(selmon);
 }
 
 void
@@ -12215,6 +12239,14 @@ hidescratchgroup(ScratchGroup *sg)
 	hidescratchgroupv(sg, 1);
 }
 
+void
+setborderwidth(Client *c, int borderpx){
+		c->bw = borderpx;
+		XWindowChanges wc;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+}
+
 ScratchItem*
 _addtoscratchgroupc(Client *c, int isshow)
 {
@@ -12229,10 +12261,7 @@ _addtoscratchgroupc(Client *c, int isshow)
 		scratchgroupptr->head->next->prev = scratchitemptr;
 		scratchgroupptr->head->next = scratchitemptr;
 		c->isscratched = 1;
-		c->bw = borderpx;
-		XWindowChanges wc;
-		wc.border_width = c->bw;
-		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc);
+		setborderwidth(c, borderpx);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeScr][ColBorder].pixel);
 	}
 	if(isshow)
