@@ -4328,6 +4328,11 @@ switchermove(const Arg *arg)
 			return;
 		}
 	}
+	if(scratchgroupptr && scratchgroupptr->isfloating)
+		if (selmon->switcheraction.movefunc) {
+	 		selmon->switcheraction.movefunc(arg);
+			return;
+		}
 	focusgrid5(arg);
 }
 
@@ -12051,10 +12056,14 @@ showscratchgroup(ScratchGroup *sg)
 		resize(si->c,si->x,si->y, si->w,si->h,0);
 	}
 	LOG_FORMAT("showscratchgroup: before focus and arrange 2");
+	Client *focusc = NULL;
 	if (sg->lastfocused)
-		focus(sg->lastfocused);
+		focusc = sg->lastfocused;
 	else if (sg->head->next && sg->head->next->c)
-		focus(sg->head->next->c);
+		focusc = sg->head->next->c;
+	if (focusc){
+		focus(focusc);
+	}
 	LOG_FORMAT("showscratchgroup: before focus and arrange 3");
 	// arrange(selmon);
 }
@@ -13038,8 +13047,18 @@ togglescratchgroup(const Arg *arg)
 	if(!sg->isfloating)
 	{
 		showscratchgroup(sg);
+		Client *c;
+		ScratchItem *si;
+		for(c=selmon->clients;c;c=c->next)
+			if(!c->isscratched)
+				hide(c);
 	}else{
 		hidescratchgroup(sg);
+		Client *c;
+		ScratchItem *si;
+		for(c=selmon->clients;c;c=c->next)
+			if(!c->isscratched)
+				show(c);
 	}
 }
 
