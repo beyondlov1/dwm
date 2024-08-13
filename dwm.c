@@ -11982,7 +11982,7 @@ arrangescratch(ScratchGroup *sg){
 			/*c->tags = 0xFFFFFFFF;*/
 			// int neww = selmon->ww * 0.75;
 			// int newh = selmon->wh * 0.75;
-			int nstub = 1;
+			int nstub = 2;
 			if(si->c->nstub > 0)
 				nstub = si->c->nstub;
 			int neww = selmon->ww * 0.25 * nstub;
