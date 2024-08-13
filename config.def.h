@@ -230,6 +230,7 @@ static const char *taskgrouppath = "/home/beyond/software/bin/dwm-taskgroup/1.cs
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
+	{MODKEY, XK_grave, i_maxwindow, {0} },
 	{ Mod1Mask|ShiftMask,                       XK_Return,      stsubspawn,      { 0 } },
 	// { Mod1Mask,                       XK_a,      spawn,       {.v=dmenucmd} },
 	{ Mod1Mask,                       XK_a,      spawn,       {.v=rofiruncmd} },

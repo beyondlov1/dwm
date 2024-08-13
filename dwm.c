@@ -3066,6 +3066,9 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 	}
 	else
 	{
+		// 为了适应缩略图
+		drw_setscheme(drw, scheme[SchemeNorm]);
+		return;
 		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 		long curr = getcurrusec();
 		if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
@@ -12189,8 +12192,6 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			break;
 		}
 	}
-
-
 	for (si = sg->tail->prev; si && si != sg->head; si = si->prev)
 	{
 		Client *c = si->c;
@@ -12299,6 +12300,7 @@ removefromscratchgroupc(Client *c)
 	ScratchItem *found = findingroup(scratchgroupptr, c);
 	if (found){
 		c->isscratched = 0;
+		c->isfloating = 0;
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		found->prev->next = found->next;
 		found->next->prev = found->prev;
@@ -12321,8 +12323,13 @@ removefromscratchgroup(const Arg *arg)
 {
 	Client * c = selmon->sel;
 	removefromscratchgroupc(c);
-	if(scratchgroupptr->head->next == scratchgroupptr->tail)
-		hidescratchgroup(scratchgroupptr);
+	ScratchItem *si;
+	for(c=selmon->clients;c;c=c->next)
+		if(!c->isscratched)
+			show(c);
+	// if(scratchgroupptr->head->next == scratchgroupptr->tail)
+	// 	hidescratchgroup(scratchgroupptr);
+	hidescratchgroup(scratchgroupptr);
 }
 
 int
@@ -14765,6 +14772,10 @@ i_expandy(const Arg *arg)
 void 
 i_maxwindow(const Arg *arg)
 {
+	if (selmon->sel->isscratched){
+		removefromscratchgroup(arg);
+		return;
+	}
 	if (selmon->lt[selmon->sellt]->arrange == tile5) {
 		tile5maximize(arg);
 	}
