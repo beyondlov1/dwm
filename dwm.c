@@ -700,6 +700,9 @@ static void removefromscratchgroupc(Client *c);
 static Picture getwindowpic(Client *c);
 static void setborderwidth(Client *c, int borderpx);
 static void arrangescratch(ScratchGroup *sg);
+static void shownonscratchs();
+static void hodenonscratchs();
+static void container_layout_tile_v_movesplit(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -5857,8 +5860,11 @@ manage(Window w, XWindowAttributes *wa)
 	LOG_FORMAT("manage isispawn:%d", isispawn);
 
 	// hidescratchgroup if needed (example: open app from terminal)manage()
-	if(scratchgroupptr->isfloating && !isnexttemp)
+	if(scratchgroupptr->isfloating && !isnexttemp){
 		hidescratchgroupv(scratchgroupptr, 0);
+		if(!isnextscratch)
+			shownonscratchs();
+	}
 
 	Client *c, *t = NULL;
 	Client *oldc = selmon->sel;
@@ -10008,7 +10014,7 @@ createcontainerc(Client *c)
 	// container->masterfactorh = 2.4;
 	// container->masterfactor_old = 2.4;
 	// container->masterfactorh_old = 2.4;
-	container->masterfactor = 1.0;
+	container->masterfactor = 2.0;
 	container->masterfactorh = 1.0;
 	container->masterfactor_old = 2.4;
 	container->masterfactorh_old = 2.4;
@@ -10718,6 +10724,19 @@ container_layout_tile_v(Container *container)
 		else
 			c->bw = borderpx - 1;
 	}
+}
+
+void 
+container_layout_tile_v_movesplit(const Arg *arg){
+	if (!selmon->sel || !selmon->sel->container) return;
+	Container *container = selmon->sel->container;
+	if (arg->i == FOCUS_UP){
+		container->masterfactor -= 0.5;
+	}
+	if (arg->i == FOCUS_DOWN){
+		container->masterfactor += 0.5;
+	}
+	arrange(selmon);
 }
 
 /**
@@ -12323,10 +12342,7 @@ removefromscratchgroup(const Arg *arg)
 {
 	Client * c = selmon->sel;
 	removefromscratchgroupc(c);
-	ScratchItem *si;
-	for(c=selmon->clients;c;c=c->next)
-		if(!c->isscratched)
-			show(c);
+	shownonscratchs();
 	// if(scratchgroupptr->head->next == scratchgroupptr->tail)
 	// 	hidescratchgroup(scratchgroupptr);
 	hidescratchgroup(scratchgroupptr);
@@ -13046,6 +13062,23 @@ fill2(rect_t sc, int w, int h, int n, rect_t ts[], int tsn, rect_t *r, double ma
 	return 0;
 }
 
+void
+shownonscratchs(){
+	Client *c;
+	ScratchItem *si;
+	for(c=selmon->clients;c;c=c->next)
+		if(!c->isscratched)
+			show(c);
+}
+
+void
+hodenonscratchs(){
+	Client *c;
+	ScratchItem *si;
+	for(c=selmon->clients;c;c=c->next)
+		if(!c->isscratched)
+			hide(c);
+}
 
 void
 togglescratchgroup(const Arg *arg)
@@ -13054,18 +13087,10 @@ togglescratchgroup(const Arg *arg)
 	if(!sg->isfloating)
 	{
 		showscratchgroup(sg);
-		Client *c;
-		ScratchItem *si;
-		for(c=selmon->clients;c;c=c->next)
-			if(!c->isscratched)
-				hide(c);
+		hodenonscratchs();
 	}else{
 		hidescratchgroup(sg);
-		Client *c;
-		ScratchItem *si;
-		for(c=selmon->clients;c;c=c->next)
-			if(!c->isscratched)
-				show(c);
+		shownonscratchs();
 	}
 }
 

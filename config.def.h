@@ -175,7 +175,7 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, "-l", "10", NULL };
-static const char *rofiruncmd[] = { "rofi", "-show", "run", "-matching", "fuzzy", NULL};
+static const char *rofiruncmd[] = { "/home/beyond/software/rofi.sh",  NULL};
 //static const char *termcmd[]  = { "st", NULL };
 static const char scratchpadname[] = "scratchpad";
 // static const char *scratchpadcmd[] = { "st", "-t", scratchpadname, "-g", "120x34", NULL };
@@ -191,7 +191,8 @@ static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://
 //static const char *todotxtcmd[] = {"st","-e","/home/beyond/software/todotxtcmd.sh",NULL};
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
-static const char *copyqcmd[] = {"copyq", "show", NULL };
+// static const char *copyqcmd[] = {"copyq", "show", NULL };
+static const char *copyqcmd[] = {"/usr/bin/clipcat-menu", NULL };
 //static const char *browsercmd[] = {"firefox", NULL};
 static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
 //static const char *browsercmd[] = {"/home/beyond/software/bin/firefox/firefox/firefox", NULL};
@@ -335,14 +336,19 @@ static Key keys[] = {
 	{MODKEY, XK_k, switchermove, {.i = 2}},
 	{MODKEY, XK_j, switchermove, {.i = -2}},
 
-	{Mod1Mask|ShiftMask, XK_Left, switchermove, {.i = -1}},
-	{Mod1Mask|ShiftMask, XK_Right, switchermove, {.i = 1}},
-	{Mod1Mask|ShiftMask, XK_Up, switchermove, {.i = 2}},
-	{Mod1Mask|ShiftMask, XK_Down, switchermove, {.i = -2}},
-	{Mod1Mask|ShiftMask, XK_h, switchermove, {.i = -1}},
-	{Mod1Mask|ShiftMask, XK_l, switchermove, {.i = 1}},
-	{Mod1Mask|ShiftMask, XK_k, switchermove, {.i = 2}},
-	{Mod1Mask|ShiftMask, XK_j, switchermove, {.i = -2}},
+	// {Mod1Mask|ShiftMask, XK_Left, switchermove, {.i = -1}},
+	// {Mod1Mask|ShiftMask, XK_Right, switchermove, {.i = 1}},
+	// {Mod1Mask|ShiftMask, XK_Up, switchermove, {.i = 2}},
+	// {Mod1Mask|ShiftMask, XK_Down, switchermove, {.i = -2}},
+	// {Mod1Mask|ShiftMask, XK_h, switchermove, {.i = -1}},
+	// {Mod1Mask|ShiftMask, XK_l, switchermove, {.i = 1}},
+	// {Mod1Mask|ShiftMask, XK_k, switchermove, {.i = 2}},
+	// {Mod1Mask|ShiftMask, XK_j, switchermove, {.i = -2}},
+
+	{Mod1Mask|ShiftMask, XK_Up, container_layout_tile_v_movesplit, {.i = 2}},
+	{Mod1Mask|ShiftMask, XK_Down, container_layout_tile_v_movesplit, {.i = -2}},
+	{Mod1Mask|ShiftMask, XK_k, container_layout_tile_v_movesplit, {.i = 2}},
+	{Mod1Mask|ShiftMask, XK_j, container_layout_tile_v_movesplit, {.i = -2}},
 
 	{ControlMask|Mod1Mask, XK_Left, tile7switchermovecontainer, {.i = -1}},
 	{ControlMask|Mod1Mask, XK_Right, tile7switchermovecontainer, {.i = 1}},

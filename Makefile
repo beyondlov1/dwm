@@ -56,6 +56,13 @@ install: all
 	chmod +x ${HOME}/software/simulate_key
 	cp -f runningtag/runningtag.py ${HOME}/software
 	chmod +x ${HOME}/software/runningtag.py
+	mkdir -p ${HOME}/software/bin/rofi-script
+	cp -f rofi-script/librofiscript.py ${HOME}/software/bin/rofi-script
+	cp -f rofi-script/funcs.py ${HOME}/software/bin/rofi-script
+	cp -f rofi-script/rofi.py ${HOME}/software/bin/rofi-script
+	chmod +x ${HOME}/software/bin/rofi-script/rofi.py
+	cp -f rofi-script/rofi.sh ${HOME}/software
+	chmod +x ${HOME}/software/rofi.sh
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dwm \
