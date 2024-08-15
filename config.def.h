@@ -106,6 +106,7 @@ static const Rule rules[] = {
 	{"ToDesk", NULL, NULL, 0, 0, -1, 5, 2,0},
 	{"qclip", NULL, NULL, 0, 1, -1, 1, 2,1},
 	{"obsidian", NULL, NULL, 0, 1, -1, 1, 2,1},
+	// {"Rofi", NULL, NULL, 0, 1, -1, 1, 2,0},
 };
 
 static const Rule subjrules[] = {

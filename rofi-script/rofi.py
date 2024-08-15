@@ -8,6 +8,7 @@ from collections import OrderedDict, defaultdict
 import subprocess
 import funcs
 import librofiscript 
+from librofiscript import SEP
 
 def run_shell_async(shell):
     # shell = f"{shell} > /dev/null 2>&1"
@@ -42,12 +43,11 @@ def getbypath(d, path, default=None):
     return result
 
 
-SEP = "|$|$|"
 cmds = OrderedDict()
+# cmds[sys.argv[0]] = {}
 
 for funcname in funcs.__all__:
-    func, lpath = eval(f"funcs.{funcname}")()
-    librofiscript.add(lpath, func, cmds)
+    eval(f"funcs.{funcname}")(cmds)
 
 rofiretv = os.environ["ROFI_RETV"]
 if rofiretv == "0":
@@ -64,5 +64,5 @@ if rofiretv == "1":
         if isinstance(cmditem, dict):
             showmenus(cmditem)
         if isfunction(cmditem): 
-            cmditem(cmd, path)
+            cmditem(cmd, path, cmds)
 

@@ -1,6 +1,8 @@
 import subprocess
 from collections import OrderedDict
 
+SEP = "|$|$|"
+
 def run_shell_async(shell):
     # shell = f"{shell} > /dev/null 2>&1"
     subprocess.Popen(shell,stdout=subprocess.DEVNULL,shell=True)
