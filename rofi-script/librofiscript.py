@@ -1,5 +1,7 @@
 import subprocess
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+import os
+import json
 
 SEP = "|$|$|"
 
@@ -15,6 +17,18 @@ def run_shell(shell):
 def copy(text):
     run_shell_async(f"echo -n '{text}' | xclip -selection clipboard")
 
+def getprimary():
+    primary = run_shell(f"xclip -selection primary -o")
+    if not primary:
+        return ""
+    return primary
+
+def getclipboard():
+    clipboard = run_shell(f"xclip -selection clipboard -o")
+    if not clipboard:
+        return ""
+    return clipboard
+
 def add(lpath: list, func, d):
     tmproot = d 
     for c in lpath[:-1]:
@@ -23,3 +37,64 @@ def add(lpath: list, func, d):
         tmproot = tmproot[c]
     tmproot[lpath[-1]] = func
 
+def readfile(path):
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        return f.read()
+
+def writefile(path, data):
+    with open(path, "w+") as f:
+        f.write(data)
+
+def loadjsonfile(path):
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        return json.load(f)
+
+def writejsonfile(path, data):
+    with open(path, "w+") as f:
+        json.dump(data, f)
+
+freqpath = "/tmp/rofi-script.freq"
+def recordfreq(path):
+    freqdict = loadjsonfile(freqpath)
+    freqdict = defaultdict(int) if not freqdict else defaultdict(int, freqdict)
+    freqdict[path] += 1
+    writejsonfile(freqpath, freqdict)
+    
+def sortbyfreq(d: dict, path):
+    freqdict = loadjsonfile(freqpath)
+    freqdict = defaultdict(int) if not freqdict else defaultdict(int, freqdict)
+    # print(freqdict)
+    sitems = [{"freq": freqdict[f"{path}{SEP}{k}"], "k": k, "path": f"{path}{SEP}{k}"} for k in d]
+    sitems.sort(key = lambda x: x["freq"], reverse = True)
+    # print(sitems)
+    result = OrderedDict()
+    for sitem in sitems:
+        result[sitem["k"]] = d[sitem["k"]]
+    return result
+
+
+
+
+
+
+
+
+
+
+
+# def recordfreq(path):
+#     p = multiprocessing.Process(target=_recordfreq, args=(path,))
+#     p.start()
+#     p.join()
+
+# def sortbyfreq(d):
+#     q = multiprocessing.Queue(maxsize=1)
+#     p = multiprocessing.Process(target=_sortbyfreq, args=(d,q))
+#     p.start()
+#     r = q.get()
+#     p.join()
+#     return r
