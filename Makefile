@@ -60,6 +60,8 @@ install: all
 	cp -f rofi-script/librofiscript.py ${HOME}/software/bin/rofi-script
 	cp -f rofi-script/funcs.py ${HOME}/software/bin/rofi-script
 	cp -f rofi-script/rofi.py ${HOME}/software/bin/rofi-script
+	mkdir -p ${HOME}/.config/systemd/user/graphical-session.target.wants
+	cp -f rofi-script/clipcatd.service.in ${HOME}/.config/systemd/user/graphical-session.target.wants/clipcat.service
 	chmod +x ${HOME}/software/bin/rofi-script/rofi.py
 	cp -f rofi-script/rofi.sh ${HOME}/software
 	chmod +x ${HOME}/software/rofi.sh
