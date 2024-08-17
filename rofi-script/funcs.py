@@ -83,15 +83,24 @@ def _fetchssr():
 #     r = f"tdf = {dfstr}[{dfstr}[\"{attrstr}\"] == ]"
 #     return r
 
+
+def browseropen(url):
+    run_shell_async(f"sleep 0.1 && /home/beyond/software/ba {url}")
+
+def stopen(dirpath):
+    run_shell_async(f"st -d {dirpath}")
+
 def addoptions(cmds):
     def _showclipboards(arg,path,cmds):
         run_shell_async("sleep 0.1 && /bin/clipcat-menu")
     add(["clipboard",], _showclipboards, cmds)
+
     def _(arg, path, rofi):
         clip = getclipboard()
         r = clip.lower()
         copy(r)
     add(["tolower",], _, cmds)
+
     def _(arg, path, rofi):
         url = readfile("/tmp/chrominum_active_url")
         if not url or "github.com" not in url:
@@ -103,7 +112,49 @@ def addoptions(cmds):
             # copy(r)
             run_shell_async(f"sleep 0.1 && /home/beyond/software/ba {r}")
     add(["togithubmirror",], _, cmds)
+
     def _(arg, path, rofi):
         r = _fetchssr()
         copy(r)
     add(["fetchssr",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://chat.tinycms.xyz:3002/#/"
+        browseropen(r)
+    add(["gpt",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://akzu82.aitianhu1.top/#/chat/1002"
+        browseropen(r)
+    add(["gpt2",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://fcp7.com/free-chatgpt-mirroring-sites-list.html"
+        browseropen(r)
+    add(["gptmirrorsite",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://g.savalone.com/"
+        browseropen(r)
+    add(["google",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://fcp7.com/use-google-search.html"
+        browseropen(r)
+    add(["googlemirrorsite",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://radio5.cn/level/net"
+        browseropen(r)
+    add(["music",], _, cmds)
+
+    def _(arg, path, rofi):
+        stopen("/home/beyond/github/dwm")
+    add(["dwm",], _, cmds)
+
+    def _(arg, path, rofi):
+        stopen("/home/beyond/github/dwm")
+        copy("vi rofi-script/funcs.py && sudo -E make clean install")
+        run_shell_async("sleep 1 && xdotool key 'shift+Insert'")
+    add(["rofiscriptmodify",], _, cmds)
+
