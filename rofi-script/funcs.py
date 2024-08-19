@@ -158,3 +158,7 @@ def addoptions(cmds):
         run_shell_async("sleep 1 && xdotool key 'shift+Insert'")
     add(["rofiscriptmodify",], _, cmds)
 
+    def _(arg, path, rofi):
+        run_shell_async("sleep 0.1 && rofi -show run")
+    add(["run",], _, cmds)
+
