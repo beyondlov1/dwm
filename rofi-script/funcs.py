@@ -159,6 +159,6 @@ def addoptions(cmds):
     add(["rofiscriptmodify",], _, cmds)
 
     def _(arg, path, rofi):
-        run_shell_async("sleep 0.1 && rofi -show run")
+        run_shell_async("sleep 0.1 && export PATH=/home/beyond/software:$PATH &&rofi -show run")
     add(["run",], _, cmds)
 
