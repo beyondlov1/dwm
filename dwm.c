@@ -11972,7 +11972,7 @@ arrangescratch(ScratchGroup *sg){
 	sc.h = selmon->wh - 2;
 
 	if(tsn < 5){
-		float sfactor = 0.8 * (2+tsn) / 4;
+		float sfactor = 0.8 * (2.5+tsn) / 4;
 		int sw = MIN(sc.w * 0.95, sc.w * sfactor);
 		int sh = MIN(sc.h * 0.95, sc.h * sfactor);
 		int sx = selmon->sel->container->x + (sc.w - sw) / 2;
