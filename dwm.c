@@ -3069,9 +3069,11 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 	}
 	else
 	{
-		// 为了适应缩略图
-		drw_setscheme(drw, scheme[SchemeNorm]);
-		return;
+		if(isswitcherpreview){
+			// preview
+			drw_setscheme(drw, scheme[SchemeNorm]);
+			return;
+		}
 		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 		long curr = getcurrusec();
 		if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
@@ -3186,10 +3188,12 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
 		drw_rect(drw, x, y, w, h, 1, 1);
 
-		// preview
-		Picture pic = getwindowpic(c);
-		drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
-		XRenderFreePicture(dpy, pic);
+		if(isswitcherpreview){
+			// preview
+			Picture pic = getwindowpic(c);
+			drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
+			XRenderFreePicture(dpy, pic);
+		}
 
 		int size_level = 1;
 		if (c->ichs[size_level] > h/2) {
@@ -3219,12 +3223,15 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		tw = MIN(TEXTW(c->name), w);
 		th = MIN(th, h / 4);
 
-		// ----- preview 相关修改
-		set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
-		drw_rect(drw, x , y + h - th, w, th, 1, 1);
-		drw_text(drw, x + w/2 - tw/2, y + h - th, tw, th, 2, c->name, 0);
-		// -----
-		// drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
+		if (isswitcherpreview){
+			// ----- preview 相关修改
+			set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
+			drw_rect(drw, x , y + h - th, w, th, 1, 1);
+			drw_text(drw, x + w/2 - tw/2, y + h - th, tw, th, 2, c->name, 0);
+			// -----
+		}else{
+			drw_text(drw, x + w/2 - tw/2, y + 2 * h / 4, tw, th, 2, c->name, 0);
+		}
 
 		if(strlen(c->note) > 0){
 			tw = MIN(TEXTW(c->note), w);
@@ -3237,12 +3244,15 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			th = MIN(th, h / 4);
 			if(h / 2 < th) th = h / 2;
 
-			// ----- preview 相关修改
 			set_backgroud(c, minlastfocusperiod, maxlastfocusperiod, minlastfocustime, maxlastfocustime);
-			drw_rect(drw, x, y + h  - 2*th, w, th, 1, 1);
-			drw_text(drw, x + 32, y + h - 2*th, tw, th, 0, c->shortcut, 0);
-			// -----
-			// drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
+			if(isswitcherpreview){
+				// ----- preview 相关修改
+				drw_rect(drw, x, y + h  - 2*th, w, th, 1, 1);
+				drw_text(drw, x + 32, y + h - 2*th, tw, th, 0, c->shortcut, 0);
+				// -----
+			}else{
+				drw_text(drw, x + 32, y + h / 2 - th, tw, th, 0, c->shortcut, 0);
+			}
 		}
 
 
@@ -5862,7 +5872,7 @@ manage(Window w, XWindowAttributes *wa)
 	// hidescratchgroup if needed (example: open app from terminal)manage()
 	if(scratchgroupptr->isfloating && !isnexttemp){
 		hidescratchgroupv(scratchgroupptr, 0);
-		if(!isnextscratch)
+		if(!isnextscratch && isscratchmask)
 			shownonscratchs();
 	}
 
@@ -12342,7 +12352,8 @@ removefromscratchgroup(const Arg *arg)
 {
 	Client * c = selmon->sel;
 	removefromscratchgroupc(c);
-	shownonscratchs();
+	if (isscratchmask)
+		shownonscratchs();
 	// if(scratchgroupptr->head->next == scratchgroupptr->tail)
 	// 	hidescratchgroup(scratchgroupptr);
 	hidescratchgroup(scratchgroupptr);
@@ -13087,10 +13098,12 @@ togglescratchgroup(const Arg *arg)
 	if(!sg->isfloating)
 	{
 		showscratchgroup(sg);
-		hodenonscratchs();
+		if(isscratchmask)
+			hodenonscratchs();
 	}else{
 		hidescratchgroup(sg);
-		shownonscratchs();
+		if(isscratchmask)
+			shownonscratchs();
 	}
 }
 

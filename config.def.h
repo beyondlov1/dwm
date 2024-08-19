@@ -6,6 +6,8 @@
 /* appearance */
 #define ICONSIZE 16
 #define ICONSPACING 5
+static const unsigned int isscratchmask  = 0;        /* hide other clients when scratch shown */
+static const unsigned int isswitcherpreview  = 0;        /* switch preview */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
 static const Gap default_gap        = {.isgap = 1, .realgap = 10, .gappx = 15};
 static const unsigned int snap      = 32;       /* snap pixel */
