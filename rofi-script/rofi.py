@@ -1,4 +1,4 @@
-#! /home/beyond/venv-common/bin/python3
+#! /bin/python3
 
 from collections.abc import Iterable
 from inspect import isfunction
