@@ -124,9 +124,19 @@ def addoptions(cmds):
     add(["gpt",], _, cmds)
 
     def _(arg, path, rofi):
-        r = "https://akzu82.aitianhu1.top/#/chat/1002"
+        r = "https://lite.icoding.ink/#/chat"
         browseropen(r)
     add(["gpt2",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://dkzpz9.aitianhu1.top/#/chat/1002"
+        browseropen(r)
+    add(["gpt3",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = "https://www.linshi-email.com/"
+        browseropen(r)
+    add(["linshiyouxiang_email",], _, cmds)
 
     def _(arg, path, rofi):
         r = "https://fcp7.com/free-chatgpt-mirroring-sites-list.html"
