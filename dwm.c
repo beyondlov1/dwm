@@ -4307,8 +4307,7 @@ toggleswitchers(const Arg *arg)
 	if (selmon->switcherstickywin) {
 		return;
 	}
-	ScratchGroup *sg = scratchgroupptr;
-	if(sg && sg->isfloating){
+	if(scratchgroupptr && scratchgroupptr->isfloating){
 		return;
 	}
 	if(selmon->switcher){
