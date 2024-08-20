@@ -172,3 +172,10 @@ def addoptions(cmds):
         run_shell_async("sleep 0.1 && export PATH=/home/beyond/software:$PATH &&rofi -show run")
     add(["run",], _, cmds)
 
+    def _(arg, path, rofi):
+        stopen(arg)
+    ls = readfile("/tmp/active_dirs.txt")
+    if ls:
+        for l in reversed(ls.split("\n")):
+            add(["recentactivedirs", l], _, cmds)
+

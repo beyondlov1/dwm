@@ -98,6 +98,8 @@
 
 #define CONTAINER_MAX_N 5
 
+#define islog 0
+
 static FILE *logfile;
 static FILE *actionlogfile;
 
@@ -831,7 +833,6 @@ static unsigned int scratchtag = 1 << LENGTH(tags);
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 static MXY spiral_index[] = {{0,0},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{1,2},{0,2},{-1,2},{-2,2},{-2,1},{-2,0},{-2,-1},{-2,-2},{-1,-2},{0,-2},{1,-2},{2,-2},{2,-1},{2,0},{2,1},{2,2},{2,3},{1,3},{0,3},{-1,3},{-2,3},{-3,3},{-3,2},{-3,1},{-3,0},{-3,-1},{-3,-2},{-3,-3},{-2,-3},{-1,-3},{0,-3},{1,-3},{2,-3},{3,-3},{3,-2},{3,-1},{3,0},{3,1},{3,2},{3,3},{3,4},{2,4},{1,4},{0,4},{-1,4},{-2,4},{-3,4},{-4,4},{-4,3},{-4,2},{-4,1},{-4,0},{-4,-1},{-4,-2},{-4,-3},{-4,-4},{-3,-4},{-2,-4},{-1,-4},{0,-4},{1,-4},{2,-4},{3,-4},{4,-4},{4,-3},{4,-2},{4,-1},{4,0},{4,1},{4,2},{4,3},{4,4},{4,5},{3,5},{2,5},{1,5},{0,5},{-1,5},{-2,5},{-3,5},{-4,5},{-5,5},{-5,4},{-5,3},{-5,2},{-5,1},{-5,0},{-5,-1},{-5,-2},{-5,-3},{-5,-4},{-5,-5},{-4,-5},{-3,-5},{-2,-5},{-1,-5},{0,-5},{1,-5},{2,-5},{3,-5},{4,-5},{5,-5},{5,-4},{5,-3},{5,-2},{5,-1},{5,0},{5,1},{5,2},{5,3},{5,4},{5,5}};
 
-static int islog = 0;
 
 void
 LOG(char *content, char * content2){
@@ -14864,9 +14865,11 @@ i_switcherfocuschange(const Arg *arg)
 int
 main(int argc, char *argv[])
 {
-	close(2);
-	logfile = fopen("/home/beyond/m.log", "a");
-	actionlogfile = fopen("/home/beyond/action.log", "a");
+	if(islog){
+		close(2);
+		logfile = fopen("/home/beyond/m.log", "a");
+		actionlogfile = fopen("/home/beyond/action.log", "a");
+	}
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("dwm-"VERSION);
 	else if (argc != 1)
@@ -14887,6 +14890,9 @@ main(int argc, char *argv[])
 	if(restart) execvp(argv[0], argv);
 	cleanup();
 	XCloseDisplay(dpy);
-	fclose(logfile);
+	if(islog){
+		fclose(logfile);
+		fclose(actionlogfile);
+	}
 	return EXIT_SUCCESS;
 }
