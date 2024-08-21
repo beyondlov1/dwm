@@ -10039,7 +10039,7 @@ createcontainerc(Client *c)
 	// container->masterfactor_old = 2.4;
 	// container->masterfactorh_old = 2.4;
 	container->masterfactor = 2.0;
-	container->masterfactorh = 2.4;
+	container->masterfactorh = 1.0;
 	container->masterfactor_old = 2.4;
 	container->masterfactorh_old = 2.4;
 	container->nmaster = nmaster;
