@@ -66,7 +66,8 @@ static const char *gradual_colors[][3] = {
 // };
 
 
-static const char *widescreen_classes[] = {"Code", "Google-chrome", "firefox"};
+// st打开时, 切换 nmaster = 1, 保持宽屏
+static const char *widescreen_classes[] = {"Code", "Google-chrome", "firefox", "Chromium", "chromium"};
 
 /* tagging */
 static const char *tags[] = { "  1-term  ", "2-browser ", "  3-dev1  ", "  4-dev2  ", "5-datasource", " 6-learn  ", "    7     ", "    8     ", "    9     " };
@@ -93,11 +94,12 @@ static const Rule rules[] = {
 	/* class                 instance    title       tags mask     isfloating   monitor  priority   nstub isscratch*/
 	{"firefox", NULL, NULL, 0, 0, -1, 5, 2, 0},
 	{"Google-chrome", NULL, NULL, 0, 0, -1, 5, 2,0},
+	{"chromium", NULL, NULL, 0, 0, -1, 5, 2,0},
 	{"Sidekick-browser", NULL, NULL, 0, 0, -1, 5, 2,0},
 	{"Brave-browser-nightly", NULL, NULL, 0, 0, -1, 5, 2,0},
 	{"X-terminal-emulator", NULL, NULL, 0, 0, -1, 1, -1,0},
 	{"Terminator", NULL, NULL, 0, 0, -1, 1, -1,0},
-	{"St", NULL, NULL, 0, 0, -1, 1, 2,0},
+	{"St", NULL, NULL, 0, 0, -1, 1, -1,0},
 	{"Code", NULL, NULL, 0, 0, -1, 5, 0,0},
 	{"jetbrains-idea", NULL, NULL, 0, 0, -1, 5, 0,0},
 	{"jetbrains-datagrip", NULL, NULL, 0, 0, -1, 5, 2,0},
@@ -119,11 +121,12 @@ static const Rule subjrules[] = {
 	/* class                  instance    title       tags mask     isfloating   monitor  priority  nstub isscratch*/
 	{ "firefox",              NULL,       NULL,       1 << 1,       0,           -1 , 5,              2, 0},
 	{ "Google-chrome",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
+	{ "chromium",        NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
 	{ "Sidekick-browser",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
 	{ "Brave-browser-nightly",     NULL,       NULL,       1 << 1,       0,           -1 , 5,              2,0},
 	{ "X-terminal-emulator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
 	{ "Terminator",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
-	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              2,0},
+	{ "St",  NULL,       NULL,       1 << 0,       0,           -1 , 1,              -1,0},
 	{ "Code",                 NULL,       NULL,       1 << 3,       0,           -1 , 5,              0,0},
 	{ "jetbrains-idea",       NULL,       NULL,       1 << 2,       0,           -1 , 5,              0,0},
 	{ "jetbrains-datagrip",   NULL,       NULL,       1 << 4,       0,           -1 , 5,              2,0},

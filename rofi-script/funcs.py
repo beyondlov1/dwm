@@ -183,3 +183,7 @@ def addoptions(cmds):
         run_shell_async("sleep 0.1 && xdotool type ' | xclip -selection clipboard' ")
     add(["clipcmd",], _, cmds)
 
+    def _(arg, path, rofi):
+        browseropen("https://www.crxsoso.com/")
+    add(["crx",], _, cmds)
+

@@ -3070,6 +3070,8 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 	}
 	else
 	{
+		// drw_setscheme(drw, scheme[SchemeNorm]);
+		// return;
 		if(isswitcherpreview){
 			// preview
 			drw_setscheme(drw, scheme[SchemeNorm]);
@@ -3077,7 +3079,7 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 		}
 		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 		long curr = getcurrusec();
-		if(lastfocusperiod > 0 && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
+		if(lastfocusperiod > 0 && lastfocusperiod > minlastfocusperiod && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
 			LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
 			int timescale = 1000 * 1000 * 60;
 			// 归一化
@@ -5995,11 +5997,23 @@ manage(Window w, XWindowAttributes *wa)
 		// c->container->masterfactor = 7; // 携带st过去， 并自动放大主窗口
 	}
 
-	// if c stub>sel stub, sel stub is master -> c to master
+	// 根据 nstub 排序, 判断谁是master
+	// if c stub>sel stub, sel stub is master -> c to master 
 	if(selmon->sel && c->nstub > selmon->sel->nstub && selmon->sel->container == c->container 
 	&& selmon->sel->indexincontainer < selmon->sel->container->nmaster
 	&& c->indexincontainer >= c->container->nmaster){
 		tile7swapclientx(c, selmon->sel);
+	}
+
+	// 根据master 的 stub 调节 masterfactorh
+	if(c->container && c->container->cn > 1){
+		int nstub1 = 1;
+		if (c->container->cs[0]->nstub > 0)
+		 	nstub1 = c->container->cs[0]->nstub;
+		int nstub2 = 1;
+		if (c->container->cs[1]->nstub > 0)
+			nstub2 = c->container->cs[1]->nstub;
+		c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
 	}
 
 	// 浮动窗口固定在右下角
@@ -6743,7 +6757,7 @@ mergetocontainerof(Client *fromc, Client *toc){
 	LOG_FORMAT("mergetocontainerof 0");
 	freecontainerc(fromc->container, fromc);
 	fromc->container = toc->container;
-	fromc->container->cs[fromc->container->cn] = fromc;
+	toc->container->cs[toc->container->cn] = fromc;
 	// 如果在左边,则交换, 把fromc放到chosen的位置
 	/*if(fromc->x < toc->x){*/
 		/*int i;*/
@@ -6754,7 +6768,7 @@ mergetocontainerof(Client *fromc, Client *toc){
 		/*fromc->container->cs[fromc->container->cn] = toc;*/
 		/*fromc->container->cs[i] = fromc;*/
 	/*}*/
-	fromc->container->cn ++;
+	toc->container->cn ++;
 	if(toc->container->cn > 1 && toc->container->arrange == container_layout_full){
 		toc->container->arrange = toc->container->oldarrange;
 	}
@@ -10025,7 +10039,7 @@ createcontainerc(Client *c)
 	// container->masterfactor_old = 2.4;
 	// container->masterfactorh_old = 2.4;
 	container->masterfactor = 2.0;
-	container->masterfactorh = 1.0;
+	container->masterfactorh = 2.4;
 	container->masterfactor_old = 2.4;
 	container->masterfactorh_old = 2.4;
 	container->nmaster = nmaster;
@@ -10951,8 +10965,8 @@ setcontainerlayout(const Arg *arg)
 		if(selmon->sel->container->nmaster == 1){
 			selmon->sel->container->nmaster_old = selmon->sel->container->nmaster;
 			selmon->sel->container->nmaster = 2;
-			selmon->sel->container->masterfactor = 1.0f;
-			selmon->sel->container->masterfactorh = 1.0f;
+			// selmon->sel->container->masterfactor = 1.0f;
+			// selmon->sel->container->masterfactorh = 1.0f;
 		}else if(selmon->sel->container->nmaster == 2){
 			selmon->sel->container->nmaster = selmon->sel->container->nmaster_old;
 			selmon->sel->container->masterfactor = selmon->sel->container->masterfactor_old;
