@@ -179,3 +179,7 @@ def addoptions(cmds):
         for l in reversed(ls.split("\n")):
             add(["recentactivedirs", l], _, cmds)
 
+    def _(arg, path, rofi):
+        run_shell_async("sleep 0.1 && xdotool type ' | xclip -selection clipboard' ")
+    add(["clipcmd",], _, cmds)
+
