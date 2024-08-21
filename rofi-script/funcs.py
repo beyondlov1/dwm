@@ -187,3 +187,11 @@ def addoptions(cmds):
         browseropen("https://www.crxsoso.com/")
     add(["crx",], _, cmds)
 
+    def _(arg, path, rofi):
+        arg = arg.replace("|||", "\n")
+        copy(arg)
+    ls = readfile("/tmp/recent_context.txt")
+    if ls:
+        for l in reversed(ls.split("\n")):
+            add(["context", l], _, cmds)
+
