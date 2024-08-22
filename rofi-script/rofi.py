@@ -42,12 +42,14 @@ def getbypath(d, path, default=None):
         result = result[k]
     return result
 
-def _sortbyfreq(root, path):
+def _sortbyfreq(root, path, exclude_paths = []):
     if not isinstance(root, dict):
+        return root
+    if path in exclude_paths:
         return root
     newroot = librofiscript.sortbyfreq(root, path)
     for k, v in root.items():
-        newroot[k] = _sortbyfreq(v, f"{path}{SEP}{k}")
+        newroot[k] = _sortbyfreq(v, f"{path}{SEP}{k}", exclude_paths)
     return newroot
 
 cmds = OrderedDict()
@@ -56,7 +58,12 @@ cmds = OrderedDict()
 for funcname in funcs.__all__:
     eval(f"funcs.{funcname}")(cmds)
 
-cmds = _sortbyfreq(cmds, "")
+
+freq_exclude_paths = [
+    f"{SEP}context",
+]
+
+cmds = _sortbyfreq(cmds, "", exclude_paths = freq_exclude_paths)
 # print(cmds)
 
 rofiretv = os.environ["ROFI_RETV"]
