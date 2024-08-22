@@ -98,7 +98,7 @@
 
 #define CONTAINER_MAX_N 5
 
-#define islog 1
+#define islog 0
 
 static FILE *logfile;
 static FILE *actionlogfile;
