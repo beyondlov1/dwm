@@ -98,7 +98,7 @@
 
 #define CONTAINER_MAX_N 5
 
-#define islog 0
+#define islog 1
 
 static FILE *logfile;
 static FILE *actionlogfile;
@@ -7850,7 +7850,7 @@ run(void)
 
 void
 runAutostart(void) {
-	system("~/.config/dwm/script/init.sh");
+	system("~/.init_dwm.sh");
 }
 
 void
@@ -11961,6 +11961,7 @@ findingroup(ScratchGroup *scratchgroupptr, Client *c)
 
 void
 arrangescratch(ScratchGroup *sg){
+	if(!selmon->sel) return;
 	if(!sg->isfloating) return;
 	int i;
 	ScratchItem *si;
@@ -12281,7 +12282,7 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			if (ISVISIBLE(c) && !found)
 				break;
 		}
-		if(c) focus(c); else focus(NULL);
+		if(c && ISVISIBLE(c)) focus(c); else focus(NULL);
 		arrange(selmon);
 	}
 	sg->isfloating = 0;
