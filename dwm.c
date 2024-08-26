@@ -3079,7 +3079,7 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 		}
 		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 		long curr = getcurrusec();
-		if(lastfocusperiod > 0 && lastfocusperiod > minlastfocusperiod && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0){
+		if(lastfocusperiod > 0 && lastfocusperiod > minlastfocusperiod && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0 && c->lastfocustime - minlastfocustime > 0){
 			LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
 			int timescale = 1000 * 1000 * 60;
 			// 归一化
