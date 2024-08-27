@@ -5,7 +5,7 @@ if [[ "$role" == "browser" || "$role" == "browser-window" ]]; then
 	xdotool key "Ctrl+w"
 	# sudo simulate_key $event 2 29 17
 else
-	xdotool key "Super+F1"
+	xdotool key "Alt+F4"
 	# sudo simulate_key $event 21 59
 	# sudo simulate_key $event 21 56
 	# sudo simulate_key $event 2 56 62

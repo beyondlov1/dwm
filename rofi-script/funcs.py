@@ -124,7 +124,8 @@ def addoptions(cmds):
     add(["gpt",], _, cmds)
 
     def _(arg, path, rofi):
-        r = "https://lite.icoding.ink/#/chat"
+        # r = "https://lite.icoding.ink/#/chat"
+        r = "https://aq109s.aitianhu1.top/#/chat/1002"
         browseropen(r)
     add(["gpt2",], _, cmds)
 
