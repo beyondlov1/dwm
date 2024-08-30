@@ -3079,7 +3079,11 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 		}
 		long lastfocusperiod = c->lastunfocustime - c->lastfocustime;
 		long curr = getcurrusec();
-		if(lastfocusperiod > 0 && lastfocusperiod > minlastfocusperiod && maxlastfocusperiod - minlastfocusperiod > 0 && curr - minlastfocustime > 0 && c->lastfocustime - minlastfocustime > 0){
+		if(lastfocusperiod > 0 
+			&& lastfocusperiod > minlastfocusperiod 
+			&& maxlastfocusperiod - minlastfocusperiod > 0 
+			&& curr - minlastfocustime > 0 
+			&& c->lastfocustime - minlastfocustime > 0){
 			LOG_FORMAT("lastfocusperiod1:%ld %ld %ld %ld",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,c->lastfocustime);
 			int timescale = 1000 * 1000 * 60;
 			// 归一化
@@ -3089,6 +3093,7 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 			if(focustimefeat <= 0) return;
 			float feat = pow(focustimefeat * focusperiodfeat, 0.5);
 			int clr_level = 0.99 * gradual_colors_count * feat;
+			if(clr_level >= LENGTH(gradual_colors)) return;
 			LOG_FORMAT("lastfocusperiod:%ld %ld %ld %d",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,clr_level);
 			LOG_FORMAT("lastfocusperiod:%f",focusperiodfeat);
 			LOG_FORMAT("lastfocusperiod:%f",focustimefeat);
