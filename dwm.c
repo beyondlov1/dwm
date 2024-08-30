@@ -3086,6 +3086,7 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 			float focusperiodfeat = 1.0 * log(1.0*(lastfocusperiod - minlastfocusperiod)/timescale + 1)/log(1.0*(maxlastfocusperiod - minlastfocusperiod)/timescale+ 1);
 			// 归一化后反比
 			float focustimefeat = (exp(5.0 * log(1.0*(c->lastfocustime - minlastfocustime)/timescale + 1) / log(1.0*(curr - minlastfocustime)/timescale + 1)) - 1) / (exp(5.0) - 1);
+			if(focustimefeat <= 0) return;
 			float feat = pow(focustimefeat * focusperiodfeat, 0.5);
 			int clr_level = 0.99 * gradual_colors_count * feat;
 			LOG_FORMAT("lastfocusperiod:%ld %ld %ld %d",lastfocusperiod,minlastfocusperiod,maxlastfocusperiod,clr_level);
