@@ -153,7 +153,7 @@ function init() {
             draw(canvas, data["content"])
         })
         .catch(err => console.error(err))
-    }, 1000*1);
+    }, 1000*60);
 }
 
 function hotkey(key){
