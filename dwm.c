@@ -97,6 +97,12 @@
 #define FOCUS_DOWN -2
 
 #define CONTAINER_MAX_N 5
+#define INIT_MASTERFACTOR 3.0
+// masterfactorh会在manage中动态修改, 所以这个设置了没用
+#define INIT_MASTERFACTOR_H 1.0
+#define WIDE_MASTERFACTOR 5.0
+// 这个没用到
+#define WIDE_MASTERFACTOR_H 1.0
 
 #define islog 0
 
@@ -6019,6 +6025,7 @@ manage(Window w, XWindowAttributes *wa)
 		int nstub2 = 1;
 		if (c->container->cs[1]->nstub > 0)
 			nstub2 = c->container->cs[1]->nstub;
+		// 这里会动态修改 masterfactorh
 		c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
 	}
 
@@ -8769,8 +8776,8 @@ stsubspawn(const Arg *arg){
 				selmon->sel->container->nmaster = 1;
 				selmon->sel->container->masterfactor_old = selmon->sel->container->masterfactor;
 				selmon->sel->container->masterfactorh_old = selmon->sel->container->masterfactorh;
-				selmon->sel->container->masterfactor = 2.4;
-				selmon->sel->container->masterfactorh = 2.4;
+				selmon->sel->container->masterfactor = WIDE_MASTERFACTOR;
+				selmon->sel->container->masterfactorh = WIDE_MASTERFACTOR_H;
 			}
 		}
 	}
@@ -8839,8 +8846,8 @@ stispawn(const Arg *arg){
 				selmon->sel->container->nmaster = 1;
 				selmon->sel->container->masterfactor_old = selmon->sel->container->masterfactor;
 				selmon->sel->container->masterfactorh_old = selmon->sel->container->masterfactorh;
-				selmon->sel->container->masterfactor = 2.4;
-				selmon->sel->container->masterfactorh = 2.4;
+				selmon->sel->container->masterfactor = WIDE_MASTERFACTOR;
+				selmon->sel->container->masterfactorh = WIDE_MASTERFACTOR_H;
 			}
 		}
 	}
@@ -10044,10 +10051,10 @@ createcontainerc(Client *c)
 	// container->masterfactorh = 2.4;
 	// container->masterfactor_old = 2.4;
 	// container->masterfactorh_old = 2.4;
-	container->masterfactor = 2.0;
-	container->masterfactorh = 1.0;
-	container->masterfactor_old = 2.4;
-	container->masterfactorh_old = 2.4;
+	container->masterfactor = INIT_MASTERFACTOR;
+	container->masterfactorh = INIT_MASTERFACTOR_H;
+	container->masterfactor_old = INIT_MASTERFACTOR;
+	container->masterfactorh_old = INIT_MASTERFACTOR_H;
 	container->nmaster = nmaster;
 	container->nmaster_old = 1;
 	container->arrange = container_layout_tile_v;
@@ -10687,6 +10694,7 @@ container_layout_tile_v(Container *container)
 		int slavenextx = 0;
 		// 右边每一个都是前一个的 q 倍, 等比数列求和 = w
 		float masterfactorh_slave = 1/container->masterfactorh;
+		LOG_FORMAT("container_layout_tile 2_1 %f,%f", masterfactorh_slave, container->masterfactorh);
 		int nextmasterw = container->w;
 		if(masterfactorh_slave == 1){
 			nextmasterw = container->w  / MIN(tilecn, container->nmaster);

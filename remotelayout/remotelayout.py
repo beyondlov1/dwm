@@ -14,7 +14,7 @@ host = ('0.0.0.0', 7397)
 
 import subprocess
 import re
-from Xlib import display,X
+# from Xlib import display,X
 
 lastwinlist = []
 
@@ -134,8 +134,7 @@ class Resquest(SimpleHTTPRequestHandler):
             self.resp({})
 
 if __name__ == '__main__':  
-    
-    from functools import *
+    from functools import partial
     htmlhome = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
     RequestHandlerClass = partial(Resquest,directory=htmlhome)
     server = HTTPServer(host, RequestHandlerClass)
