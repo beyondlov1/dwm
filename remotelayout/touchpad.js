@@ -44,12 +44,12 @@ touchpad.addEventListener('touchmove', function(event) {
     }
   } else {
     // 垂直滑动
-    if (deltaY > 20) {
+    if (deltaY > 0) {
       // 向下滑动
       // console.log('向下滑动');
       hotkey("0xff52")
       startY = startY + deltaY;
-    } else if (deltaY < -20){
+    } else if (deltaY < 0){
       // 向上滑动
       // console.log('向上滑动');
       hotkey("0xff54")
