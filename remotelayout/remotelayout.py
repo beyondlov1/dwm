@@ -4,12 +4,12 @@ import sys
 import uuid
 import time
 import collections
-import jsonref as json
 import copy
+import json
 
 
 data = {'result': 'this is a test'}
-host = ('0.0.0.0', 7398)
+host = ('0.0.0.0', 7397)
 
 
 import subprocess
@@ -51,6 +51,26 @@ def listwindow():
         winlist.append({"x":x,"y":y,"w":w,"h":h,"name":name,"wid":wid,"focused":focused,"class":cls})
 
     return winlist
+
+def listwindow2():
+    listwin_cmd = "dwm-msg get_dwm_clients"
+    listwin_return = subprocess.run(listwin_cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, encoding ='utf-8' ,shell =True)
+    winlist = json.loads(listwin_return.stdout)
+    result = []
+    for item in winlist:
+        g = item["geometry"]["current"]
+        x = g["x"]
+        y = g["y"]
+        w = g["width"]
+        h = g["height"]
+        name = item["name"]
+        wid = hex(item["window_id"])
+        focused = item["states"]["is_focused"]
+        cls = item["class"]
+        if item["states"]["is_floating"]:
+            continue
+        result.append({"x":x,"y":y,"w":w,"h":h,"name":name,"wid":wid,"focused":focused,"class":cls})
+    return result
 
 
 class Resquest(SimpleHTTPRequestHandler):
@@ -97,7 +117,7 @@ class Resquest(SimpleHTTPRequestHandler):
             self.resp({"size":len(winlist), "content":winlist})
 
         if self.path == "/list":
-            winlist = listwindow()
+            winlist = listwindow2()
             lastwinlist = copy.deepcopy(winlist)
             self.resp({"size":len(winlist), "content":winlist})
 
