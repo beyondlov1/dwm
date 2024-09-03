@@ -7,6 +7,7 @@ import json
 
 from datetime import datetime
 import sched
+import re
 
 def run_shell_async(shell):
     # shell = f"{shell} > /dev/null 2>&1"
@@ -35,6 +36,18 @@ def isrunning(client):
         return True
     return False
 
+def getrunningcmd(ppid):
+    pid = 0
+    output= run_shell(f"pstree -p {ppid}")
+    if output:
+        groups = re.search(r"st\(\d+\)---zsh\(\d+\)---.*?\((\d+)\).*", output)
+        pid = int(groups[1]) if groups else 0
+    cmd = run_shell(f"ps -p {pid} -o args=")
+    if cmd:
+        cmd = cmd.replace("/bin/bash", "").strip()
+        return re.sub(r"^/.*/(\w+) ", r"\1 ",cmd)
+    
+
 def func():
     cs = get_dwm_clients()
     if cs:
@@ -47,11 +60,15 @@ def func():
                 name = f"{MARK}{name}"
                 change_window_property(c["window_id"], "_NET_WM_NAME", name)
                 change_window_property(c["window_id"], "WM_NAME", name)
+                runningcmd = getrunningcmd(c["pid"])
+                if runningcmd:
+                    change_window_property(c["window_id"], "_NET_MY_NOTE", runningcmd)
             else:
                 while name.startswith(MARK):
                     name = name[1:]
                 change_window_property(c["window_id"], "_NET_WM_NAME", name)
                 change_window_property(c["window_id"], "WM_NAME", name)
+                change_window_property(c["window_id"], "_NET_MY_NOTE", "")
 
 def schedule(func, delay):
     def wrapfunc():
