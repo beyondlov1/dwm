@@ -45,8 +45,9 @@ def getrunningcmd(ppid):
     cmd = run_shell(f"ps -p {pid} -o args=")
     if cmd:
         cmd = cmd.replace("/bin/bash", "").strip()
-        return re.sub(r"^/.*/(\w+) ", r"\1 ",cmd)
-    
+        cmd =  re.sub(r"^/.*/(\w+) ", r"\1 ",cmd)
+        cmd = cmd.replace("python3 ", "py ")
+        return cmd
 
 def func():
     cs = get_dwm_clients()
