@@ -4153,7 +4153,6 @@ drawswitcher(Monitor *m)
 	int tagswh[tagn];
 	switchertagarrange_tag(ww, wh, tagn, tagsx, tagsy, tagsww, tagswh, &validtagn, tagi2t);
 	LOG_FORMAT("validtagn %d", validtagn);
-	float maxh2w = INT_MIN; // 最大高宽比, 用来截取client的实际占地
 	int minx = INT_MAX, miny= INT_MAX, maxx= INT_MIN, maxy= INT_MIN;
 	for (i = 0; i < validtagn; i++)
 	{
@@ -4162,26 +4161,9 @@ drawswitcher(Monitor *m)
 		maxy = MAX(tagsy[t] + tagswh[t], maxy);
 		minx = MIN(tagsx[t], minx);
 		miny = MIN(tagsy[t], miny);
-		// client实际占地
-		int cminx = INT_MAX, cminy= INT_MAX, cmaxx= INT_MIN, cmaxy= INT_MIN;
-		for (c = nexttiled(selmon->clients);c;c=nexttiled(c->next)){
-			if (c->tags & (1<<t)){
-				cminx = MIN(c->x,cminx);
-				cminy = MIN(c->y,cminy);
-				cmaxx = MAX(c->x + c->w,cmaxx);
-				cmaxy = MAX(c->y + c->h,cmaxy);
-			}
-		}
-		maxh2w = MAX(maxh2w, 1.0*(cmaxy - cminy) / (cmaxx - cminx));
 	}
-	if (validtagn == 1){
-		// 这里只支持单个tag的剪裁, 多个tag, 比例不统一, 太复杂
-		ww = MIN(maxx - minx, (maxy - miny) / maxh2w );
-		wh = MIN(maxy - miny, (maxx - minx) * maxh2w );
-	}else{
-		ww = maxx - minx;
-		wh = maxy - miny;
-	}
+	ww = maxx - minx;
+	wh = maxy - miny;
 	LOG_FORMAT("ww %d wh %d",ww,wh);
 	if(ww == 0 || wh == 0) return;
 	// -------------- 剪裁空白tag end ---------------
