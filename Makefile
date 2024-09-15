@@ -57,6 +57,7 @@ install: all
 	cp -f software/smartright.sh ${HOME}/software
 	cp -f software/smartleft.sh ${HOME}/software
 	cp -f software/pwdc ${HOME}/software
+	cp -f software/flameshottocloud.sh ${HOME}/software
 	chmod +x ${HOME}/software/*
 	gcc simulate-key/simulate_key.c -o simulate-key/simulate_key
 	cp -f simulate-key/simulate_key ${HOME}/software
