@@ -119,13 +119,14 @@ def addoptions(cmds):
     add(["fetchssr",], _, cmds)
 
     def _(arg, path, rofi):
-        r = "https://chat.tinycms.xyz:3002/#/"
+        # r = "https://chat.tinycms.xyz:3002/#/"
+        r = "https://freegpt.tech/"
         browseropen(r)
     add(["gpt",], _, cmds)
 
     def _(arg, path, rofi):
         # r = "https://lite.icoding.ink/#/chat"
-        r = "https://aq109s.aitianhu1.top/#/chat/1002"
+        r = "https://jk92fd.aitianhu1.top/#/chat/1002"
         browseropen(r)
     add(["gpt2",], _, cmds)
 
@@ -133,6 +134,14 @@ def addoptions(cmds):
         r = "https://dkzpz9.aitianhu1.top/#/chat/1002"
         browseropen(r)
     add(["gpt3",], _, cmds)
+
+    def _(arg, path, rofi):
+        r = arg 
+        browseropen(r)
+    gptmirroritems = loadjsonfile("/tmp/gptmirror.json")
+    if gptmirroritems:
+        for item in gptmirroritems:
+            add(["gptd", item["href"]], _, cmds)
 
     def _(arg, path, rofi):
         r = "https://www.linshi-email.com/"
@@ -196,3 +205,7 @@ def addoptions(cmds):
         for l in reversed(ls.split("\n")):
             add(["context", l], _, cmds)
 
+    def _(arg, path, rofi):
+        copy("pip3 install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple ")
+        run_shell_async("sleep 1 && xdotool key 'shift+Insert'")
+    add(["pip",], _, cmds)
