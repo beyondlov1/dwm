@@ -3704,85 +3704,111 @@ clientswitchermove_tag2(const Arg *arg)
 		if(!c->isfloating && !HIDDEN(c)) n++;
 	}
 	int i=0;
+	Client *closestc;
 
-	XY cxys[n];
-	XY sxys[n];
-	int tagindexin[n];
-	int curi = 0;
-	int zlevels[n];
-	memset(zlevels, 0, sizeof(zlevels));
-	int selcx = selmon->sel->x + selmon->sel->w/2;
-	int selcy = selmon->sel->y + selmon->sel->h/2;
-	for(i = 0, c = selmon->clients;c;c=c->next)
+	int n_currcontainer = selmon->sel->container->cn;
+	int tagindexin_currcontainer[n_currcontainer];
+	int zlevels_currcontainer[n_currcontainer];
+	XY cxys_currcontainer[n_currcontainer];
+	XY sxys_currcontainer[n_currcontainer];
+	int curi_currcontainer = 0;
+	for(i=0;i<n_currcontainer; i++)
 	{
-		if(!c->isfloating && !HIDDEN(c)){
-			if(selmon->sel == c) 
-			{
-				curi = i;
-				cxys[i].x = c->x + c->w/2;
-				cxys[i].y = c->y + c->h/2;
-				tagindexin[i] = gettagindex(c->tags);
-				zlevels[i] = c->zlevel;
-				i ++;
-				continue;
-			}
-			tagindexin[i] = gettagindex(c->tags);
-			zlevels[i] = c->zlevel;
-			cxys[i].x = c->x + c->w/2;
-			cxys[i].y = c->y + c->h/2;
-			int relx = cxys[i].x - selcx;
-			int rely = cxys[i].y - selcy;
-			if(c->container == selmon->sel->container){
-				if(abs(cxys[i].x - selcx) > 5 || abs(cxys[i].y - selcy) > 5){
-					cxys[i].x = cxys[i].x - relx / 2.5;
-					cxys[i].y = cxys[i].y - rely / 2.5;
-				}else{
-					cxys[i].x = selcx;
-					cxys[i].y = selcy;
+		c = selmon->sel->container->cs[i];
+		if(selmon->sel == c){
+			curi_currcontainer = i;
+		}
+		cxys_currcontainer[i].x = c->x + c->w/2;
+		cxys_currcontainer[i].y = c->y + c->h/2;
+		tagindexin_currcontainer[i] = gettagindex(c->tags);
+		zlevels_currcontainer[i] = c->zlevel;
+	}
+	clientxy2switcherxy_tag(cxys_currcontainer,n_currcontainer,sxys_currcontainer,tagindexin_currcontainer);
+	int closest_currcontainer = nextclosestanglexyz(arg, n_currcontainer, sxys_currcontainer, curi_currcontainer, zlevels_currcontainer);
+	if (closest_currcontainer >= 0)
+		// 有限查找当前container
+		closestc = sxy2client_tag(sxys_currcontainer[closest_currcontainer].x, sxys_currcontainer[closest_currcontainer].y, 0);
+	else{
+		XY cxys[n];
+		XY sxys[n];
+		int tagindexin[n];
+		int curi = 0;
+		int zlevels[n];
+		memset(zlevels, 0, sizeof(zlevels));
+		int selcx = selmon->sel->x + selmon->sel->w/2;
+		int selcy = selmon->sel->y + selmon->sel->h/2;
+		for(i = 0, c = selmon->clients;c;c=c->next)
+		{
+			if(!c->isfloating && !HIDDEN(c)){
+				if(selmon->sel == c) 
+				{
+					curi = i;
+					cxys[i].x = c->x + c->w/2;
+					cxys[i].y = c->y + c->h/2;
+					tagindexin[i] = gettagindex(c->tags);
+					zlevels[i] = c->zlevel;
 					i ++;
 					continue;
 				}
-			}else {
-				// 离sel近的移动的更多, 类似于万有引力, 近的更近
-				int unitx = selmon->mw / 2;
-				int unity = selmon->mh / 2;
-				float relux = 1.0 * relx / unitx;
-				float reluy = 1.0 * rely / unity;
-			// LOG_FORMAT("clientswitchermove_tag2 %f", relux);
-			// LOG_FORMAT("clientswitchermove_tag2 %f", reluy);
-				if(relx != 0)
-					cxys[i].x = cxys[i].x - ((int)(0.8 / relux * selmon->sel->w / 6));
-				if(rely != 0)
-					cxys[i].y = cxys[i].y - ((int)(0.8 / reluy * selmon->sel->h / 6));
+				tagindexin[i] = gettagindex(c->tags);
+				zlevels[i] = c->zlevel;
+				cxys[i].x = c->x + c->w/2;
+				cxys[i].y = c->y + c->h/2;
+				int relx = cxys[i].x - selcx;
+				int rely = cxys[i].y - selcy;
+				if(c->container == selmon->sel->container){
+					if(abs(cxys[i].x - selcx) > 5 || abs(cxys[i].y - selcy) > 5){
+						cxys[i].x = cxys[i].x - relx / 2.5;
+						cxys[i].y = cxys[i].y - rely / 2.5;
+					}else{
+						cxys[i].x = selcx;
+						cxys[i].y = selcy;
+						i ++;
+						continue;
+					}
+				}else {
+					// 离sel近的移动的更多, 类似于万有引力, 近的更近
+					int unitx = selmon->mw / 2;
+					int unity = selmon->mh / 2;
+					float relux = 1.0 * relx / unitx;
+					float reluy = 1.0 * rely / unity;
+				// LOG_FORMAT("clientswitchermove_tag2 %f", relux);
+				// LOG_FORMAT("clientswitchermove_tag2 %f", reluy);
+					if(relx != 0)
+						cxys[i].x = cxys[i].x - ((int)(0.8 / relux * selmon->sel->w / 6));
+					if(rely != 0)
+						cxys[i].y = cxys[i].y - ((int)(0.8 / reluy * selmon->sel->h / 6));
+				}
+				LOG_FORMAT("clientswitchermove_tag2 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
+				LOG_FORMAT("clientswitchermove_tag2 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
+				// 防止进入到sel的区域
+				rect_t selrect = {selmon->sel->x, selmon->sel->y, selmon->sel->w,selmon->sel->h};
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x < (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x - 10;
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x >= (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x + selmon->sel->w + 10;
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y < (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y - 10;
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y >= (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y + selmon->sel->h + 10;
+				// 防止重心跑出物体框
+				if(cxys[i].x < c->x) cxys[i].x = c->x + c->w / 6;
+				if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
+				if(cxys[i].y < c->y) cxys[i].y = c->y + c->h / 6;
+				if(cxys[i].y > c->y + c->h) cxys[i].y = c->y + c->h - c->h / 6;
+				LOG_FORMAT("clientswitchermove_tag4 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
+				LOG_FORMAT("clientswitchermove_tag4 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
+				i++;
 			}
-			LOG_FORMAT("clientswitchermove_tag2 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
-			LOG_FORMAT("clientswitchermove_tag2 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
-			// 防止进入到sel的区域
-			rect_t selrect = {selmon->sel->x, selmon->sel->y, selmon->sel->w,selmon->sel->h};
-			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x < (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x - 10;
-			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x >= (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x + selmon->sel->w + 10;
-			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y < (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y - 10;
-			if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y >= (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y + selmon->sel->h + 10;
-			// 防止重心跑出物体框
-			if(cxys[i].x < c->x) cxys[i].x = c->x + c->w / 6;
-			if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
-			if(cxys[i].y < c->y) cxys[i].y = c->y + c->h / 6;
-			if(cxys[i].y > c->y + c->h) cxys[i].y = c->y + c->h - c->h / 6;
-			LOG_FORMAT("clientswitchermove_tag4 %d %d %d %d , %d %d", c->x,c->y,c->w, c->h, cxys[i].x, cxys[i].y);
-			LOG_FORMAT("clientswitchermove_tag4 sel %d %d %d %d , %d %d", selmon->sel->x,selmon->sel->y,selmon->sel->w, selmon->sel->h, selcx, selcy);
-			i++;
 		}
+
+		clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
+		for(i = 0; i < n; i++)
+		{
+			LOG_FORMAT("clientswitchermove_tag4 %d %d",  sxys[i].x, sxys[i].y);
+		}
+		LOG_FORMAT("clientswitchermove_tag4 %d",  curi);
+		int closest = nextclosestanglexyz(arg, n, sxys, curi, zlevels);
+		if (closest < 0) return;
+		closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
 	}
 
-	clientxy2switcherxy_tag(cxys,n,sxys,tagindexin);
-	for(i = 0; i < n; i++)
-	{
-		LOG_FORMAT("clientswitchermove_tag4 %d %d",  sxys[i].x, sxys[i].y);
-	}
-	LOG_FORMAT("clientswitchermove_tag4 %d",  curi);
-	int closest = nextclosestanglexyz(arg, n, sxys, curi, zlevels);
-	if (closest < 0) return;
-	Client *closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
 			viewui(closestc->tags);
@@ -6026,7 +6052,9 @@ manage(Window w, XWindowAttributes *wa)
 		if (c->container->cs[1]->nstub > 0)
 			nstub2 = c->container->cs[1]->nstub;
 		// 这里会动态修改 masterfactorh
-		c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
+		// 如果还没设置过
+		if (c->container->masterfactorh == INIT_MASTERFACTOR_H)
+			c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
 	}
 
 	// 浮动窗口固定在右下角
@@ -10773,6 +10801,12 @@ container_layout_tile_v_movesplit(const Arg *arg){
 	}
 	if (arg->i == FOCUS_DOWN){
 		container->masterfactor += 0.5;
+	}
+	if (arg->i == FOCUS_LEFT){
+		container->masterfactorh -= 0.5;
+	}
+	if (arg->i == FOCUS_RIGHT){
+		container->masterfactorh += 0.5;
 	}
 	arrange(selmon);
 }

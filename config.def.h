@@ -357,6 +357,11 @@ static Key keys[] = {
 	{Mod1Mask|ShiftMask, XK_k, container_layout_tile_v_movesplit, {.i = 2}},
 	{Mod1Mask|ShiftMask, XK_j, container_layout_tile_v_movesplit, {.i = -2}},
 
+	{Mod1Mask|ShiftMask, XK_Left, container_layout_tile_v_movesplit, {.i = -1}},
+	{Mod1Mask|ShiftMask, XK_Right, container_layout_tile_v_movesplit, {.i = 1}},
+	{Mod1Mask|ShiftMask, XK_h, container_layout_tile_v_movesplit, {.i = -1}},
+	{Mod1Mask|ShiftMask, XK_l, container_layout_tile_v_movesplit, {.i = 1}},
+
 	{ControlMask|Mod1Mask, XK_Left, tile7switchermovecontainer, {.i = -1}},
 	{ControlMask|Mod1Mask, XK_Right, tile7switchermovecontainer, {.i = 1}},
 	{ControlMask|Mod1Mask, XK_Up, tile7switchermovecontainer, {.i = 2}},
