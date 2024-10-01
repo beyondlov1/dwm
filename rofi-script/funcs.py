@@ -126,12 +126,14 @@ def addoptions(cmds):
 
     def _(arg, path, rofi):
         # r = "https://lite.icoding.ink/#/chat"
-        r = "https://jk92fd.aitianhu1.top/#/chat/1002"
+        # r = "https://jk92fd.aitianhu1.top/#/chat/1002"
+        r = "https://www.yeschat.ai/zh-CN/gpt-4o"
         browseropen(r)
     add(["gpt2",], _, cmds)
 
     def _(arg, path, rofi):
-        r = "https://dkzpz9.aitianhu1.top/#/chat/1002"
+        # r = "https://dkzpz9.aitianhu1.top/#/chat/1002"
+        r = "https://origin.eqing.tech/"
         browseropen(r)
     add(["gpt3",], _, cmds)
 

@@ -3725,10 +3725,11 @@ clientswitchermove_tag2(const Arg *arg)
 	}
 	clientxy2switcherxy_tag(cxys_currcontainer,n_currcontainer,sxys_currcontainer,tagindexin_currcontainer);
 	int closest_currcontainer = nextclosestanglexyz(arg, n_currcontainer, sxys_currcontainer, curi_currcontainer, zlevels_currcontainer);
-	if (closest_currcontainer >= 0)
+	if (closest_currcontainer >= 0){
 		// 有限查找当前container
 		closestc = sxy2client_tag(sxys_currcontainer[closest_currcontainer].x, sxys_currcontainer[closest_currcontainer].y, 0);
-	else{
+		LOG_FORMAT("findincurrcontainer");
+	}else{
 		XY cxys[n];
 		XY sxys[n];
 		int tagindexin[n];
@@ -3757,14 +3758,15 @@ clientswitchermove_tag2(const Arg *arg)
 				int relx = cxys[i].x - selcx;
 				int rely = cxys[i].y - selcy;
 				if(c->container == selmon->sel->container){
-					if(abs(cxys[i].x - selcx) > 5 || abs(cxys[i].y - selcy) > 5){
+					if(abs(cxys[i].x - selcx) > 5){
 						cxys[i].x = cxys[i].x - relx / 2.5;
-						cxys[i].y = cxys[i].y - rely / 2.5;
 					}else{
 						cxys[i].x = selcx;
+					}
+					if(abs(cxys[i].y - selcy) > 5){
+						cxys[i].y = cxys[i].y - rely / 2.5;
+					}else{
 						cxys[i].y = selcy;
-						i ++;
-						continue;
 					}
 				}else {
 					// 离sel近的移动的更多, 类似于万有引力, 近的更近
@@ -3784,9 +3786,9 @@ clientswitchermove_tag2(const Arg *arg)
 				// 防止进入到sel的区域
 				rect_t selrect = {selmon->sel->x, selmon->sel->y, selmon->sel->w,selmon->sel->h};
 				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x < (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x - 10;
-				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x >= (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x + selmon->sel->w + 10;
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].x > (selmon->sel->x + selmon->sel->w/2)) cxys[i].x = selmon->sel->x + selmon->sel->w + 10;
 				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y < (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y - 10;
-				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y >= (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y + selmon->sel->h + 10;
+				if(ispointin(cxys[i].x, cxys[i].y,selrect) && cxys[i].y > (selmon->sel->y + selmon->sel->h/2)) cxys[i].y = selmon->sel->y + selmon->sel->h + 10;
 				// 防止重心跑出物体框
 				if(cxys[i].x < c->x) cxys[i].x = c->x + c->w / 6;
 				if(cxys[i].x > c->x + c->w) cxys[i].x = c->x + c->w - c->w / 6;
@@ -10631,6 +10633,17 @@ layout_tile_v(int sx, int sy, int sw, int sh, rect_t *cs[], int cn, float master
 	}
 }
 
+
+int 
+index_of(void *arr[], int size, void *target) {
+    for (int i = 0; i < size; i++) {
+        if (arr[i] == target) {
+            return i; // 返回找到的索引
+        }
+    }
+    return -1; // 如果未找到，返回 -1
+}
+
 /**
  * 纵向
  */
@@ -10710,6 +10723,12 @@ container_layout_tile_v(Container *container)
 		int isslavevsplit = tilecn > container->nmaster ? 1:0;
 		if(isslavevsplit) 
 		{
+			int selindex = index_of((void **)container->cs, container->cn, selmon->sel);
+			if(selindex > container->nmaster - 1){
+				container->masterfactor = MIN(1/container->masterfactor, container->masterfactor);
+			}else if(selindex >= 0){
+				container->masterfactor = MAX(1/container->masterfactor, container->masterfactor);
+			}
 			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
 			slaveh = container->h - masterh;
 		}

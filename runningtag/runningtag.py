@@ -53,23 +53,26 @@ def func():
     cs = get_dwm_clients()
     if cs:
         for c in cs:
+            oldname = c["name"]
             name = c["name"]
             if isrunning(c):
                 # change_window_property(c["window_id"], "_NET_MY_NOTE", "running")
                 while name.startswith(MARK):
                     name = name[1:]
                 name = f"{MARK}{name}"
-                change_window_property(c["window_id"], "_NET_WM_NAME", name)
-                change_window_property(c["window_id"], "WM_NAME", name)
-                runningcmd = getrunningcmd(c["pid"])
-                if runningcmd:
-                    change_window_property(c["window_id"], "_NET_MY_NOTE", runningcmd)
+                if name != oldname:
+                    change_window_property(c["window_id"], "_NET_WM_NAME", name)
+                    change_window_property(c["window_id"], "WM_NAME", name)
+                    runningcmd = getrunningcmd(c["pid"])
+                    if runningcmd:
+                        change_window_property(c["window_id"], "_NET_MY_NOTE", runningcmd)
             else:
                 while name.startswith(MARK):
                     name = name[1:]
-                change_window_property(c["window_id"], "_NET_WM_NAME", name)
-                change_window_property(c["window_id"], "WM_NAME", name)
-                change_window_property(c["window_id"], "_NET_MY_NOTE", "")
+                if name != oldname:
+                    change_window_property(c["window_id"], "_NET_WM_NAME", name)
+                    change_window_property(c["window_id"], "WM_NAME", name)
+                    change_window_property(c["window_id"], "_NET_MY_NOTE", "")
 
 def schedule(func, delay):
     def wrapfunc():
