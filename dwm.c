@@ -377,6 +377,7 @@ struct ScratchGroup
 	int pretags;
 	int isfloating;
 	Client *lastfocused;
+	long lastshowtime;
 };
 
 typedef struct Tag Tag;
@@ -4516,6 +4517,8 @@ enternotify(XEvent *e)
 	} else if (!c || c == selmon->sel)
 		return;
 	
+	if (scratchgroupptr && scratchgroupptr->isfloating && c!=scratchgroupptr->lastfocused && getcurrusec() - scratchgroupptr->lastshowtime < 1 * 1000000) return;
+
 	Client *oldc = selmon->sel;
 	if (oldc && oldc->isfloating) {
 		focus(c);
@@ -10544,7 +10547,7 @@ tile7maximize(const Arg *arg){
  * sh: 布局的总高度
  * cs: clients
  * cn: client n
- * 
+ * masterfactorv: 暂时没用到
  */
  void 
 layout_tile_v(int sx, int sy, int sw, int sh, rect_t *cs[], int cn, float masterfactor, float masterfactorh, float masterfactorv, int nmaster){
@@ -12059,7 +12062,7 @@ arrangescratch(ScratchGroup *sg){
 		int sh = MIN(sc.h * 0.95, sc.h * sfactor);
 		int sx = selmon->sel->container->x + (sc.w - sw) / 2;
 		int sy = selmon->sel->container->y + (sc.h - sh) / 2;
-		layout_tile_v(sx, sy, sw, sh, tps, tsn, 1, 1, 1, 2);
+		layout_tile_v(sx, sy, sw, sh, tps, tsn, 3, 3, 1, 2);
 		i = 0;
 		for(si = sg->tail->prev; si && si != sg->head; si = si->prev)
 		{
@@ -12155,6 +12158,7 @@ showscratchgroup(ScratchGroup *sg)
 		stsspawn(0);
 		return;
 	}
+	sg->lastshowtime = getcurrusec();
 	sg->isfloating = 1;
 	arrangescratch(sg);
 	LOG_FORMAT("showscratchgroup: before focus and arrange");
@@ -12334,6 +12338,7 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 			hide(si->c);
 		}	
 	}
+	sg->isfloating = 0;
 	if(isarrange){
 		int curtags = selmon->tagset[selmon->seltags];
 		Client *c;
@@ -12352,8 +12357,6 @@ hidescratchgroupv(ScratchGroup *sg, int isarrange)
 		if(c && ISVISIBLE(c)) focus(c); else focus(NULL);
 		arrange(selmon);
 	}
-	sg->isfloating = 0;
-	
 }
 
 void 
@@ -13763,6 +13766,12 @@ getcurrusec(){
 	return us.tv_sec * 1000000 + us.tv_usec;
 }
 
+// int
+// getcurrsec(){
+// 	struct timeval us;
+// 	gettimeofday(&us,NULL);
+// 	return us.tv_sec;
+// }
 
 static uint32_t prealpha(uint32_t p) {
 	uint8_t a = p >> 24u;
