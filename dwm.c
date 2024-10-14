@@ -10727,11 +10727,12 @@ container_layout_tile_v(Container *container)
 		if(isslavevsplit) 
 		{
 			int selindex = index_of((void **)container->cs, container->cn, selmon->sel);
-			if(selindex > container->nmaster - 1){
-				container->masterfactor = MIN(1/container->masterfactor, container->masterfactor);
-			}else if(selindex >= 0){
-				container->masterfactor = MAX(1/container->masterfactor, container->masterfactor);
-			}
+			// 选中时扩展窗口
+			// if(selindex > container->nmaster - 1){
+			// 	container->masterfactor = MIN(1/container->masterfactor, container->masterfactor);
+			// }else if(selindex >= 0){
+			// 	container->masterfactor = MAX(1/container->masterfactor, container->masterfactor);
+			// }
 			masterh = container->h * container->masterfactor/(container->masterfactor + 1);
 			slaveh = container->h - masterh;
 		}

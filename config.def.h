@@ -255,7 +255,7 @@ static Key keys[] = {
 	//{ 0,                       XK_F2,      spawn,      { .v = smartrefreshcmd } },
 	//{ 0,                       XK_F3,      spawn,      { .v = searchwordcmd } },
 	//{ 0,                       XK_F4,      spawn,      { .v = highlightcmd } },
-	{ Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
+	// { Mod1Mask,                       XK_z,      spawn,      { .v = ocrcmd } },
 	{ Mod1Mask,                       XK_s,      spawn,      { .v = flameshotcmd } },
 	{ Mod1Mask,                       XK_F4,      killclient,       {0} },
 	{ Mod1Mask,                       XK_n,      spawn,      { .v = notecurrwincmd } },
