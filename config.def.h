@@ -143,6 +143,7 @@ static const float facty     = 0.05; /* factor of master area size [0.05..0.95] 
 static const int nmaster     = 2;    /* number of clients in master area (没什么用, 但是不能删, 有旧功能占用着) */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
+static const int expandslavewhenfocus = 1; // focus slave窗口时, 是否扩展当前窗口
 
 /* Include */
 #include "sort.c"
