@@ -53,12 +53,17 @@ install: all
 	cp -f vim-mask/main-alpha ${DESTDIR}${PREFIX}/bin/vimmask
 	chmod 755 ${DESTDIR}${PREFIX}/bin/vimmask
 	cp -f software/vimmask.sh ${HOME}/software
+	chmod +x ${HOME}/software/vimmask.sh
 	cp -f software/smartclose.sh ${HOME}/software
+	chmod +x ${HOME}/software/smartclose.sh
 	cp -f software/smartright.sh ${HOME}/software
+	chmod +x ${HOME}/software/smartright.sh
 	cp -f software/smartleft.sh ${HOME}/software
+	chmod +x ${HOME}/software/smartleft.sh
 	cp -f software/pwdc ${HOME}/software
+	chmod +x ${HOME}/software/pwdc
 	cp -f software/flameshottocloud.sh ${HOME}/software
-	chmod +x ${HOME}/software/*
+	chmod +x ${HOME}/software/flameshottocloud.sh
 	gcc simulate-key/simulate_key.c -o simulate-key/simulate_key
 	cp -f simulate-key/simulate_key ${HOME}/software
 	chmod +x ${HOME}/software/simulate_key
