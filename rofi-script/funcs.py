@@ -6,6 +6,7 @@ __all__ = [
 
 from librofiscript import *
 import re
+import random
 
 
 def emptyfunc(arg, path, cmds):
@@ -211,3 +212,10 @@ def addoptions(cmds):
         copy("pip3 install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple ")
         run_shell_async("sleep 1 && xdotool key 'shift+Insert'")
     add(["pip",], _, cmds)
+
+    def _(arg, path, rofi):
+        # r = run_shell("cat /dev/urandom | sed 's/[^a-zA-Z]//g' | strings -n 6 | head -n 1")
+        r = "".join(random.sample("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY", 6))
+        copy(r.strip())
+    add(["randomstring",], _, cmds)
+
