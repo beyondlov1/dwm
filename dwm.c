@@ -712,6 +712,7 @@ static void arrangescratch(ScratchGroup *sg);
 static void shownonscratchs();
 static void hodenonscratchs();
 static void container_layout_tile_v_movesplit(const Arg *arg);
+static void container_layout_tile_v_movesplit_toggle(const Arg *arg);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -10834,6 +10835,21 @@ container_layout_tile_v_movesplit(const Arg *arg){
 	if (arg->i == FOCUS_RIGHT){
 		container->masterfactorh += 0.5;
 	}
+	if (container->masterfactor <= 0) container->masterfactor = 0.2;
+	if (container->masterfactorh <= 0) container->masterfactorh = 0.2;
+	arrange(selmon);
+}
+
+void 
+container_layout_tile_v_movesplit_toggle(const Arg *arg){
+	if (!selmon->sel || !selmon->sel->container) return;
+	Container *container = selmon->sel->container;
+	if (arg->i == FOCUS_UP)
+		container->masterfactor = 1 / container->masterfactor;
+	if (arg->i == FOCUS_RIGHT)
+		container->masterfactorh = 1 / container->masterfactorh;
+	if (container->masterfactor <= 0) container->masterfactor = 0.2;
+	if (container->masterfactorh <= 0) container->masterfactorh = 0.2;
 	arrange(selmon);
 }
 
