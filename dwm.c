@@ -4261,7 +4261,8 @@ void
 destroyswitcher(Monitor *m)
 {
 	if(selmon->sel){
-		XSetInputFocus(dpy, selmon->sel->win, RevertToPointerRoot, CurrentTime);
+		XSetInputFocus(dpy, selmon->sel->win, RevertToPointerRoot, CurrentTime); // 让窗口可以focus
+		focus(selmon->sel); // 修复idea不能获取焦点的问题
 	}else{
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 	}
