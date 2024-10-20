@@ -219,3 +219,6 @@ def addoptions(cmds):
         copy(r.strip())
     add(["randomstring",], _, cmds)
 
+    def _(arg, path, rofi):
+        r = run_shell_async("dwm-msg run_command nextmanagetype 2 && browserclip.sh \"http://youdao.com/result?word=%s&lang=en\"")
+    add(["fanyi",], _, cmds)
