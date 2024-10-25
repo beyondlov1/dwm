@@ -29,11 +29,19 @@ def getclipboard():
         return ""
     return clipboard
 
-def add(lpath: list, func, d):
+
+class Node(OrderedDict):
+    def __init__(self) -> None:
+        self.usefreq = True 
+        self.forcetop = False
+
+def add(lpath: list, func, d, usefreq = True, forcetop=False):
     tmproot = d 
     for c in lpath[:-1]:
         if c not in tmproot or not isinstance(tmproot[c],dict):
-            tmproot[c] = OrderedDict()
+            tmproot[c] = Node()
+            tmproot[c].usefreq = usefreq
+            tmproot[c].forcetop = forcetop
         tmproot = tmproot[c]
     tmproot[lpath[-1]] = func
 
@@ -68,10 +76,13 @@ def sortbyfreq(d: dict, path):
     freqdict = loadjsonfile(freqpath)
     freqdict = defaultdict(int) if not freqdict else defaultdict(int, freqdict)
     # print(freqdict)
-    sitems = [{"freq": freqdict[f"{path}{SEP}{k}"], "k": k, "path": f"{path}{SEP}{k}"} for k in d]
+    sitems = [{"freq": freqdict[f"{path}{SEP}{k}"], "k": k, "v": v, "path": f"{path}{SEP}{k}"} for k,v in d.items()]
     sitems.sort(key = lambda x: x["freq"], reverse = True)
     # print(sitems)
-    result = OrderedDict()
+    result = Node()
+    for sitem in sitems:
+        if isinstance(sitem["v"], Node) and sitem["v"].forcetop:
+            result[sitem["k"]] = d[sitem["k"]]
     for sitem in sitems:
         result[sitem["k"]] = d[sitem["k"]]
     return result

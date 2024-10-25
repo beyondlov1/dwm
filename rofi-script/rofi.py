@@ -3,12 +3,14 @@
 from collections.abc import Iterable
 from inspect import isfunction
 import os
+import re
 import sys
 from collections import OrderedDict, defaultdict
 import subprocess
 import funcs
 import librofiscript 
-from librofiscript import SEP
+from librofiscript import SEP, Node, add, copy
+
 
 def run_shell_async(shell):
     # shell = f"{shell} > /dev/null 2>&1"
@@ -42,17 +44,21 @@ def getbypath(d, path, default=None):
         result = result[k]
     return result
 
-def _sortbyfreq(root, path, exclude_paths = []):
+def _sortbyfreq(root:Node, path, exclude_paths = []):
     if not isinstance(root, dict):
         return root
     if path in exclude_paths:
+        return root
+    if not root.usefreq:
         return root
     newroot = librofiscript.sortbyfreq(root, path)
     for k, v in root.items():
         newroot[k] = _sortbyfreq(v, f"{path}{SEP}{k}", exclude_paths)
     return newroot
 
-cmds = OrderedDict()
+# cmds = OrderedDict()
+cmds = Node()
+# cmds.usefreq = False
 # cmds[sys.argv[0]] = {}
 
 for funcname in funcs.__all__:
@@ -64,7 +70,34 @@ freq_exclude_paths = [
 ]
 
 cmds = _sortbyfreq(cmds, "", exclude_paths = freq_exclude_paths)
-# print(cmds)
+
+# 添加tops
+# topcmds = Node()
+# topcmds[f"clipboard"] = cmds[f"clipboard"]
+# clipliststr = run_shell("clipcatctl list")
+# if clipliststr:
+#     groups = re.findall("([a-zA-Z0-9]{16}): (.*)", clipliststr)
+#     if groups:
+#         abstract2id = {}
+#         for group in groups:
+#             abstract2id[group[1]] = group[0]
+#         for group in groups[:5]:
+#             abstract = group[1]
+#             def _(arg, path, rofi):
+#                 id = abstract2id[arg]
+#                 content = run_shell(f"clipcatctl get {id}")
+#                 if content:
+#                     # 这里容易被误杀
+#                     copy(content.replace("\\n", "\n"))
+#             add([abstract], _, topcmds)
+
+# 合并
+# newcmds = Node()
+# for k, v in topcmds.items():
+#     newcmds[k] = v
+# for k, v in cmds.items():
+#     newcmds[k] = v
+# cmds = newcmds
 
 rofiretv = os.environ["ROFI_RETV"]
 if rofiretv == "0":

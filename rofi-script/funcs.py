@@ -1,5 +1,5 @@
 __all__ = [
-    "addclipboard",
+    # "addclipboard",
     "addoptions",
 ]
 
@@ -92,9 +92,22 @@ def stopen(dirpath):
     run_shell_async(f"st -d {dirpath}")
 
 def addoptions(cmds):
+    """
+    add 方法: 将 path, callback 加入到cmds
+    arg: 选中的条目
+    path: 菜单路径
+    """
+    # def _(arg, path, rofi):
+    #     arg = arg.replace("|||", "\n")
+    #     copy(arg)
+    # ls = readfile("/tmp/recent_context.txt")
+    # if ls:
+    #     for l in reversed(ls.split("\n")[-2:]):
+    #         add([f"{l}"], _, cmds)
+
     def _showclipboards(arg,path,cmds):
         run_shell_async("sleep 0.1 && /bin/clipcat-menu")
-    add(["clipboard",], _showclipboards, cmds)
+    add(["clipboard",], _showclipboards, cmds, forcetop=True)
 
     def _(arg, path, rofi):
         clip = getclipboard()

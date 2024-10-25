@@ -99,7 +99,7 @@
 #define CONTAINER_MAX_N 5
 #define INIT_MASTERFACTOR 3.0
 // masterfactorh会在manage中动态修改, 所以这个设置了没用
-#define INIT_MASTERFACTOR_H 1.0
+#define INIT_MASTERFACTOR_H 3.0
 #define WIDE_MASTERFACTOR 5.0
 // 这个没用到
 #define WIDE_MASTERFACTOR_H 1.0
@@ -6051,7 +6051,7 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	// 根据master 的 stub 调节 masterfactorh
-	if(c->container && c->container->cn > 1){
+	if(c->container && c->container->cn > 1 && strcasecmp(c->class, "St") != 0){
 		int nstub1 = 1;
 		if (c->container->cs[0]->nstub > 0)
 		 	nstub1 = c->container->cs[0]->nstub;
