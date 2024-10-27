@@ -7,6 +7,7 @@ __all__ = [
 from librofiscript import *
 import re
 import random
+from urllib.parse import quote
 
 
 def emptyfunc(arg, path, cmds):
@@ -90,6 +91,17 @@ def browseropen(url):
 
 def stopen(dirpath):
     run_shell_async(f"st -d {dirpath}")
+
+def regex_topidentifyfunc(regex):
+    def f():
+        clip = getclipboard()
+        if re.search(regex, clip.strip()):
+            return 9999
+        clip = getprimary()
+        if re.search(regex, clip.strip()):
+            return 9999
+        return 0 
+    return f
 
 def addoptions(cmds):
     """
@@ -234,7 +246,17 @@ def addoptions(cmds):
 
     def _(arg, path, rofi):
         r = run_shell_async("dwm-msg run_command nextmanagetype 2 && browserclip.sh \"http://youdao.com/result?word=%s&lang=en\"")
-    add(["fanyi",], _, cmds)
+    add(["fanyi",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"[a-zA-Z]{3,18}"))
+
+    def _(arg, path, rofi):
+        r = run_shell_async("dwm-msg run_command nextmanagetype 2 && browserclip.sh \"https://g.savalone.com/search?q=%s\"")
+    add(["googlesearchtmp",], _, cmds)
+
+    def _(arg, path, rofi):
+        clip = getprimary()
+        clip = quote(clip)
+        browseropen(f"https://g.savalone.com/search?q={clip}")
+    add(["googlesearch",], _, cmds, forcetop=9998)
 
     def _(arg, path, rofi):
         copy("https://gitee.com/beyondlov1/mytools/tree/master")
@@ -242,7 +264,7 @@ def addoptions(cmds):
 
     def _(arg, path, rofi):
         browseropen("https://tool.lu/timestamp/")
-    add(["shijianchuo",], _, cmds)
+    add(["shijianchuo",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d{10}|^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
 
     def _(arg, path, rofi):
         browseropen("https://www.json.cn/")

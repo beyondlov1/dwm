@@ -37,7 +37,7 @@ class Node(OrderedDict):
         self.func = None 
         self.name = ""
 
-def add(lpath: list, func, d, usefreq = True, forcetop=0):
+def add(lpath: list, func, d, usefreq = True, forcetop=0, topidentifyfunc = None):
     tmproot = d 
     for c in lpath[:-1]:
         if c not in tmproot:
@@ -48,6 +48,8 @@ def add(lpath: list, func, d, usefreq = True, forcetop=0):
     funcnode.func = func
     funcnode.usefreq = usefreq
     funcnode.forcetop = forcetop
+    if topidentifyfunc:
+        funcnode.forcetop = topidentifyfunc()
     funcnode.name = lpath[-1]
     tmproot[lpath[-1]] = funcnode 
 
