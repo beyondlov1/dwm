@@ -137,7 +137,7 @@ def addoptions(cmds):
             r = url.replace("github.com", replacetarget)
             # copy(r)
             run_shell_async(f"sleep 0.1 && /home/beyond/software/ba {r}")
-    add(["togithubmirror",], _, cmds)
+    add(["togithubmirror",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"http.*github\.com.*"))
 
     def _(arg, path, rofi):
         r = _fetchssr()
