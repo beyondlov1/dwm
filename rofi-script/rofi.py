@@ -7,6 +7,7 @@ import re
 import sys
 from collections import OrderedDict, defaultdict
 import subprocess
+from typing import Optional
 import funcs
 import librofiscript 
 from librofiscript import SEP, Node, add, copy
@@ -29,7 +30,7 @@ def showmenus(cmds):
 def parsepath(cmdpath):
     return cmdpath.split(SEP)[1:]
 
-def getbypath(d, path, default=None):
+def getbypath(d, path, default=None) -> Optional[Node]:
     ks = parsepath(path)
     if not ks:
         return default
@@ -37,7 +38,7 @@ def getbypath(d, path, default=None):
         return default
     result = d 
     for k in ks:
-        if not isinstance(result, dict):
+        if not isinstance(result, Node):
             return None
         if k not in result:
             return default
@@ -68,6 +69,12 @@ for funcname in funcs.__all__:
 freq_exclude_paths = [
     f"{SEP}context",
 ]
+
+rofidata = os.environ.get("ROFI_DATA")
+if rofidata:
+    subcmds = getbypath(cmds, rofidata.replace("/", SEP))
+    if subcmds is not None:
+        subcmds.forcetop = 9999 
 
 cmds = _sortbyfreq(cmds, "", exclude_paths = freq_exclude_paths)
 
@@ -110,10 +117,10 @@ if rofiretv == "1":
     # print(path)
     print(f"\0data\x1f{path}\n")
     cmditem = getbypath(cmds, path, funcs.emptyfunc)
-    if cmditem:
-        if isinstance(cmditem, dict):
+    if cmditem is not None:
+        if cmditem:
             showmenus(cmditem)
-        if isfunction(cmditem): 
-            cmditem(cmd, path, cmds)
+        elif cmditem.func and isfunction(cmditem.func): 
+            cmditem.func(cmd, path, cmds)
         librofiscript.recordfreq(path)
 

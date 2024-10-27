@@ -33,17 +33,23 @@ def getclipboard():
 class Node(OrderedDict):
     def __init__(self) -> None:
         self.usefreq = True 
-        self.forcetop = False
+        self.forcetop = 0 
+        self.func = None 
+        self.name = ""
 
-def add(lpath: list, func, d, usefreq = True, forcetop=False):
+def add(lpath: list, func, d, usefreq = True, forcetop=0):
     tmproot = d 
     for c in lpath[:-1]:
-        if c not in tmproot or not isinstance(tmproot[c],dict):
+        if c not in tmproot:
             tmproot[c] = Node()
-            tmproot[c].usefreq = usefreq
-            tmproot[c].forcetop = forcetop
+            tmproot[c].name = c
         tmproot = tmproot[c]
-    tmproot[lpath[-1]] = func
+    funcnode = Node()
+    funcnode.func = func
+    funcnode.usefreq = usefreq
+    funcnode.forcetop = forcetop
+    funcnode.name = lpath[-1]
+    tmproot[lpath[-1]] = funcnode 
 
 def readfile(path):
     if not os.path.exists(path):
@@ -72,19 +78,19 @@ def recordfreq(path):
     freqdict[path] += 1
     writejsonfile(freqpath, freqdict)
     
-def sortbyfreq(d: dict, path):
+def sortbyfreq(d: Node, path):
     freqdict = loadjsonfile(freqpath)
     freqdict = defaultdict(int) if not freqdict else defaultdict(int, freqdict)
-    # print(freqdict)
     sitems = [{"freq": freqdict[f"{path}{SEP}{k}"], "k": k, "v": v, "path": f"{path}{SEP}{k}"} for k,v in d.items()]
-    sitems.sort(key = lambda x: x["freq"], reverse = True)
-    # print(sitems)
-    result = Node()
+    result = d
+    result.clear()
+    sitems.sort(key = lambda x: x["v"].forcetop, reverse = True)
     for sitem in sitems:
         if isinstance(sitem["v"], Node) and sitem["v"].forcetop:
-            result[sitem["k"]] = d[sitem["k"]]
+            result[sitem["k"]] = sitem["v"]
+    sitems.sort(key = lambda x: x["freq"], reverse = True)
     for sitem in sitems:
-        result[sitem["k"]] = d[sitem["k"]]
+        result[sitem["k"]] = sitem["v"]
     return result
 
 

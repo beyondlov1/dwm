@@ -107,7 +107,7 @@ def addoptions(cmds):
 
     def _showclipboards(arg,path,cmds):
         run_shell_async("sleep 0.1 && /bin/clipcat-menu")
-    add(["clipboard",], _showclipboards, cmds, forcetop=True)
+    add(["clipboard",], _showclipboards, cmds, forcetop=1)
 
     def _(arg, path, rofi):
         clip = getclipboard()
