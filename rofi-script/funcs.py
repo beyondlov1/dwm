@@ -270,3 +270,9 @@ def addoptions(cmds):
         browseropen("https://www.json.cn/")
     add(["json",], _, cmds)
 
+    def _(arg, path, rofi):
+        clip = getclipboard()
+        copy(clip.replace(",", ""))
+    add(["removecomma",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d+,\d+\.?\d*"))
+
+
