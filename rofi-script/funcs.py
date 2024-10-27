@@ -239,3 +239,12 @@ def addoptions(cmds):
     def _(arg, path, rofi):
         copy("https://gitee.com/beyondlov1/mytools/tree/master")
     add(["mytools_gitee",], _, cmds)
+
+    def _(arg, path, rofi):
+        browseropen("https://tool.lu/timestamp/")
+    add(["shijianchuo",], _, cmds)
+
+    def _(arg, path, rofi):
+        browseropen("https://www.json.cn/")
+    add(["json",], _, cmds)
+
