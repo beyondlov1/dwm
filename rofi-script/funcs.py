@@ -228,6 +228,11 @@ def addoptions(cmds):
     def _(arg, path, rofi):
         arg = arg.replace("|||", "\n")
         copy(arg)
+        if arg.strip().startswith("http"):
+            browseropen(arg)
+        if arg.strip().startswith("/"):
+            run_shell_async(f"st -d {arg}")
+
     ls = readfile("/tmp/recent_context.txt")
     if ls:
         for l in reversed(ls.split("\n")):
@@ -246,7 +251,7 @@ def addoptions(cmds):
 
     def _(arg, path, rofi):
         r = run_shell_async("dwm-msg run_command nextmanagetype 2 && browserclip.sh \"http://youdao.com/result?word=%s&lang=en\"")
-    add(["fanyi",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"[a-zA-Z]{3,18}"))
+    add(["fanyi",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"^[a-zA-Z]{3,18}$"))
 
     def _(arg, path, rofi):
         r = run_shell_async("dwm-msg run_command nextmanagetype 2 && browserclip.sh \"https://g.savalone.com/search?q=%s\"")
@@ -259,7 +264,7 @@ def addoptions(cmds):
     add(["googlesearch",], _, cmds, forcetop=9998)
 
     def _(arg, path, rofi):
-        copy("https://gitee.com/beyondlov1/mytools/tree/master")
+        browseropen("https://gitee.com/beyondlov1/mytools/tree/master")
     add(["mytools_gitee",], _, cmds)
 
     def _(arg, path, rofi):
@@ -275,4 +280,19 @@ def addoptions(cmds):
         copy(clip.replace(",", ""))
     add(["removecomma",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d+,\d+\.?\d*"))
 
+    def _(arg, path, rofi):
+        githubdir = "/home/beyond/github/"
+        if not os.path.exists(githubdir):
+            githubdir = "/home/beyond/Documents/GitHubProject"
+        stopen(githubdir)
+        clip = getclipboard()
+        copy(f"git clone {clip} --depth 1")
+        run_shell_async("sleep 1 && xdotool key 'shift+Insert'")
+    add(["gitclone",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"(http|git).*git"))
 
+    def _(arg, path, rofi):
+        clip = getclipboard()
+        name = clip.split("/")[-1]
+        cmd = f"wgetmulti.sh {clip} {name}"
+        copy(cmd)
+    add(["multiget",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"(?!.*\.html$)http.*\..*$"))
