@@ -13287,6 +13287,16 @@ unmanage(Client *c, int destroyed)
 	Monitor *m = c->mon;
 	XWindowChanges wc;
 
+	Client *nextfocus = NULL;
+	// 关闭时有限focus当前的container
+	if (c->lastfocus->container != c->container && c->container->cn > 1) {
+		for(int i=0;i<c->container->cn; i++){
+			if (c->container->cs[i] != c){
+				nextfocus = c->container->cs[i];
+			}
+		}
+	}
+
 	Client *tmpc;
 	for(tmpc = m->clients;tmpc;tmpc = tmpc->next)
 		if (tmpc->launchparent) 
@@ -13311,7 +13321,7 @@ unmanage(Client *c, int destroyed)
 	}
 	freecontainerc(c->container, c);
 	free(c);
-	focus(NULL);
+	focus(nextfocus);
 	if (selmon->sel) 
 		// centertocamera(selmon->sel->x+selmon->sel->w/2,selmon->sel->y+selmon->sel->h/2);
 		tile5viewcomplete(0);
