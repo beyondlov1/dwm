@@ -83,6 +83,8 @@ install: all
 	chmod +x ${HOME}/software/bin/rofi-script/_rofi.sh
 	chmod +x ${HOME}/software/rofi.sh
 	chown beyond:beyond ${HOME}/software/rofi.sh
+	touch /tmp/rofi-script.dirty
+	chown beyond:beyond /tmp/rofi-script.dirty
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dwm \
