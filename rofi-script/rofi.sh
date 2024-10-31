@@ -11,7 +11,7 @@ if [ -L "$LINK_NAME" ]; then
     echo "Link $LINK_NAME already exists. Checking for dirty flag..."
     
     # 检查是否存在 .dirty 文件
-    if [ -f "$DIRTY_FLAG" ]; then
+    if [ -d "$TARGET_DIR" ]; then
         echo "$DIRTY_FLAG exists. Syncing files..."
         rsync -av --progress "$SOURCE_DIR/" "$TARGET_DIR/"
         # 同步完成后，您可以选择删除 .dirty 文件
