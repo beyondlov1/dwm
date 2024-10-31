@@ -111,7 +111,7 @@ static FILE *actionlogfile;
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked,SchemeSwitchPrepareMove, SchemeTiled, SchemeFulled}; /* color schemes */
+enum { SchemeNorm, SchemeSel , SchemeScr,SchemeInvalidNormal, SchemeInvalidSel,SchemeDoublePageMarked,SchemeSwitchPrepareMove, SchemeTiled, SchemeFulled, SchemeWarn}; /* color schemes */
 enum { NetSupported, NetWMName, NetWMIcon, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -3114,6 +3114,15 @@ set_backgroud(Client *c, int minlastfocusperiod, int maxlastfocusperiod, int min
 
 void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tagsy, int tagsww, int tagswh)
 {
+	Client *lastfocused = selmon->sel->lastfocus;
+	while (lastfocused && lastfocused->win) {
+		if(selmon->sel->container == lastfocused->container){
+			lastfocused = lastfocused->lastfocus;
+			continue;
+		}
+		break;
+	}
+
 	unsigned int tags = 1<<tagindex;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, tagsx, tagsy, tagsww, tagswh, 1, 1);
@@ -3282,6 +3291,12 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 		drw_line(drw, x, y+h, x+w, y+h, 0);
 		drw_line(drw, x, y, x,y+h, 0);
 		drw_line(drw, x+w, y, x+w,y+h, 0);
+		
+		if(lastfocused && lastfocused == c)
+		{
+			drw_setscheme(drw, scheme[SchemeWarn]);
+			drw_text_x(drw, x + w / 2, y + h - th, tw, th, 0, "▲", 0, 0);
+		}
 
 		drw_setscheme(drw, oldscheme);
 	}
@@ -4693,12 +4708,16 @@ focuslast(const Arg *arg)
 {
 	Client *lastfocused = selmon->sel->lastfocus;
 	while (lastfocused && lastfocused->win) {
-		if(selmon->sel->lastfocustime - lastfocused->lastfocustime < 1000*1000*1){
+		// if(selmon->sel->lastfocustime - lastfocused->lastfocustime < 1000*1000*1){
+		if(selmon->sel->container == lastfocused->container){
 			lastfocused = lastfocused->lastfocus;
 			continue;
 		}
 		focus(lastfocused);
 		arrange(selmon);
+		if (selmon->switcher) {
+			selmon->switcheraction.drawfunc(selmon->switcher, selmon->switcherww, selmon->switcherwh);
+		}
 		break;
 	}
 }

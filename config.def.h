@@ -43,6 +43,7 @@ static const char *colors[][3] = {
 	[SchemeSwitchPrepareMove] = {"#ff9300", "#ff9300", "#ff9300"},
 	[SchemeTiled] = {"#ff9300", col_gray1, col_gray2},
 	[SchemeFulled] = {"#33FF89", col_gray1, col_gray2},
+	[SchemeWarn] = {"#ff9300", "#000000", col_gray2},
 };
 
 static const int gradual_colors_count = 6;
@@ -414,8 +415,8 @@ static Key keys[] = {
 	// { MODKEY,             XK_Tab, smartzoom,           {0} },
 	// { MODKEY,             XK_Tab,   toggleswitchers,           {0} },
 	//{ MODKEY,                       XK_Tab,    view,           {.ui = ~0 } },
-	//{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
-	{ MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
+	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	// { MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
 	// { MODKEY,                       XK_Tab,    toggleswitchers,           {0} },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
@@ -622,8 +623,8 @@ static Key switcherkeys[] = {
 	// { MODKEY|ControlMask,                       XK_Right,      tiledual,       {.i = +1} },
 	// { MODKEY|ControlMask,                       XK_Left,      tiledual,       {.i = -1} },
 	{ MODKEY|ShiftMask,                       XK_n,      setfacty,       {0} },
-	//{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
-	{ MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
+	{ MODKEY,                       XK_Tab,    focuslast,           { 0 } },
+	// { MODKEY,                       XK_Tab,    tile7shiftnext,           { 0 } },
 	{ MODKEY,             XK_KP_Page_Up, zoomi,           {.i=1} },
 	{ MODKEY,             XK_KP_Right, zoomi,           {.i=2} },
 	{ MODKEY,             XK_KP_Page_Down, zoomi,           {.i=3} },
