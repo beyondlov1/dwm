@@ -7,7 +7,7 @@ LINK_NAME="/home/beyond/software/bin/rofi-script_"
 DIRTY_FLAG="/tmp/rofi-script.dirty"
 
 # 检查软链接是否存在
-if [ -L "$LINK_NAME" ]; then
+if [ -d "$TARGET_DIR" ]; then
     echo "Link $LINK_NAME already exists. Checking for dirty flag..."
     
     # 检查是否存在 .dirty 文件
