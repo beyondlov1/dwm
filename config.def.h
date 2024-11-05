@@ -359,7 +359,8 @@ static Key keys[] = {
 	{Mod1Mask|ShiftMask, XK_k, container_layout_tile_v_movesplit, {.i = 2}},
 	{Mod1Mask|ShiftMask, XK_j, container_layout_tile_v_movesplit, {.i = -2}},
 
-	{Mod1Mask|ShiftMask, XK_u, container_layout_tile_v_movesplit_toggle, {.i = 2}},
+	// {Mod1Mask|ShiftMask, XK_u, container_layout_tile_v_movesplit_toggle, {.i = 2}},
+	{MODKEY, XK_m, container_layout_tile_v_movesplit_toggle, {.i = 2}},
 
 	{Mod1Mask|ShiftMask, XK_Left, container_layout_tile_v_movesplit, {.i = -1}},
 	{Mod1Mask|ShiftMask, XK_Right, container_layout_tile_v_movesplit, {.i = 1}},
@@ -592,7 +593,7 @@ static Key switcherkeys[] = {
 	{ MODKEY,                       XK_s,      spawn,          {.v = flameshotcmd } },
 	{ MODKEY,                       XK_p,      addtoscratchgroup,  {0 } },
 	{ MODKEY,                       XK_y,      removefromscratchgroup,  {0 } },
-	{ MODKEY,                       XK_m,      removefromscratchgroup,  {0 } },
+	// { MODKEY,                       XK_m,      removefromscratchgroup,  {0 } },
 	{ MODKEY,                       XK_n,      togglescratchgroup,  {0} },
 	{ MODKEY,                       XK_r,      rerule,      {0} },
 
