@@ -67,6 +67,7 @@ install: all
 	gcc simulate-key/simulate_key.c -o simulate-key/simulate_key
 	cp -f simulate-key/simulate_key ${HOME}/software
 	chmod +x ${HOME}/software/simulate_key
+	cp -f dotfiles/.xbindkeysrc.scm ${HOME}
 	cp -f runningtag/runningtag.py ${HOME}/software
 	chmod +x ${HOME}/software/runningtag.py
 	mkdir -p ${HOME}/.config/systemd/user/
