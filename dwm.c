@@ -13312,13 +13312,16 @@ unmanage(Client *c, int destroyed)
 	XWindowChanges wc;
 
 	Client *nextfocus = NULL;
-	// 关闭时有限focus当前的container
-	if (c->lastfocus->container != c->container && c->container->cn > 1) {
+	// 关闭时优先focus当前的container
+	if (c->lastfocus && c->lastfocus->container != c->container && c->container->cn > 1) {
 		for(int i=0;i<c->container->cn; i++){
 			if (c->container->cs[i] != c){
 				nextfocus = c->container->cs[i];
+				break;
 			}
 		}
+	}else if(c->lastfocus){
+		nextfocus = c->lastfocus;
 	}
 
 	Client *tmpc;

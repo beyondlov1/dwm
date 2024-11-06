@@ -76,7 +76,7 @@ def func():
                     change_window_property(c["window_id"], "WM_NAME", name)
                     change_window_property(c["window_id"], "_NET_MY_NOTE", "")
         
-        for c in cs:
+        for c in sorted(cs, key=lambda x: x["stastic"]["lastfocustime"], reverse=True):
             lastfocusduration = c["stastic"]["lastunfocustime"] - c["stastic"]["lastfocustime"]
             if c["class"] == "St" \
                 and c["stastic"]["lastfocustime"] < (time.time() - 60*60) * 10**6 \
