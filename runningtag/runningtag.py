@@ -1,6 +1,7 @@
 #!/bin/python3
 
 import json
+from os import kill
 import time
 import subprocess
 import json
@@ -8,6 +9,7 @@ import json
 from datetime import datetime
 import sched
 import re
+import signal
 
 def run_shell_async(shell):
     # shell = f"{shell} > /dev/null 2>&1"
@@ -73,6 +75,14 @@ def func():
                     change_window_property(c["window_id"], "_NET_WM_NAME", name)
                     change_window_property(c["window_id"], "WM_NAME", name)
                     change_window_property(c["window_id"], "_NET_MY_NOTE", "")
+        
+        for c in cs:
+            lastfocusduration = c["stastic"]["lastunfocustime"] - c["stastic"]["lastfocustime"]
+            if c["class"] == "St" \
+                and c["stastic"]["lastfocustime"] < (time.time() - 60*60) * 10**6 \
+                and not c["states"]["is_focused"] \
+                and not isrunning(c):
+                kill(c["pid"], signal.SIGTERM)
 
 def schedule(func, delay):
     def wrapfunc():

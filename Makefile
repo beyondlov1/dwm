@@ -30,6 +30,7 @@ dwm-msg: dwm-msg.o
 
 clean:
 	rm -f config.h dwm dwm-msg ${OBJ} dwm-${VERSION}.tar.gz drw.o dwm.o util.o *.orig *.rej
+	rm ${DESTDIR}${PREFIX}/bin/dwm ${DESTDIR}${PREFIX}/bin/dwm-msg
 
 dist: clean
 	mkdir -p dwm-${VERSION}

@@ -104,7 +104,7 @@
 // 这个没用到
 #define WIDE_MASTERFACTOR_H 1.0
 
-#define islog 0
+#define islog 1
 
 static FILE *logfile;
 static FILE *actionlogfile;
@@ -240,6 +240,7 @@ struct Client {
 
 	long lastfocustime;
 	long lastunfocustime;
+	long focusduration;
 
 	char shortcut[5];
 	Client *subclient;
@@ -4616,6 +4617,8 @@ focus(Client *c)
 		LOG_FORMAT("focus: after setfocus");
 
 		actionlog("focus", c);
+		selmon->sel = c;
+		c->focusfreq++;
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -4628,7 +4631,6 @@ focus(Client *c)
 		LOG_FORMAT("focus: c or c->win is NULL");
 		// return;
 	}
-	selmon->sel = c;
 	drawbars();
 	LOG_FORMAT("focus: over");
 
@@ -4728,7 +4730,6 @@ lru(Client *c)
 	if(!c) return;
 	if(c == focuschain->lastfocus) return;
 	// LOG_FORMAT("lru2 start \n");
-	c->focusfreq++;
 	Client *tmp = NULL, *prev = NULL;
 	for(tmp = focuschain; tmp; tmp = tmp->lastfocus)
 	{
@@ -5977,6 +5978,9 @@ manage(Window w, XWindowAttributes *wa)
 	c->parentclient = 0;
 	c->issidecar = 0;
 	c->preview = 0;
+	c->focusduration = 0;
+	c->lastunfocustime = 0;
+	c->focusfreq = 0;
 
 	LOG_FORMAT("isnexttemp:%d, c->istemp: %d  %d", isnexttemp, c->istemp, getpid());
 	if(isnexttemp) {
@@ -13296,6 +13300,7 @@ unfocus(Client *c, int setfocus)
 	}
 	c->isfocused = False;
 	c->lastunfocustime = getcurrusec();
+	c->focusduration += (c->lastunfocustime - c->lastfocustime);
 	selmon->sel = NULL;
 	updateborder(c);
 }

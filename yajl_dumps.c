@@ -93,6 +93,12 @@ dump_client(yajl_gen gen, Client *c)
       YSTR("old_state"); YBOOL(c->oldstate);
       YSTR("is_fullscreen"); YBOOL(c->isfullscreen);
     )
+    YSTR("stastic"); YMAP(
+      YSTR("focusduration"); YINT(c->focusduration);
+      YSTR("focusfreq"); YINT(c->focusfreq);
+      YSTR("lastfocustime"); YINT(c->lastfocustime);
+      YSTR("lastunfocustime"); YINT(c->lastunfocustime);
+    )
   )
   // clang-format on
 

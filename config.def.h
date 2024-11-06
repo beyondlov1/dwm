@@ -359,8 +359,7 @@ static Key keys[] = {
 	{Mod1Mask|ShiftMask, XK_k, container_layout_tile_v_movesplit, {.i = 2}},
 	{Mod1Mask|ShiftMask, XK_j, container_layout_tile_v_movesplit, {.i = -2}},
 
-	// {Mod1Mask|ShiftMask, XK_u, container_layout_tile_v_movesplit_toggle, {.i = 2}},
-	{MODKEY, XK_m, container_layout_tile_v_movesplit_toggle, {.i = 2}},
+	{Mod1Mask|ShiftMask, XK_u, container_layout_tile_v_movesplit_toggle, {.i = 2}},
 
 	{Mod1Mask|ShiftMask, XK_Left, container_layout_tile_v_movesplit, {.i = -1}},
 	{Mod1Mask|ShiftMask, XK_Right, container_layout_tile_v_movesplit, {.i = 1}},
@@ -527,6 +526,8 @@ static Key switcherkeys[] = {
 	{0, XK_w, quickfocus, {.ui = 'w'}},
 	{0, XK_e, quickfocus, {.ui = 'e'}},
 	{0, XK_r, quickfocus, {.ui = 'r'}},
+
+	{MODKEY, XK_m, container_layout_tile_v_movesplit_toggle, {.i = 2}},
 
 	{ MODKEY|ControlMask,                       XK_l,      tile5expandx,       {.f = 0.1} },
 	{ MODKEY|ControlMask,                       XK_h,      tile5expandx,       {.f = -0.1} },
