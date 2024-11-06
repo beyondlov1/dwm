@@ -296,3 +296,9 @@ def addoptions(cmds):
         cmd = f"wgetmulti.sh {clip} {name}"
         copy(cmd)
     add(["multiget",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"(?!.*\.html$)http.*\..*$"))
+
+    # 貌似没用
+    # def _(arg, path, rofi):
+    #     run_shell_async("""sudo sh -c 'sed -i "/# GitHub520 Host Start/Q" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'""")
+    # add(["updategithubhosts",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"(?!.*\.html$)http.*\..*$"))
+

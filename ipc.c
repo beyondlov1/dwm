@@ -754,7 +754,7 @@ ipc_get_dwm_clients(IPCClient *ipc_client, const char *msg, const Monitor *mons)
 
   ipc_reply_prepare_send_message(gen, ipc_client,
                                 IPC_TYPE_GET_DWM_CLIENTS);
-  return -1;
+  return 0;
 }
 
 /**
@@ -1234,7 +1234,7 @@ ipc_handle_socket_epoll_event(struct epoll_event *ev)
   if (!(ev->events & EPOLLIN)) return -1;
 
   // EPOLLIN means incoming client connection request
-  fputs("Received EPOLLIN event on socket\n", stderr);
+  // fputs("Received EPOLLIN event on socket\n", stderr);
   int new_fd = ipc_accept_client();
 
   return new_fd;

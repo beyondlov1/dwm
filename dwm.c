@@ -104,7 +104,7 @@
 // 这个没用到
 #define WIDE_MASTERFACTOR_H 1.0
 
-#define islog 1
+#define islog 0
 
 static FILE *logfile;
 static FILE *actionlogfile;
