@@ -13324,6 +13324,9 @@ unmanage(Client *c, int destroyed)
 		nextfocus = c->lastfocus;
 	}
 
+	// 其他方式kill时, 不转换焦点
+	if (selmon->sel != c) nextfocus = selmon->sel;
+
 	Client *tmpc;
 	for(tmpc = m->clients;tmpc;tmpc = tmpc->next)
 		if (tmpc->launchparent) 
