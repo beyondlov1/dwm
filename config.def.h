@@ -712,6 +712,7 @@ static IPCCommand ipccommands[] = {
   IPCCOMMAND(  setlayoutsafe,       1,      {ARG_TYPE_PTR}    ),
   IPCCOMMAND(  nextsidecar,         1,      {ARG_TYPE_NONE}    ),
   IPCCOMMAND(  nextmanagetype,         1,      {ARG_TYPE_UINT}    ),
+  IPCCOMMAND(  container_layout_tile_v_movesplit_toggle,         1,      {ARG_TYPE_SINT}    ),
 //   IPCCOMMAND(  setcontainerlayout,  1,      {ARG_TYPE_PTR}    ),
   IPCCOMMAND(  quit,                1,      {ARG_TYPE_NONE}   )
 };

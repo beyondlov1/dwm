@@ -4634,6 +4634,12 @@ focus(Client *c)
 	drawbars();
 	LOG_FORMAT("focus: over");
 
+	if(c){
+		if(1.0 * c->w / c->mon->ww < 0.4) c->container->masterfactorh = 1/c->container->masterfactorh;
+		if(1.0 * c->h / c->mon->wh < 0.4) c->container->masterfactor = 1/c->container->masterfactor;
+		// arrange(c->mon);
+	}
+
 	// thumb
 	// if(c && c->win){
 	// 	Screen *scr = ScreenOfDisplay(dpy, screen);

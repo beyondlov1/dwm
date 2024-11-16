@@ -25,6 +25,11 @@ def get_dwm_clients():
     output = run_shell(cmd)
     return json.loads(output) if output else None
 
+def get_dwm_monitors():
+    cmd = "dwm-msg get_monitors"
+    output = run_shell(cmd)
+    return json.loads(output) if output else None
+
 def change_window_property(win, name, value):
     cmd = f"xprop -id {win} -f {name} 8u -set {name} '{value}'"
     run_shell_async(cmd)
@@ -83,6 +88,27 @@ def func():
                 and not c["states"]["is_focused"] \
                 and not isrunning(c):
                 kill(c["pid"], signal.SIGTERM)
+
+        # focus 2s, max window
+        # for c in cs:
+        #     is_focused = c["states"]["is_focused"]
+        #     lastfocustime = c["stastic"]["lastfocustime"]
+        #     if is_focused \
+        #         and c["class"] == "St" \
+        #         and time.time() * 10**6 - lastfocustime > 2*10**6: # 超过2s
+        #         monitors = get_dwm_monitors()
+        #         if monitors:
+        #             w = c["geometry"]["current"]["width"]
+        #             h = c["geometry"]["current"]["height"]
+        #             monitor = monitors[0]
+        #             mw = monitor["window_geometry"]["width"]
+        #             mh = monitor["window_geometry"]["height"]
+        #             if h / mh < 0.4:
+        #                 run_shell_async("dwm-msg run_command container_layout_tile_v_movesplit_toggle 2")
+        #             if w / mw < 0.4:
+        #                 run_shell_async("dwm-msg run_command container_layout_tile_v_movesplit_toggle 1")
+        #         break
+            
 
 def schedule(func, delay):
     def wrapfunc():
