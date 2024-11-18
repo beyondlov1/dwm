@@ -302,3 +302,12 @@ def addoptions(cmds):
     #     run_shell_async("""sudo sh -c 'sed -i "/# GitHub520 Host Start/Q" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'""")
     # add(["updategithubhosts",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"(?!.*\.html$)http.*\..*$"))
 
+    def _(arg, path, rofi):
+        clip = getclipboard()
+        clip = clip.replace("\n", " ")
+        clip = clip.replace("\t", " ")
+        clip = clip.strip()
+        l = clip.split(" ")
+        liststr = ",".join([f"\"{item}\"" for item in set(l)])
+        copy(liststr)
+    add(["line2list",], _, cmds)
