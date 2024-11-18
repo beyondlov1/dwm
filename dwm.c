@@ -4636,7 +4636,7 @@ focus(Client *c)
 
 	if(c){
 		if(1.0 * c->w / c->mon->ww < 0.4) c->container->masterfactorh = 1/c->container->masterfactorh;
-		if(1.0 * c->h / c->mon->wh < 0.4) c->container->masterfactor = 1/c->container->masterfactor;
+		// if(1.0 * c->h / c->mon->wh < 0.4) c->container->masterfactor = 1/c->container->masterfactor;
 		// arrange(c->mon);
 	}
 
