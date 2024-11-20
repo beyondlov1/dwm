@@ -9,6 +9,24 @@ import re
 import random
 from urllib.parse import quote
 
+def timestamp2datestr(timestamp):
+    import datetime
+    dt_object = datetime.datetime.fromtimestamp(timestamp)
+    formatted_time = dt_object.strftime("%Y-%m-%d %H:%M:%S")
+    return formatted_time
+
+def timestamp2datestr2(timestamp):
+    import time
+    timeArray = time.localtime(timestamp)
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+    return formatted_time
+
+def datestr2timestamp(time_string):
+    import datetime
+    time_format = "%Y-%m-%d %H:%M:%S"
+    local_time = datetime.datetime.strptime(time_string, time_format)
+    timestamp = local_time.timestamp()
+    return int(timestamp) 
 
 def emptyfunc(arg, path, cmds):
     pass
@@ -88,6 +106,11 @@ def _fetchssr():
 
 def browseropen(url):
     run_shell_async(f"sleep 0.1 && /home/beyond/software/ba {url}")
+
+def simplepageshow(s):
+    path = "/tmp/simplepage_content.tmp"
+    writefile(path, f"{s}")
+    run_shell_async(f"sleep 0.1 && dwm-msg run_command nextmanagetype 2 && /home/beyond/software/browserclip.sh file://{path}")
 
 def stopen(dirpath):
     run_shell_async(f"st -d {dirpath}")
@@ -267,9 +290,20 @@ def addoptions(cmds):
         browseropen("https://gitee.com/beyondlov1/mytools/tree/master")
     add(["mytools_gitee",], _, cmds)
 
+    # def _(arg, path, rofi):
+    #     browseropen("https://tool.lu/timestamp/")
+    # add(["shijianchuo",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d{10}|^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
+
     def _(arg, path, rofi):
-        browseropen("https://tool.lu/timestamp/")
-    add(["shijianchuo",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d{10}|^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
+        clip = getclipboard()
+        if re.match(r"\d{10}", clip):
+            timestr = timestamp2datestr(int(clip))
+            simplepageshow(timestr)
+        if re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", clip):
+            timestamp = datestr2timestamp(clip)
+            copy(timestamp)
+            simplepageshow(timestamp)
+    add(["shijianchuo2",], _, cmds, topidentifyfunc=regex_topidentifyfunc(r"\d{10}|^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
 
     def _(arg, path, rofi):
         browseropen("https://www.json.cn/")
