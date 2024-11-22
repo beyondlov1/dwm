@@ -345,3 +345,12 @@ def addoptions(cmds):
         liststr = ",".join([f"\"{item}\"" for item in set(l)])
         copy(liststr)
     add(["line2list",], _, cmds)
+
+
+    def _(arg, path, rofi):
+        copy("""pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth',None)
+# pd.set_option('display.max_rows', None)""")
+    add(["pdoptions",], _, cmds)
+    
