@@ -65,6 +65,8 @@ install: all
 	chmod +x ${HOME}/software/pwdc
 	cp -f software/flameshottocloud.sh ${HOME}/software
 	chmod +x ${HOME}/software/flameshottocloud.sh
+	cp -f software/simplepageopen.sh ${HOME}/software
+	chmod +x ${HOME}/software/simplepageopen.sh
 	gcc simulate-key/simulate_key.c -o simulate-key/simulate_key
 	cp -f simulate-key/simulate_key ${HOME}/software
 	chmod +x ${HOME}/software/simulate_key
