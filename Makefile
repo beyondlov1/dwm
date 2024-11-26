@@ -81,6 +81,7 @@ install: all
 	cp -f rofi-script/funcs.py ${HOME}/software/bin/rofi-script
 	cp -f rofi-script/rofi.py ${HOME}/software/bin/rofi-script
 	cp -f rofi-script/_rofi.sh ${HOME}/software/bin/rofi-script
+	sh rofi-script/install.sh
 	cp -f rofi-script/rofi.sh ${HOME}/software
 	chown -R beyond:beyond ${HOME}/software/bin/rofi-script
 	chmod +x ${HOME}/software/bin/rofi-script/rofi.py
