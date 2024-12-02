@@ -10,7 +10,7 @@ if [[ "$(uname -a)" == *"arch"* ]]; then
 else
   rm -rf ${HOME}/software/bin/rofi-script/dist
   HERE=$(pwd)
-  su - beyond -c "pyinstaller -D $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
+  su - beyond -c "source /home/beyond/venv-common/bin/activate && pyinstaller -D $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
   cp -rf rofi-script/dist ${HOME}/software/bin/rofi-script
 fi
 
