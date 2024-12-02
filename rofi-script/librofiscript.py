@@ -17,8 +17,7 @@ def run_shell(shell):
 def copy(text):
     # run_shell_async(f"echo -n '{text}' | xclip -selection clipboard")
     run_shell_async(f"""cat > /tmp/clip.tmp <<EOF
-{text}
-EOF
+{text}EOF
 cat /tmp/clip.tmp | xclip -selection clipboard
 """)
 
