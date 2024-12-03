@@ -268,8 +268,8 @@ def addoptions(cmds):
 
     def _(arg, path, rofi):
         # r = run_shell("cat /dev/urandom | sed 's/[^a-zA-Z]//g' | strings -n 6 | head -n 1")
-        r = "".join(random.sample("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY", 6))
-        copy(r.strip())
+        r = "".join(random.sample("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY", 6) )
+        copy_x(r.strip())
     add(["randomstring",], _, cmds)
 
     def _(arg, path, rofi):
