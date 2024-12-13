@@ -108,8 +108,20 @@ cmds = _sortbyfreq(cmds, "", exclude_paths = freq_exclude_paths)
 
 rofiretv = os.environ["ROFI_RETV"]
 if rofiretv == "0":
-    showmenus(cmds)
-    print(f"\0data\x1f\n")
+    if rofidata:
+        # 传入环境变量, 指定打开的路径
+        path = rofidata.replace("/", SEP)
+        subcmd = getbypath(cmds, path)
+        if subcmd is not None:
+            subcmd.forcetop = 9999 
+            if subcmd:
+                showmenus(subcmd)
+                print(f"\0data\x1f{path}\n")
+            elif subcmd.func and isfunction(subcmd.func): 
+                subcmd.func(None, path, cmds)
+    else:
+        showmenus(cmds)
+        print(f"\0data\x1f\n")
 if rofiretv == "1":
     cmd = sys.argv[1]
     lastpath = os.environ["ROFI_DATA"]

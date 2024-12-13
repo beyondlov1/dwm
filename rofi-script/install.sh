@@ -7,11 +7,23 @@ if [[ "$(uname -a)" == *"arch"* ]]; then
   HERE=$(pwd)
   su - beyond -c "source /home/beyond/venv-common/bin/activate && pyinstaller -D $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
   cp -rf rofi-script/dist ${HOME}/software/bin/rofi-script
+
+cat > $HOME/software/roficontext.sh <<EOF
+ROFI_DATA="/context" /usr/local/bin/rofi -pid /tmp/rofi-context.pid -normal-window -cache-dir /tmp/roficache -show fb -modes "fb:/home/beyond/github/dwm/rofi-script/_rofi.sh" -matching fuzzy -hold-window > /dev/null 2>&1 &
+EOF
+chmod +x $HOME/software/roficontext.sh 
+
 else
   rm -rf ${HOME}/software/bin/rofi-script/dist
   HERE=$(pwd)
   su - beyond -c "source /home/beyond/venv-common/bin/activate && pyinstaller -D $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
   cp -rf rofi-script/dist ${HOME}/software/bin/rofi-script
+
+cat > $HOME/software/roficontext.sh <<EOF
+ROFI_DATA="/context" /usr/local/bin/rofi -pid /tmp/rofi-context.pid -normal-window -cache-dir /tmp/roficache -show fb -modes "fb:/home/beyond/github/dwm/rofi-script/_rofi.sh" -matching fuzzy -hold-window > /dev/null 2>&1 &
+EOF
+chmod +x $HOME/software/roficontext.sh 
+
 fi
 
 
