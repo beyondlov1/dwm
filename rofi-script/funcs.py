@@ -256,7 +256,10 @@ def addoptions(cmds):
         if arg.strip().startswith("/"):
             run_shell_async(f"st -d {arg}")
 
-    ls = readfile("/tmp/recent_context.txt")
+    # ls = readfile("/tmp/recent_context.txt")
+    home = os.environ["HOME"]
+    contextdir = os.path.join(home, ".config/collector")
+    ls = readfile(f"{contextdir}/recent_context.txt")
     if ls:
         for l in reversed(ls.split("\n")):
             add(["context", l], _, cmds)
