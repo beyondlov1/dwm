@@ -8859,7 +8859,7 @@ stsubspawn(const Arg *arg){
 
 void stspawn(const Arg *arg){
 	char workingdir[PATH_MAX] = "";
-	if (selmon->sel) {
+	if (selmon->sel && selmon->sel != root) {
 		pid_t currpid = selmon->sel->pid;
 		if (currpid) {
 			getstworkingdir(workingdir, currpid);
