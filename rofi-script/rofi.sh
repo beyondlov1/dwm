@@ -53,4 +53,6 @@ if [[ "$(uname -a)" == *"arch"* ]]; then
   source /home/beyond/venv-common/bin/activate
 fi
 
+subcmdpath=$1
+export ROFI_DATA=$subcmdpath
 rofi -cache-dir /tmp/roficache -show fb -modes "fb:/home/beyond/software/bin/rofi-script_/_rofi.sh" -matching fuzzy
