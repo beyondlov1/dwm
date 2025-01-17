@@ -714,6 +714,7 @@ static void shownonscratchs();
 static void hodenonscratchs();
 static void container_layout_tile_v_movesplit(const Arg *arg);
 static void container_layout_tile_v_movesplit_toggle(const Arg *arg);
+static Client* get_max_client_in(Container *container);
 
 static void i_move(const Arg *arg);
 static void i_focus(const Arg *arg);
@@ -3828,7 +3829,11 @@ clientswitchermove_tag2(const Arg *arg)
 		if (closest < 0) return;
 		closestc = sxy2client_tag(sxys[closest].x, sxys[closest].y, 0);
 	}
-
+	if(closestc->container != selmon->sel->container){
+		// 优先找最大的client
+		Client *maxc = get_max_client_in(closestc->container);
+		closestc = maxc;
+	}
 	if (closestc) {
 		if((closestc->tags & selmon->sel->tags) == 0)
 			viewui(closestc->tags);
@@ -10869,6 +10874,20 @@ container_layout_tile_v_movesplit(const Arg *arg){
 	arrange(selmon);
 }
 
+Client*
+get_max_client_in(Container *container){
+	int max = 0;
+	Client *maxc = NULL;
+	for(int i=0;i<container->cn;i++){
+		Client *c = container->cs[i];
+		if(c->w * c->h > max){
+			max = c->w * c->h;
+			maxc = c;
+		}
+	}
+	return maxc;
+}
+
 void 
 container_layout_tile_v_movesplit_toggle(const Arg *arg){
 	if (!selmon->sel || !selmon->sel->container) return;
@@ -10880,6 +10899,8 @@ container_layout_tile_v_movesplit_toggle(const Arg *arg){
 	if (container->masterfactor <= 0) container->masterfactor = 0.2;
 	if (container->masterfactorh <= 0) container->masterfactorh = 0.2;
 	arrange(selmon);
+	Client *maxc = get_max_client_in(selmon->sel->container);
+	focus(maxc);
 }
 
 /**
