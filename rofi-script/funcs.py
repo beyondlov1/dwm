@@ -79,6 +79,7 @@ def addclipboard(cmds):
         cliphistory = getcliphistory()
         if not cliphistory:
             return 
+        cliphistory.reverse()
         for chitem in cliphistory:
             # 这里要特殊处理一下, 不然查找的时候找不到
             # add(["clipboard", chitem.split("\0")[0]], clipcopyfunc, cmds)
