@@ -5,7 +5,7 @@ if [[ "$(uname -a)" == *"arch"* ]]; then
   # source /home/beyond/venv-common/bin/activate
   rm -rf ${HOME}/software/bin/rofi-script/dist
   HERE=$(pwd)
-  su - beyond -c "source $HERE/rofi-script/pyenv/bin/activate && pyinstaller -F $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
+  su - beyond -c "source $HERE/rofi-script/pyenv/bin/activate && pyinstaller -F $HERE/rofi-script/rofi.py --strip --noconfirm --distpath $HERE/rofi-script/dist"
   cp -rf rofi-script/dist ${HOME}/software/bin/rofi-script
 
 cat > $HOME/software/roficontext <<EOF
@@ -16,7 +16,7 @@ chmod +x $HOME/software/roficontext
 else
   rm -rf ${HOME}/software/bin/rofi-script/dist
   HERE=$(pwd)
-  su - beyond -c "source $HERE/rofi-script/pyenv/bin/activate && pyinstaller -F $HERE/rofi-script/rofi.py --noconfirm --distpath $HERE/rofi-script/dist"
+  su - beyond -c "source $HERE/rofi-script/pyenv/bin/activate && pyinstaller -F $HERE/rofi-script/rofi.py --strip --noconfirm --distpath $HERE/rofi-script/dist"
   cp -rf rofi-script/dist ${HOME}/software/bin/rofi-script
 
 cat > $HOME/software/roficontext <<EOF

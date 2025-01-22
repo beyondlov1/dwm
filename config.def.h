@@ -201,7 +201,8 @@ static const char *dictcmd[] = {"/home/beyond/software/browserclip.sh", "http://
 static const char *todotxtcmd[] = {"st","-e","python3", "/home/beyond/software/bin/textual-demo/app.py",NULL};
 static const char *enotecmd[] = {"st","-e","python3", "/home/beyond/software/bin/enotepy/app.py",NULL};
 // static const char *copyqcmd[] = {"copyq", "show", NULL };
-static const char *copyqcmd[] = {"/usr/bin/clipcat-menu", NULL };
+// static const char *copyqcmd[] = {"/usr/bin/clipcat-menu", NULL };
+static const char *copyqcmd[] = {"/home/beyond/software/rofi.sh", "/clipboard",  NULL };
 static const char *contextcmd[] = {"/home/beyond/software/rofi.sh", "/context",  NULL };
 //static const char *browsercmd[] = {"firefox", NULL};
 static const char *browsercmd[] = {"/home/beyond/software/ba", NULL};
@@ -306,7 +307,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_q, tsspawn,          {.v = querybrowsercmd } },
 
 	{ ControlMask,                  XK_space, tsspawn,          {.v = copyqcmd } },
-	{ Mod1Mask,                  XK_z, tsspawn,          {.v = contextcmd } },
+	{ Mod1Mask,                  XK_z, spawn,          {.v = contextcmd } },
 
 	{ MODKEY,                       XK_a, tsspawn,          {.v = dictcmd } },
 	{ MODKEY,                       XK_z, tsspawn,          {.v = todotxtcmd} },

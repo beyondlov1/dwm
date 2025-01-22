@@ -9,6 +9,12 @@ import re
 import random
 from urllib.parse import quote
 
+def topinyin(s):
+    os.environ["PYPINYIN_NO_PHRASES"] = 'true'
+    os.environ["PYPINYIN_NO_DICT_COPY"] = 'true'
+    from pypinyin import lazy_pinyin, Style
+    return " ".join(lazy_pinyin(s, style=Style.NORMAL))
+
 def timestamp2datestr(timestamp):
     import datetime
     dt_object = datetime.datetime.fromtimestamp(timestamp)
@@ -35,26 +41,50 @@ def copyfunc(arg, path, cmds):
     copy(arg)
     # print(arg)
 
-def addclipboard(cmds):
-    def _showclipboards(arg,path,cmds):
-        # run_shell_async("nohup clipcat-menu > /dev/null & disown")
-        run_shell_async("sleep 0.1 && /bin/clipcat-menu")
-    add(["clipboard",], _showclipboards, cmds)
-
-def getcliphistory():
-    r = run_shell("""clipcatctl list""")
-    if not r:
-        return
-    clips =  [item.strip() for item in re.split(r"[\n]?[0-9a-zA-Z]{16}.*: ", r)] 
-    return clips
-
 # def addclipboard(cmds):
-    # """废弃, 因为不能显示回车, 改用showclipboards"""
+#     def _showclipboards(arg,path,cmds):
+#         # run_shell_async("nohup clipcat-menu > /dev/null & disown")
+#         run_shell_async("sleep 0.1 && /bin/clipcat-menu")
+#     add(["clipboard",], _showclipboards, cmds)
+
+# def getcliphistory():
+#     r = run_shell("""clipcatctl list""")
+#     if not r:
+#         return
+#     clips =  [item.strip() for item in re.split(r"[\n]?[0-9a-zA-Z]{16}.*: ", r)] 
+#     return clips
+#
+# def addclipboard(cmds):
+#     """废弃, 因为不能显示回车, 改用showclipboards"""
 #     cliphistory = getcliphistory()
 #     if not cliphistory:
 #         return 
 #     for chitem in cliphistory:
 #         add(["clipboard", chitem], copyfunc, cmds)
+
+def getcliphistory():
+    content = readfile("/tmp/clip.txt")
+    if content:
+        lines = content.split("\n")
+        lines = [line.replace("|||", "↵") for line in lines]
+        lines = [f"{line}\0meta\x1f{topinyin(line)}" for line in lines]
+        return lines
+    return []
+
+def clipcopyfunc(arg, path, cmds):
+    copy(arg.replace("↵", "\n"))
+
+def addclipboard(cmds):
+    def _(arg, path, cmds):
+        cliphistory = getcliphistory()
+        if not cliphistory:
+            return 
+        for chitem in cliphistory:
+            # 这里要特殊处理一下, 不然查找的时候找不到
+            # add(["clipboard", chitem.split("\0")[0]], clipcopyfunc, cmds)
+            add(["clipboard", chitem.split("\0")[0], ], clipcopyfunc, cmds, value = chitem)
+            # print(chitem)
+    add(["clipboard", ], _, cmds)
 
 def _fetchssr():
     import requests
@@ -140,9 +170,11 @@ def addoptions(cmds):
     #     for l in reversed(ls.split("\n")[-2:]):
     #         add([f"{l}"], _, cmds)
 
-    def _showclipboards(arg,path,cmds):
-        run_shell_async("sleep 0.1 && /bin/clipcat-menu")
-    add(["clipboard",], _showclipboards, cmds, forcetop=1)
+    # def _showclipboards(arg,path,cmds):
+    #     run_shell_async("sleep 0.1 && /bin/clipcat-menu")
+    # add(["clipboard",], _showclipboards, cmds, forcetop=1)
+
+    addclipboard(cmds)
 
     def _(arg, path, rofi):
         clip = getclipboard()
@@ -248,21 +280,30 @@ def addoptions(cmds):
         browseropen("https://www.crxsoso.com/")
     add(["crx",], _, cmds)
 
-    def _(arg, path, rofi):
-        arg = arg.replace("|||", "\n")
-        copy(arg)
-        if arg.strip().startswith("http"):
-            browseropen(arg)
-        if arg.strip().startswith("/"):
-            run_shell_async(f"st -d {arg}")
-
     # home = os.environ["HOME"]
     # contextdir = os.path.join(home, ".config/collector")
-    contextdir = "/tmp"
-    ls = readfile(f"{contextdir}/recent_context.txt")
-    if ls:
-        for l in reversed(ls.split("\n")):
-            add(["context", l], _, cmds)
+
+    # contextdir = "/tmp"
+    # ls = readfile(f"{contextdir}/recent_context.txt")
+    # if ls:
+    #     for l in reversed(ls.split("\n")):
+    #         add(["context", l], _, cmds)
+
+    def _(arg, path, rofi):
+        """创建子菜单"""
+        def _(arg, path, rofi):
+            """执行"""
+            arg = arg.replace("|||", "\n")
+            copy(arg)
+            if arg.strip().startswith("http"):
+                browseropen(arg)
+            if arg.strip().startswith("/"):
+                run_shell_async(f"st -d {arg}")
+        ls = readfile(f"/tmp/recent_context.txt")
+        if ls:
+            for l in reversed(ls.split("\n")):
+                add(["context", l], _, cmds)
+    add(["context", ], _, cmds)
 
     def _(arg, path, rofi):
         copy("pip3 install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple ")

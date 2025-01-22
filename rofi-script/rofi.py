@@ -1,16 +1,11 @@
 #! /bin/python3
-
-from collections.abc import Iterable
 from inspect import isfunction
 import os
-import re
 import sys
-from collections import OrderedDict, defaultdict
 import subprocess
 from typing import Optional
 import funcs
-import librofiscript 
-from librofiscript import SEP, Node, add, copy
+from librofiscript import SEP, Node, sortbyfreq, recordfreq
 
 
 def run_shell_async(shell):
@@ -23,9 +18,9 @@ def run_shell(shell):
     return output
 
 
-def showmenus(cmds):
-    for cmd in cmds:
-        print(cmd)
+def showmenus(cmds:dict):
+    for cmd in cmds.values():
+        print(cmd.value)
 
 def parsepath(cmdpath):
     return cmdpath.split(SEP)[1:]
@@ -52,10 +47,21 @@ def _sortbyfreq(root:Node, path, exclude_paths = []):
         return root
     if not root.usefreq:
         return root
-    newroot = librofiscript.sortbyfreq(root, path)
+    newroot = sortbyfreq(root, path)
     for k, v in root.items():
         newroot[k] = _sortbyfreq(v, f"{path}{SEP}{k}", exclude_paths)
     return newroot
+
+def initpathmenu(path, cmds):
+    # 把上级全都执行一遍, 防止懒加载加载不到的情况
+    tmppathlist = []
+    for name in path.split(SEP)[1:]:
+        tmppathlist.append(name)
+        tmppath = SEP + SEP.join(tmppathlist)
+        cmditemdir = getbypath(cmds, tmppath, None)
+        if cmditemdir is not None and cmditemdir.func:
+            cmditemdir.func(name, tmppath, cmds)
+
 
 # cmds = OrderedDict()
 cmds = Node()
@@ -64,7 +70,6 @@ cmds = Node()
 
 for funcname in funcs.__all__:
     eval(f"funcs.{funcname}")(cmds)
-
 
 freq_exclude_paths = [
     f"{SEP}context",
@@ -111,6 +116,7 @@ if rofiretv == "0":
     if rofidata:
         # 传入环境变量, 指定打开的路径
         path = rofidata.replace("/", SEP)
+        initpathmenu(path, cmds)
         subcmd = getbypath(cmds, path)
         if subcmd is not None:
             subcmd.forcetop = 9999 
@@ -128,11 +134,9 @@ if rofiretv == "1":
     path = lastpath + f"{SEP}{cmd}"
     # print(path)
     print(f"\0data\x1f{path}\n")
-    cmditem = getbypath(cmds, path, funcs.emptyfunc)
-    if cmditem is not None:
-        if cmditem:
-            showmenus(cmditem)
-        elif cmditem.func and isfunction(cmditem.func): 
-            cmditem.func(cmd, path, cmds)
-        librofiscript.recordfreq(path)
+    initpathmenu(path, cmds)
+    cmditem = getbypath(cmds, path)
+    if cmditem:
+        showmenus(cmditem)
+    recordfreq(path)
 

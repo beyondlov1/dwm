@@ -45,13 +45,17 @@ class Node(OrderedDict):
         self.forcetop = 0 
         self.func = None 
         self.name = ""
+        # 如果有 \0\x1f, 则可能和key不同
+        self.value = ""
 
-def add(lpath: list, func, d, usefreq = True, forcetop=0, topidentifyfunc = None):
+def add(lpath: list, func, d, value = None, usefreq = True, forcetop=0, topidentifyfunc = None):
     tmproot = d 
     for c in lpath[:-1]:
         if c not in tmproot:
-            tmproot[c] = Node()
-            tmproot[c].name = c
+            # 要先有父级才能添加子
+            # tmproot[c] = Node()
+            # tmproot[c].name = c
+            return 
         tmproot = tmproot[c]
     funcnode = Node()
     funcnode.func = func
@@ -60,6 +64,12 @@ def add(lpath: list, func, d, usefreq = True, forcetop=0, topidentifyfunc = None
     if topidentifyfunc:
         funcnode.forcetop = topidentifyfunc()
     funcnode.name = lpath[-1]
+    if value is None:
+        funcnode.value = funcnode.name # 可有可无, 因为funcnode不会展示
+        tmproot.value = funcnode.name 
+    else:
+        funcnode.value = value # 可有可无, 因为funcnode不会展示
+        tmproot.value = value
     tmproot[lpath[-1]] = funcnode 
 
 def readfile(path):
