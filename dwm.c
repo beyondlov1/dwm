@@ -2331,12 +2331,12 @@ drawclientswitcherwinvertical(Window win, int ww, int wh)
 		i++;
 	}
 
-	drw_map(drw,win, 0, 0, ww, wh);
+	// drw_map(drw,win, 0, 0, ww, wh);
 }
 
 
-void 
-clientswitcheractionvertical(int rx, int ry)
+Client * 
+clientswitcheractionvertical(int rx, int ry, int include_floating)
 {
 	int n = 0;
 	Client *c;
@@ -2365,6 +2365,7 @@ clientswitcheractionvertical(int rx, int ry)
 		}
 		i++;
 	}
+	return c;
 }
 
 int
@@ -4221,6 +4222,11 @@ drawswitcher(Monitor *m)
 
 	m->switcherww = ww;
 	m->switcherwh = wh;
+	if (isswitcherpreview){
+		m->switcherww = m->ww;
+		m->switcherwh = m->wh;
+	}
+
 
 	int wx = m->ww/2-ww/2;
 	int wy = m->wh/2-wh/2;
@@ -6095,7 +6101,8 @@ manage(Window w, XWindowAttributes *wa)
 		// 这里会动态修改 masterfactorh
 		// 如果还没设置过
 		if (c->container->masterfactorh == INIT_MASTERFACTOR_H)
-			c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
+			// c->container->masterfactorh = 1.0 * nstub1 / nstub2 ;
+			c->container->masterfactorh = 1; // 设置成平等的
 	}
 
 	// 浮动窗口固定在右下角
@@ -10816,6 +10823,11 @@ container_layout_tile_v(Container *container)
 				c->bw = borderpx;
 			else
 				c->bw = 0;
+
+			if(ismaster){
+				// 如果有border, 且在上边, 则上调, 适用于顶部需要点击的: 如chrome
+				c->y = c->y - c->bw - c->mon->gap->gappx / 4;
+			}
 
 			XWindowChanges wc;
 			wc.border_width = c->bw;
