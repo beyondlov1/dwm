@@ -242,6 +242,15 @@ static const char *taskgrouppath = "/home/beyond/software/bin/dwm-taskgroup/1.cs
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
+	{ControlMask|Mod1Mask, XK_Left, switchermove_inner, {.i = -1}},
+	{ControlMask|Mod1Mask, XK_Right, switchermove_inner, {.i = 1}},
+	{ControlMask|Mod1Mask, XK_Up, switchermove_inner, {.i = 2}},
+	{ControlMask|Mod1Mask, XK_Down, switchermove_inner, {.i = -2}},
+	{ControlMask|Mod1Mask, XK_h, switchermove_inner, {.i = -1}},
+	{ControlMask|Mod1Mask, XK_l, switchermove_inner, {.i = 1}},
+	{ControlMask|Mod1Mask, XK_k, switchermove_inner, {.i = 2}},
+	{ControlMask|Mod1Mask, XK_j, switchermove_inner, {.i = -2}},
+
 	{MODKEY, XK_grave, i_maxwindow, {0} },
 	{ Mod1Mask|ShiftMask,                       XK_Return,      stsubspawn,      { 0 } },
 	// { Mod1Mask,                       XK_a,      spawn,       {.v=dmenucmd} },

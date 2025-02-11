@@ -271,6 +271,7 @@ struct SwitcherAction{
 	void (*drawfunc)(Window win, int ww, int wh);
 	void (*drawfuncx)(Window win, int ww, int wh);
 	void (*movefunc)(const Arg *);
+	void (*movefunc_inner)(const Arg *);
 	Client *(*sxy2client)(int rx, int ry, int include_floating);
 	void (*pointerfunc)(int rx, int ry);
 	void (*xy2switcherxy)(XY cxy[], int n, XY sxy[], int tagindexin[]);
@@ -588,6 +589,7 @@ static void smartview(const Arg *arg);
 static void showscratchgroup(ScratchGroup *sg);
 static void scratchmove(const Arg *arg);
 static void switchermove(const Arg *arg);
+static void switchermove_inner(const Arg *arg);
 static void switcherview(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -3687,7 +3689,7 @@ nextclosestanglexy(const Arg *arg, int n, XY xys[], int curi)
 }
 
 void 
-clientswitchermove_tag2(const Arg *arg)
+_clientswitchermove_tag2(const Arg *arg, int onlysearchcontainer)
 {
 	if (scratchgroupptr && scratchgroupptr->isfloating) {
 		/*scratchmove(arg);*/
@@ -3745,8 +3747,20 @@ clientswitchermove_tag2(const Arg *arg)
 	}
 	clientxy2switcherxy_tag(cxys_currcontainer,n_currcontainer,sxys_currcontainer,tagindexin_currcontainer);
 	int closest_currcontainer = nextclosestanglexyz(arg, n_currcontainer, sxys_currcontainer, curi_currcontainer, zlevels_currcontainer);
+
+	// 以container为单位
+	// 实现方式: 如果当前container里没有能找到的了, 就终止循环
+	if(onlysearchcontainer){
+		while (closest_currcontainer >= 0) {
+			curi_currcontainer = closest_currcontainer;
+			closest_currcontainer = nextclosestanglexyz(arg, n_currcontainer, sxys_currcontainer, curi_currcontainer, zlevels_currcontainer);
+		}
+		selmon->sel = selmon->sel->container->cs[curi_currcontainer];
+	}
+	// 以container为单位 --
+
 	if (closest_currcontainer >= 0){
-		// 有限查找当前container
+		// 优先查找当前container
 		closestc = sxy2client_tag(sxys_currcontainer[closest_currcontainer].x, sxys_currcontainer[closest_currcontainer].y, 0);
 		LOG_FORMAT("findincurrcontainer");
 	}else{
@@ -3846,6 +3860,16 @@ clientswitchermove_tag2(const Arg *arg)
 	selmon->switcheraction.drawfunc(selmon->switcher, ww, wh);
 	XMapWindow(dpy, selmon->switcher);
 	XSetInputFocus(dpy, selmon->switcher, RevertToPointerRoot, 0);
+}
+void 
+clientswitchermove_tag2(const Arg *arg)
+{
+	_clientswitchermove_tag2(arg, 1);
+}
+void 
+clientswitchermove_tag2_inner(const Arg *arg)
+{
+	_clientswitchermove_tag2(arg, 0);
 }
 // ------------------ switcher tag client end --------------------
 
@@ -4091,6 +4115,7 @@ drawswitcher(Monitor *m)
 		m->switcheraction.switcherxy2xy = switcherxy2clientxy_tag;
 		m->switcheraction.sxy2client = sxy2client_tag;
 		m->switcheraction.movefunc = clientswitchermove_tag2;
+		m->switcheraction.movefunc_inner = clientswitchermove_tag2_inner;
 		m->switcheraction.switcherfactors = switcherfactors_tag;
 	}
 	
@@ -4424,6 +4449,28 @@ switchermove(const Arg *arg)
 	focusgrid5(arg);
 }
 
+void 
+switchermove_inner(const Arg *arg)
+{
+	if (selmon->switcherstickywin) {
+		if (selmon->switcherstickyaction.movefunc_inner) {
+			selmon->switcherstickyaction.movefunc_inner(arg);
+			return;
+		}
+	}
+	if (selmon->switcher) {
+		if (selmon->switcheraction.movefunc_inner) {
+	 		selmon->switcheraction.movefunc_inner(arg);
+			return;
+		}
+	}
+	if(scratchgroupptr && scratchgroupptr->isfloating)
+		if (selmon->switcheraction.movefunc_inner) {
+	 		selmon->switcheraction.movefunc_inner(arg);
+			return;
+		}
+	focusgrid5(arg);
+}
 
 
 void
