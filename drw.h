@@ -62,6 +62,7 @@ int drw_text_x(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned 
 void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h);
 
 Picture drw_resize_picture(Drw *drw, Picture src, unsigned int srcw, unsigned int srch,  unsigned int dstw, unsigned int dsth);
+Picture drw_blur_picture(Drw *drw, Picture src, unsigned int srcw, unsigned int srch,  unsigned int dstw, unsigned int dsth);
 Picture drw_picture_create_resized(Drw *drw, char *src, unsigned int src_w, unsigned int src_h, unsigned int dst_w, unsigned int dst_h);
 Picture drw_picture_load_resized(Drw *drw, char *file, unsigned int src_w, unsigned int src_h, unsigned int dst_w, unsigned int dst_h);
 void drw_pic(Drw *drw, int x, int y, unsigned int w, unsigned int h, Picture pic);

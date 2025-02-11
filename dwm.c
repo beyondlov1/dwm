@@ -3223,6 +3223,19 @@ void drawclientswitcherwinx_pretag(Window win, int tagindex, int tagsx, int tags
 			// preview
 			Picture pic = getwindowpic(c);
 			drw_pic(drw, x, y, w, h, drw_resize_picture(drw, pic, c->w, c->h,  w, h));
+			// drw_pic(drw, x, y, w, h, drw_blur_picture(drw, pic, c->w, c->h,  w, h));
+			if(c == selmon->sel){
+				int lw = w/24 * 2;
+				int lh = h/24;
+				drw_rect(drw, x, y, lw, lh, 1, 1); // 竖
+				drw_rect(drw, x, y, lh, lw, 1, 1); // 横
+				drw_rect(drw, x+w-lw, y, lw, lh, 1, 1); // 竖
+				drw_rect(drw, x+w-lh, y, lh, lw, 1, 1); // 横
+				drw_rect(drw, x, y+h-lh, lw, lh, 1, 1); // 竖
+				drw_rect(drw, x, y+h-lw, lh, lw, 1, 1); // 横
+				drw_rect(drw, x+w-lw, y+h-lh, lw, lh, 1, 1); // 竖
+				drw_rect(drw, x+w-lh, y+h-lw, lh, lw, 1, 1); // 横
+			}
 			XRenderFreePicture(dpy, pic);
 		}
 

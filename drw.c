@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#include <X11/extensions/Xrender.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,6 +117,38 @@ drw_resize_picture(Drw *drw, Picture pic, unsigned int srcw, unsigned int srch, 
 	xf.matrix[2][0] = 0; xf.matrix[2][1] = 0; xf.matrix[2][2] = 65536;
 	XRenderSetPictureTransform(drw->dpy, pic, &xf);
 	return pic;
+}
+
+XFixed floatToXFixed(float f) {
+    return (XFixed)((int16_t)(f * 65536.0 + 0.5));
+}
+
+Picture
+drw_blur_picture(Drw *drw, Picture pic, unsigned int srcw, unsigned int srch, unsigned int dstw, unsigned int dsth) {
+
+	XTransform xf;
+	xf.matrix[0][0] = (srcw << 16u) / dstw; xf.matrix[0][1] = 0; xf.matrix[0][2] = 0;
+	xf.matrix[1][0] = 0; xf.matrix[1][1] = (srch << 16u) / dsth; xf.matrix[1][2] = 0;
+	xf.matrix[2][0] = 0; xf.matrix[2][1] = 0; xf.matrix[2][2] = 65536;
+	XRenderSetPictureTransform(drw->dpy, pic, &xf);
+
+	int kernel[9] = {
+    0, 1, 0,
+    1, 4, 1,
+    0, 1, 0
+  };
+  double kernel_sum = 0.0;
+  for (int i = 0; i < 9; i++) {
+  	kernel_sum += kernel[i];
+  }
+  XFixed fixed_kernel[9];
+  for (int i = 0; i < 9; i++) {
+  	double d = 1.0;
+    fixed_kernel[i] = XDoubleToFixed(d*kernel[i]/kernel_sum);
+  }
+  XRenderSetPictureFilter(drw->dpy, pic, FilterConvolution, fixed_kernel, 9);
+
+  return pic;
 }
 
 
