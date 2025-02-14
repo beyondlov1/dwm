@@ -3596,7 +3596,8 @@ angley(XY xy1, XY xy2)
 	if(xy1.y - xy2.y == 0) return INT_MAX - 1;
 	// 上下
 	if(1.0 * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) >= 2.0) return 4.5*distancexy(xy1, xy2);
-	return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + 1.5*distancexy(xy1, xy2);
+	// return distancexy(xy1,xy2) * abs(xy1.x - xy2.x) / abs(xy1.y - xy2.y) + distancexy(xy1, xy2);
+	return distancexy(xy1, xy2);
 }
 
 int
@@ -3604,8 +3605,10 @@ anglex(XY xy1, XY xy2)
 {
 	if(xy1.x - xy2.x == 0) return INT_MAX - 1;
 	// 左右
-	if(1.0 * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1.0*selmon->wh/selmon->ww ) return 5*distancexy(xy1, xy2);
+	if(1.0 * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 1.0*selmon->wh/selmon->ww ) return 3*distancexy(xy1, xy2);
+	if(1.0 * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) >= 0.5*selmon->wh/selmon->ww ) return 1.5*distancexy(xy1, xy2);
 	return distancexy(xy1, xy2) * abs(xy1.y - xy2.y) / abs(xy1.x - xy2.x) + distancexy(xy1, xy2);
+	// return 2*abs(xy1.y - xy2.y) + distancexy(xy1, xy2);
 }
 
 int
