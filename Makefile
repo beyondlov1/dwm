@@ -63,6 +63,8 @@ install: all
 	chmod +x ${HOME}/software/smartleft.sh
 	cp -f software/pwdc ${HOME}/software
 	chmod +x ${HOME}/software/pwdc
+	cp -f software/t ${HOME}/software
+	chmod +x ${HOME}/software/t
 	cp -f software/flameshottocloud.sh ${HOME}/software
 	chmod +x ${HOME}/software/flameshottocloud.sh
 	cp -f software/simplepageopen.sh ${HOME}/software
