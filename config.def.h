@@ -507,6 +507,7 @@ static Key keys[] = {
 	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -10% ") },
 	{ 0, XF86XK_AudioMute,       spawn, SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle") },
 	{ 0, XF86XK_AudioMicMute,        spawn, SHCMD("pactl set-source-mute @DEFAULT_SOURCE@ toggle") },
+	{ 0, XK_F1,        spawn,    {.v = smartclosecmd} },
 };
 
 
@@ -693,6 +694,8 @@ static Button buttons[] = {
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         Mod1Mask|ShiftMask,         Button3,        resizemouse,    {0} },
 	{ ClkClientWin,         0,              Button2,        spawn,    {.v = smartclosecmd} },
+	{ ClkClientWin,         0,              6,        spawn,    {.v = smartleftcmd} },
+	{ ClkClientWin,         0,              7,        spawn,    {.v = smartrightcmd} },
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
