@@ -254,6 +254,8 @@ static Key keys[] = {
 
 	//{ 0,                       XK_Caps_Lock,      toggleswitchers,      {0} },
 	{ 0,                       XF86XK_Tools,      toggleswitchers,      {0} },
+	{ 0, XK_F1,        spawn,    {.v = smartclosecmd} },
+	{ 0, XK_F2,        spawn,    {.v = smartrefreshcmd} },
 	
 
 	//{ 0,                       XK_F1,      spawn,      { .v = smartclosecmd } },
@@ -507,7 +509,6 @@ static Key keys[] = {
 	{ 0, XF86XK_AudioLowerVolume, spawn, SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -10% ") },
 	{ 0, XF86XK_AudioMute,       spawn, SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle") },
 	{ 0, XF86XK_AudioMicMute,        spawn, SHCMD("pactl set-source-mute @DEFAULT_SOURCE@ toggle") },
-	{ 0, XK_F1,        spawn,    {.v = smartclosecmd} },
 };
 
 

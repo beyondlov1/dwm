@@ -61,6 +61,8 @@ install: all
 	chmod +x ${HOME}/software/smartright.sh
 	cp -f software/smartleft.sh ${HOME}/software
 	chmod +x ${HOME}/software/smartleft.sh
+	cp -f software/smartrefresh.sh ${HOME}/software
+	chmod +x ${HOME}/software/smartrefresh.sh
 	cp -f software/pwdc ${HOME}/software
 	chmod +x ${HOME}/software/pwdc
 	cp -f software/t ${HOME}/software
